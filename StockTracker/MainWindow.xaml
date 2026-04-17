@@ -1,0 +1,175 @@
+﻿<Window x:Class="StockTracker.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="股票監測主控台" Height="800" Width="1200" WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackgroundBrush}" WindowStyle="None" ResizeMode="CanResizeWithGrip">
+    <Grid Margin="12" Background="{DynamicResource AppBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" CornerRadius="4" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
+            <DockPanel LastChildFill="True" Margin="8,0">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <Button Content="＿" Width="36" Height="24" Click="MinimizeButton_OnClick"/>
+                    <Button Content="▢" Width="36" Height="24" Margin="6,0,0,0" Click="MaximizeRestoreButton_OnClick"/>
+                    <Button Content="✕" Width="36" Height="24" Margin="6,0,0,0" Click="CloseButton_OnClick"/>
+                </StackPanel>
+                <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="股票監測主控台"/>
+            </DockPanel>
+        </Border>
+
+        <DockPanel Grid.Row="1">
+            <TextBlock Text="已訂閱股票" FontSize="20" FontWeight="SemiBold" DockPanel.Dock="Left"/>
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <ComboBox Width="120" Height="30" VerticalContentAlignment="Center" Name="comboBoxChangeInterval"
+                          ItemsSource="{Binding GlobalKLineIntervals}"
+                          SelectedItem="{Binding SelectedGlobalKLineInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="comboBoxChangeInterval_SelectionChanged"/>
+                <TextBox Width="120" Height="30" VerticalContentAlignment="Center" Name="textBoxSubscribe"
+                         Text="{Binding NewSymbol, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Content="訂閱" Name="btnSubscribe" Width="80" Margin="8,0,0,0" Click="btnSubscribe_Click" />
+                <Button Content="匯出 CSV" Width="90" Margin="8,0,0,0" Command="{Binding ExportCsvCommand}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <Border Grid.Row="3" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceBrush}" Padding="8">
+            <DockPanel>
+                <TextBlock Text="全部訂閱股票 K 線總覽（雙擊可開啟詳細圖表）" FontWeight="Bold" Margin="0,0,0,8" DockPanel.Dock="Top"/>
+                <ListBox ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" MouseDoubleClick="StockList_OnMouseDoubleClick"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.CanContentScroll="False">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Width" Value="560"/>
+                            <Setter Property="Margin" Value="0,0,10,10"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="8" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceAltBrush}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,6">
+                                        <TextBlock FontWeight="SemiBold" FontSize="14" DockPanel.Dock="Left">
+                                            <Run Text="{Binding Symbol, Mode=OneWay}"/>
+                                            <Run Text=" - "/>
+                                            <Run Text="{Binding Name, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        
+                                    </DockPanel>
+
+                                    <TextBlock DockPanel.Dock="Top">
+                                        <Run Text="訊號: "/>
+                                        <Run Text="{Binding Signal, Mode=OneWay}"/>
+                                    </TextBlock>
+
+                                    <ComboBox Width="120" Margin="0,4,0,6"
+                                              ItemsSource="{Binding KLineIntervals}"
+                                              SelectedItem="{Binding SelectedKLineInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <TextBlock Margin="0,0,0,6">
+                                        <Run Text="最新價格: "/>
+                                        <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}"/>
+                                        <Run Text="   漲跌幅: "/>
+                                        <Run Text="{Binding ChangePercent, StringFormat=F2, Mode=OneWay}"/>
+                                        <Run Text="%   MA5: "/>
+                                        <Run Text="{Binding MA5, StringFormat=F2, Mode=OneWay}"/>
+                                        <Run Text="   MA20: "/>
+                                        <Run Text="{Binding MA20, StringFormat=F2, Mode=OneWay}"/>
+                                    </TextBlock>
+
+                                    <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
+                                               Text="Y軸：價格(元)    X軸：時間(由左到右)"/>
+
+                                    <Viewbox Stretch="Fill" Height="150" Width="720">
+                                        <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}">
+                                            <ItemsControl ItemsSource="{Binding Candles}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <Canvas/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemContainerStyle>
+                                                    <Style TargetType="ContentPresenter">
+                                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                        <Setter Property="Canvas.Top" Value="0"/>
+                                                    </Style>
+                                                </ItemsControl.ItemContainerStyle>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Canvas Width="8" Height="220">
+                                                            <Line X1="4" X2="4" Y1="{Binding WickTop}" Y2="{Binding WickBottom}" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="1"/>
+                                                            <Rectangle Width="8" Height="{Binding BodyHeight}" Fill="{Binding BodyBrush}" Canvas.Top="{Binding BodyTop}"/>
+                                                        </Canvas>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <Polyline Points="{Binding Ma5Points}" Stroke="Orange" StrokeThickness="1.6"/>
+                                            <Polyline Points="{Binding Ma20Points}" Stroke="DodgerBlue" StrokeThickness="1.6"/>
+                                            <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding LatestPriceY}" Y2="{Binding LatestPriceY}"
+                                                  Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="4,2"/>
+                                            <Border Canvas.Left="6" Canvas.Top="{Binding LatestPriceY}" Padding="4,1"
+                                                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                                                <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="12">
+                                                    <Run Text="Now: "/>
+                                                    <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </Border>
+                                            <ItemsControl ItemsSource="{Binding SignalMarkers}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <Canvas/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemContainerStyle>
+                                                    <Style TargetType="ContentPresenter">
+                                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                                    </Style>
+                                                </ItemsControl.ItemContainerStyle>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="12"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <ItemsControl ItemsSource="{Binding TimeLabels}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <Canvas/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemContainerStyle>
+                                                    <Style TargetType="ContentPresenter">
+                                                        <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                                                        <Setter Property="Canvas.Top" Value="204"/>
+                                                    </Style>
+                                                </ItemsControl.ItemContainerStyle>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Text}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="9"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Canvas>
+                                    </Viewbox>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

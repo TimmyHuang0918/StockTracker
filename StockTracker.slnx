@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="StockTracker/StockTracker.csproj" Id="6dc0652e-217c-4b93-9bd6-2b47d3889eb9">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+</Solution>
