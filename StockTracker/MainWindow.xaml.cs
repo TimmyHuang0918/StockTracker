@@ -2,7 +2,9 @@
 using StockTracker.Models;
 using StockTracker.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
 using System.Windows;
 using System.Windows.Input;
@@ -74,7 +76,7 @@ namespace StockTracker
 		}
 	    }
 
-	    BuildDateRangeFor120Bars(symbol, (DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, out var startDate, out var endDate);
+	    BuildDateRangeForBars(symbol, (DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, 120, out var startDate, out var endDate);
 	    ResolveKLineRequest((DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, out var kLineType, out var minuteNumber);
 	    m_api.SKQuoteLib_RequestKLineAMByDate(symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
 	}
@@ -157,7 +159,7 @@ namespace StockTracker
 
 	    foreach (var stock in vm.Stocks)
 	    {
-		BuildDateRangeFor120Bars(stock.Symbol, vm.SelectedGlobalKLineInterval, out var startDate, out var endDate);
+		BuildDateRangeForBars(stock.Symbol, vm.SelectedGlobalKLineInterval, 120, out var startDate, out var endDate);
 		stock.ClearData();
 		m_api.SKQuoteLib_RequestKLineAMByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
 	    }
@@ -186,39 +188,69 @@ namespace StockTracker
 	    }
 	}
 
-	private static void BuildDateRangeFor120Bars(string symbol, string interval, out string startDate, out string endDate)
+	public static void BuildDateRangeForBars(string symbol, string interval, int requiredBars, out string startDate, out string endDate)
 	{
-	    var minutesPerDay = ResolveTradingMinutesPerDay(symbol);
-	    int requiredTradingDays;
+	    // 每日交易分鐘數 (例如台股 9:00~13:30 = 270 分鐘)
+	    var minutesPerDay = 270;
+
+	    // 每日可產生多少 K 線
+	    int barsPerDay;
 	    switch (interval)
 	    {
 		case "日K":
-		    requiredTradingDays = 120;
+		    barsPerDay = 1;
 		    break;
 		case "5分K":
-		    requiredTradingDays = (int)Math.Ceiling(30d * 5d / minutesPerDay);
+		    barsPerDay = minutesPerDay / 5;
 		    break;
 		case "3分K":
-		    requiredTradingDays = (int)Math.Ceiling(30d * 3d / minutesPerDay);
+		    barsPerDay = minutesPerDay / 3;
 		    break;
+		case "1分K":
 		default:
-		    requiredTradingDays = (int)Math.Ceiling(30d * 1d / minutesPerDay);
+		    barsPerDay = minutesPerDay / 1;
 		    break;
 	    }
 
-	    var calendarLookbackDays = Math.Max(5, (int)Math.Ceiling(requiredTradingDays * 7d / 5d) + 5);
-	    startDate = DateTime.Today.AddDays(-calendarLookbackDays).ToString("yyyyMMdd");
-	    endDate = DateTime.Today.ToString("yyyyMMdd");
+	    // 需要多少交易日
+	    int requiredTradingDays = (int)Math.Ceiling((double)requiredBars / barsPerDay);
+
+	    // 取得最近交易日清單 (你需要自己實作，例如從交易所日曆或 API)
+	    List<DateTime> tradingDays = GetRecentTradingDays(requiredTradingDays);
+
+	    // 起始日是最早的交易日，結束日是今天或最近交易日
+	    startDate = tradingDays.First().ToString("yyyyMMdd");
+	    endDate = tradingDays.Last().ToString("yyyyMMdd");
 	}
 
-	private static int ResolveTradingMinutesPerDay(string symbol)
+	// 範例：模擬取得最近交易日清單
+	private static List<DateTime> GetRecentTradingDays(int requiredDays)
 	{
-	    if (!string.IsNullOrWhiteSpace(symbol) && symbol.Length == 4 && char.IsDigit(symbol[0]))
+	    var days = new List<DateTime>();
+	    var current = DateTime.Today;
+	    while (days.Count < requiredDays)
 	    {
-		return 240;
+		if (IsTradingDay(current))
+		{
+		    days.Insert(0, current); // 往前插入
+		}
+		current = current.AddDays(-1);
 	    }
+	    return days;
+	}
 
-	    return 300;
+	// 判斷是否為交易日 (簡單版：排除週六週日)
+	private static bool IsTradingDay(DateTime date)
+	{
+	    return date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday;
+	}
+
+	private void ChartViewbox_OnSizeChanged(object sender, SizeChangedEventArgs e)
+	{
+	    if ((sender as FrameworkElement)?.DataContext is StockViewModel stock)
+	    {
+		stock.UpdateDisplayCapacity(e.NewSize.Width);
+	    }
 	}
     }
 }

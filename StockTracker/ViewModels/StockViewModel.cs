@@ -14,7 +14,7 @@ namespace StockTracker.ViewModels
         private const double MacdChartHeight = 120;
         private const double RsiChartHeight = 90;
         private const double VolumeChartHeight = 100;
-        private const int MaxDisplayPoints = 60;
+        private const int MinDisplayPoints = 20;
 
         private readonly List<CandleData> _candles = new List<CandleData>();
         private readonly List<double> _macdSeries = new List<double>();
@@ -32,6 +32,7 @@ namespace StockTracker.ViewModels
         private string _selectedKLineInterval = "1分K";
         private string _signal = "中立";
         private string _lastNotifiedSignal = string.Empty;
+        private int _maxDisplayPoints = 60;
 
         public StockViewModel(string symbol, string name)
         {
@@ -182,6 +183,24 @@ namespace StockTracker.ViewModels
         public ObservableCollection<TimeLabelVisual> TimeLabels { get; }
 
         public event Action<StockViewModel, string> SignalTriggered;
+
+        public void UpdateDisplayCapacity(double availableWidth)
+        {
+            if (availableWidth <= 0)
+            {
+                return;
+            }
+
+            var candidate = Math.Max(MinDisplayPoints, (int)Math.Floor((availableWidth - 100) / 12));
+            if (candidate == _maxDisplayPoints)
+            {
+                return;
+            }
+
+            _maxDisplayPoints = candidate;
+            OnPropertyChanged(nameof(ChartWidth));
+            RebuildVisuals();
+        }
 
         public void UpdateFromKLine(CandleData candle)
         {
@@ -395,7 +414,7 @@ namespace StockTracker.ViewModels
 
         private void RebuildVisuals()
         {
-            var displayOffset = Math.Max(0, _candles.Count - MaxDisplayPoints);
+            var displayOffset = Math.Max(0, _candles.Count - _maxDisplayPoints);
             var candles = _candles.Skip(displayOffset).ToList();
             if (!candles.Any())
             {
@@ -624,7 +643,7 @@ namespace StockTracker.ViewModels
                 return new List<CandleData>();
             }
 
-            return _candles.Skip(Math.Max(0, _candles.Count - MaxDisplayPoints)).ToList();
+            return _candles.Skip(Math.Max(0, _candles.Count - _maxDisplayPoints)).ToList();
         }
 
         private static double CalculateRsiAt(int index, int period, IReadOnlyList<double> closes)

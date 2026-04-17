@@ -4,8 +4,8 @@
         Title="股票詳細資訊" Height="760" Width="980" WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppBackgroundBrush}">
     <Grid Margin="12" Background="{DynamicResource AppBackgroundBrush}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Background="{DynamicResource SurfaceBrush}">
-            <StackPanel Margin="8">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Background="{DynamicResource SurfaceBrush}">
+            <StackPanel Margin="8,8,20,8" >
                 <TextBlock FontSize="16" FontWeight="SemiBold">
                     <Run Text=""/>
                     <Run Text="{Binding Symbol, Mode=OneWay}"/>
@@ -24,9 +24,6 @@
                     <Run Text="   訊號: "/>
                     <Run Text="{Binding Signal, Mode=OneWay}"/>
                 </TextBlock>
-                <ComboBox Width="140" Margin="0,0,0,10"
-                          ItemsSource="{Binding KLineIntervals}"
-                          SelectedItem="{Binding SelectedKLineInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="8" Background="{DynamicResource SurfaceBrush}" Margin="0,0,0,10">
                     <StackPanel>
@@ -40,8 +37,8 @@
                         </TextBlock>
                         <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
                                    Text="Y軸：價格(元)    X軸：時間(由左到右)"/>
-                        <Viewbox Stretch="Fill" Height="220"
-                                 Width="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ViewportWidth}">
+                        <Viewbox Stretch="Fill" Height="220" SizeChanged="ChartViewbox_OnSizeChanged"
+                                 Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
                         <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}">
                             <ItemsControl ItemsSource="{Binding Candles}">
                                 <ItemsControl.ItemsPanel>
@@ -131,7 +128,7 @@
                         <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
                                    Text="Y軸：MACD值    X軸：時間(由左到右)"/>
                         <Viewbox Stretch="Fill" Height="120"
-                                 Width="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ViewportWidth}">
+                                 Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
                         <Canvas Width="{Binding ChartWidth}" Height="120" Background="{DynamicResource SurfaceAltBrush}">
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding MacdZeroY}" Y2="{Binding MacdZeroY}"
                                   Stroke="{DynamicResource MutedForegroundBrush}" StrokeThickness="1" StrokeDashArray="3,3"/>
@@ -171,7 +168,7 @@
                         <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
                                    Text="Y軸：RSI(0~100)    X軸：時間(由左到右)"/>
                         <Viewbox Stretch="Fill" Height="90"
-                                 Width="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ViewportWidth}">
+                                 Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
                         <Canvas Width="{Binding ChartWidth}" Height="90" Background="{DynamicResource SurfaceAltBrush}">
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="27" Y2="27" Stroke="{DynamicResource MutedForegroundBrush}" StrokeDashArray="3,3"/>
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="63" Y2="63" Stroke="{DynamicResource MutedForegroundBrush}" StrokeDashArray="3,3"/>
@@ -190,7 +187,7 @@
                         <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
                                    Text="Y軸：成交量    X軸：時間(由左到右)"/>
                         <Viewbox Stretch="Fill" Height="100"
-                                 Width="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ViewportWidth}">
+                                 Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
                         <Canvas Width="{Binding ChartWidth}" Height="100" Background="{DynamicResource SurfaceAltBrush}">
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="100" Y2="100"
                                   Stroke="{DynamicResource MutedForegroundBrush}" StrokeThickness="1"/>

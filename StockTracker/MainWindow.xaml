@@ -124,7 +124,7 @@
                                     <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
                                                Text="Y軸：價格(元)    X軸：時間(由左到右)"/>
 
-                                    <Viewbox Stretch="Fill" Height="150"
+                                    <Viewbox Stretch="Fill" Height="150" SizeChanged="ChartViewbox_OnSizeChanged"
                                              Width="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=ActualWidth}">
                                         <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}">
                                             <ItemsControl ItemsSource="{Binding Candles}">
