@@ -234,36 +234,31 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(LatestVolume));
         }
 
-        public void Update(StockModel model)
-        {
-            var open = _candles.Count == 0 ? model.Price : _candles.Last().Close;
-            var close = model.Price;
-            var offset = (decimal)(new Random(Guid.NewGuid().GetHashCode()).NextDouble() * 1.2);
-            var high = Math.Max(open, close) + offset;
-            var low = Math.Min(open, close) - offset;
-
-            _candles.Add(new CandleData
-            {
-                Time = model.Time,
-                Open = Math.Round(open, 2),
-                High = Math.Round(high, 2),
-                Low = Math.Round(Math.Max(0.1m, low), 2),
-                Close = Math.Round(close, 2),
-                Volume = model.Volume
-            });
-
-            LatestPrice = model.Price;
-            var first = _candles.FirstOrDefault()?.Open ?? model.Price;
-            ChangePercent = first == 0 ? 0 : Math.Round((model.Price - first) / first * 100, 2);
-
-            MA5 = CalculateMa(5);
-            MA20 = CalculateMa(20);
-            CalculateMacd();
-            RSI = CalculateRsi(14);
-            UpdateSignal();
-            RebuildVisuals();
-            OnPropertyChanged(nameof(LatestVolume));
-        }
+	public void ClearData()
+	{
+	    _candles.Clear();
+	    _signalHistory.Clear();
+	    _lastNotifiedSignal = string.Empty;
+	    LatestPrice = 0;
+	    ChangePercent = 0;
+	    MA5 = 0;
+	    MA20 = 0;
+	    MACD = 0;
+	    RSI = 0;
+	    LatestPriceY = 0;
+	    MacdZeroY = 0;
+	    Candles.Clear();
+	    Ma5Points.Clear();
+	    Ma20Points.Clear();
+	    MacdHistogram.Clear();
+	    MacdLinePoints.Clear();
+	    SignalLinePoints.Clear();
+	    RsiLinePoints.Clear();
+	    VolumeBars.Clear();
+	    SignalMarkers.Clear();
+	    TimeLabels.Clear();
+	    OnPropertyChanged(nameof(LatestVolume));
+	}
 
         private double CalculateMa(int period)
         {

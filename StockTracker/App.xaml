@@ -3,108 +3,187 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:StockTracker">
     <Application.Resources>
-        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FF121212"/>
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#FF1E1E1E"/>
-        <SolidColorBrush x:Key="SurfaceAltBrush" Color="#FF252526"/>
-        <SolidColorBrush x:Key="AppBorderBrush" Color="#FF3A3A3A"/>
-        <SolidColorBrush x:Key="AppForegroundBrush" Color="#FFF3F3F3"/>
-        <SolidColorBrush x:Key="MutedForegroundBrush" Color="#FFB5B5B5"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#FF4FC3F7"/>
+        <ResourceDictionary>
 
-        <Style TargetType="Window">
-            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-        </Style>
+            <!-- 全域顏色 -->
+            <SolidColorBrush x:Key="DarkBackground" Color="#1E1E1E"/>
+            <SolidColorBrush x:Key="DarkForeground" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="DarkBorder" Color="#444444"/>
+            <SolidColorBrush x:Key="DarkControlBackground" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="DarkControlHover" Color="#3E3E40"/>
+            <SolidColorBrush x:Key="DarkSelected" Color="#505050"/>
 
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-        </Style>
+            <!-- 與既有頁面相容的資源鍵 -->
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1E1E1E"/>
+            <SolidColorBrush x:Key="AppForegroundBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="AppBorderBrush" Color="#444444"/>
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="SurfaceAltBrush" Color="#3E3E40"/>
+            <SolidColorBrush x:Key="MutedForegroundBrush" Color="#AAAAAA"/>
+            <SolidColorBrush x:Key="AccentBrush" Color="#FF9800"/>
+            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#505050"/>
+            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF"/>
 
-        <Style TargetType="Label">
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-        </Style>
+            <!-- Window -->
+            <Style TargetType="Window">
+                <Setter Property="Background" Value="{StaticResource DarkBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+            </Style>
 
-        <Style TargetType="TextBox">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-            <Setter Property="CaretBrush" Value="{DynamicResource AppForegroundBrush}"/>
-        </Style>
+            <!-- TextBlock -->
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+            </Style>
 
-        <Style TargetType="PasswordBox">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <!-- Button -->
+            <Style TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{StaticResource DarkControlHover}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
 
-        <Style TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <!-- TextBox -->
+            <Style TargetType="TextBox">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Setter Property="CaretBrush" Value="{StaticResource DarkForeground}"/>
+            </Style>
 
-        <Style TargetType="ComboBox">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <!-- ListView -->
+            <Style TargetType="ListView">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+            </Style>
 
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-        </Style>
+            <!-- DataGrid -->
+            <Style TargetType="DataGrid">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Setter Property="RowBackground" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="AlternatingRowBackground" Value="#2A2A2A"/>
+                <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+                <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource DarkBorder}"/>
+                <Setter Property="VerticalGridLinesBrush" Value="{StaticResource DarkBorder}"/>
+            </Style>
 
-        <Style TargetType="DataGrid">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-            <Setter Property="RowBackground" Value="{DynamicResource SurfaceBrush}"/>
-            <Setter Property="AlternatingRowBackground" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <!-- DataGridRow (選取顏色) -->
+            <Style TargetType="DataGridRow">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="{StaticResource DarkSelected}"/>
+                        <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
 
-        <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <!-- ComboBox -->
+            <Style TargetType="ComboBox">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+            </Style>
 
-        <Style TargetType="DataGridCell">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <!-- ComboBoxItem -->
+            <Style TargetType="ComboBoxItem">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Style.Triggers>
+                    <!-- 滑鼠移過去 -->
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{StaticResource DarkControlHover}"/>
+                        <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                    </Trigger>
+                    <!-- 被選取 -->
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="{StaticResource DarkSelected}"/>
+                        <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
 
-        <Style TargetType="DataGridRow">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <!-- Menu -->
+            <Style TargetType="Menu">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+            </Style>
 
-        <Style TargetType="DataGridRowHeader">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <Style TargetType="MenuItem">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsHighlighted" Value="True">
+                        <Setter Property="Background" Value="{StaticResource DarkControlHover}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
 
-        <Style TargetType="TabControl">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-        </Style>
+            <!-- TabControl -->
+            <Style TargetType="TabControl">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+            </Style>
 
-        <Style TargetType="TabItem">
-            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppForegroundBrush}"/>
-        </Style>
+            <Style TargetType="TabItem">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="{StaticResource DarkSelected}"/>
+                    </Trigger>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{StaticResource DarkControlHover}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
 
-        <Style TargetType="Grid">
-            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
-        </Style>
+            <!-- ScrollViewer -->
+            <Style TargetType="ScrollViewer">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+            </Style>
 
-        <Style TargetType="Border">
-            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-        </Style>
+            <!-- StatusBar -->
+            <Style TargetType="StatusBar">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+            </Style>
+
+            <!-- Slider -->
+            <Style TargetType="Slider">
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+            </Style>
+
+            <!-- ProgressBar -->
+            <Style TargetType="ProgressBar">
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+            </Style>
+
+            <!-- CheckBox -->
+            <Style TargetType="CheckBox">
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+            </Style>
+
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

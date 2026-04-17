@@ -158,6 +158,7 @@ namespace StockTracker
 	    foreach (var stock in vm.Stocks)
 	    {
 		BuildDateRangeFor120Bars(stock.Symbol, vm.SelectedGlobalKLineInterval, out var startDate, out var endDate);
+		stock.ClearData();
 		m_api.SKQuoteLib_RequestKLineAMByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
 	    }
 	}
