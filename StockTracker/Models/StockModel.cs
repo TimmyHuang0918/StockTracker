@@ -58,6 +58,7 @@ namespace StockTracker.Models
     public class PriceLevelVisual
     {
         public double Y { get; set; }
+        public double LabelTop { get; set; }
         public string Text { get; set; }
     }
 }

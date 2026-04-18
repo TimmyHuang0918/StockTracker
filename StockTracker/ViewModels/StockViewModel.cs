@@ -10,7 +10,7 @@ namespace StockTracker.ViewModels
 {
     public class StockViewModel : ViewModelBase
     {
-        private const double CandleChartHeight = 220;
+        private const double CandleChartHeight = 200;
         private const double MacdChartHeight = 120;
         private const double RsiChartHeight = 90;
         private const double VolumeChartHeight = 100;
@@ -53,6 +53,9 @@ namespace StockTracker.ViewModels
             SignalMarkers = new ObservableCollection<SignalMarkerVisual>();
             TimeLabels = new ObservableCollection<TimeLabelVisual>();
             PriceLevels = new ObservableCollection<PriceLevelVisual>();
+            MacdLevels = new ObservableCollection<PriceLevelVisual>();
+            RsiLevels = new ObservableCollection<PriceLevelVisual>();
+            VolumeLevels = new ObservableCollection<PriceLevelVisual>();
 
             Ma5Points = new PointCollection();
             Ma20Points = new PointCollection();
@@ -191,6 +194,9 @@ namespace StockTracker.ViewModels
         public ObservableCollection<SignalMarkerVisual> SignalMarkers { get; }
         public ObservableCollection<TimeLabelVisual> TimeLabels { get; }
         public ObservableCollection<PriceLevelVisual> PriceLevels { get; }
+        public ObservableCollection<PriceLevelVisual> MacdLevels { get; }
+        public ObservableCollection<PriceLevelVisual> RsiLevels { get; }
+        public ObservableCollection<PriceLevelVisual> VolumeLevels { get; }
 
         public double CrosshairX
         {
@@ -355,6 +361,9 @@ namespace StockTracker.ViewModels
 	    SignalMarkers.Clear();
 	    TimeLabels.Clear();
 	    PriceLevels.Clear();
+	    MacdLevels.Clear();
+	    RsiLevels.Clear();
+	    VolumeLevels.Clear();
 	    ClearCrosshair();
 	    OnPropertyChanged(nameof(LatestVolume));
 	}
@@ -608,6 +617,7 @@ namespace StockTracker.ViewModels
                 PriceLevels.Add(new PriceLevelVisual
                 {
                     Y = Scale(price, minPrice, priceRange, CandleChartHeight),
+                    LabelTop = Math.Max(4, Math.Min(CandleChartHeight - 28, Scale(price, minPrice, priceRange, CandleChartHeight) - 8)),
                     Text = price.ToString("F2")
                 });
             }
@@ -622,6 +632,7 @@ namespace StockTracker.ViewModels
             if (sourceCandles == null || sourceCandles.Count == 0)
             {
                 MacdHistogram.Clear();
+                MacdLevels.Clear();
                 MacdLinePoints = new PointCollection();
                 SignalLinePoints = new PointCollection();
                 OnPropertyChanged(nameof(MacdLinePoints));
@@ -649,6 +660,20 @@ namespace StockTracker.ViewModels
             var min = new[] { _macdSeries.Min(), _signalSeries.Min(), histSeries.Min(), 0d }.Min();
             var max = new[] { _macdSeries.Max(), _signalSeries.Max(), histSeries.Max(), 0d }.Max();
             var range = Math.Max(0.01, max - min);
+
+            MacdLevels.Clear();
+            const int macdLevelCount = 5;
+            for (var i = 0; i < macdLevelCount; i++)
+            {
+                var ratio = i / (double)(macdLevelCount - 1);
+                var value = max - range * ratio;
+                MacdLevels.Add(new PriceLevelVisual
+                {
+                    Y = Scale(value, min, range, MacdChartHeight),
+                    LabelTop = Math.Max(2, Math.Min(MacdChartHeight - 14, Scale(value, min, range, MacdChartHeight) - 7)),
+                    Text = value.ToString("F3")
+                });
+            }
 
             var macdPoints = new PointCollection();
             var signalPoints = new PointCollection();
@@ -688,6 +713,7 @@ namespace StockTracker.ViewModels
         {
             if (sourceCandles == null || sourceCandles.Count == 0)
             {
+                RsiLevels.Clear();
                 RsiLinePoints = new PointCollection();
                 OnPropertyChanged(nameof(RsiLinePoints));
                 return;
@@ -695,6 +721,17 @@ namespace StockTracker.ViewModels
 
             var rsiPoints = new PointCollection();
             var closes = sourceCandles.Select(x => (double)x.Close).ToList();
+
+            RsiLevels.Clear();
+            foreach (var level in new[] { 100d, 70d, 50d, 30d, 0d })
+            {
+                RsiLevels.Add(new PriceLevelVisual
+                {
+                    Y = RsiChartHeight - (level / 100.0 * RsiChartHeight),
+                    LabelTop = Math.Max(2, Math.Min(RsiChartHeight - 14, (RsiChartHeight - (level / 100.0 * RsiChartHeight)) - 7)),
+                    Text = level.ToString("F0")
+                });
+            }
 
             for (var i = 0; i < closes.Count; i++)
             {
@@ -713,11 +750,27 @@ namespace StockTracker.ViewModels
             if (sourceCandles == null || sourceCandles.Count == 0)
             {
                 VolumeBars.Clear();
+                VolumeLevels.Clear();
                 return;
             }
 
             var maxVolume = Math.Max(1, sourceCandles.Max(x => (double)x.Volume));
             VolumeBars.Clear();
+            VolumeLevels.Clear();
+
+            const int volumeLevelCount = 4;
+            for (var i = 0; i < volumeLevelCount; i++)
+            {
+                var ratio = i / (double)(volumeLevelCount - 1);
+                var value = maxVolume * (1 - ratio);
+                var y = VolumeChartHeight - (value / maxVolume * VolumeChartHeight);
+                VolumeLevels.Add(new PriceLevelVisual
+                {
+                    Y = y,
+                    LabelTop = Math.Max(2, Math.Min(VolumeChartHeight - 14, y - 7)),
+                    Text = value.ToString("N0")
+                });
+            }
 
             for (var i = 0; i < sourceCandles.Count; i++)
             {
@@ -792,8 +845,8 @@ namespace StockTracker.ViewModels
                 return chartWidth / 2;
             }
 
-            var usableWidth = Math.Max(1, chartWidth - 20);
-            return 10 + index * (usableWidth / (count - 1));
+            var usableWidth = Math.Max(1, chartWidth - 60);
+            return 50 + index * (usableWidth / (count - 1));
         }
 
         private static int GetNearestCandleIndex(double x, int count, double chartWidth)

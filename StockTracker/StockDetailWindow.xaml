@@ -39,7 +39,7 @@
                                    Text="Y軸：價格(元)    X軸：時間(由左到右)"/>
                         <Viewbox Stretch="Fill" Height="220" SizeChanged="ChartViewbox_OnSizeChanged"
                                  Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
-                        <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}"
+                        <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}" ClipToBounds="False"
                                 MouseMove="KLineCanvas_OnMouseMove" MouseLeave="KLineCanvas_OnMouseLeave"
                                 ToolTip="{Binding HoverInfo}">
                             <ItemsControl ItemsSource="{Binding PriceLevels}">
@@ -178,6 +178,31 @@
                         <Canvas Width="{Binding ChartWidth}" Height="120" Background="{DynamicResource SurfaceAltBrush}">
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding MacdZeroY}" Y2="{Binding MacdZeroY}"
                                   Stroke="{DynamicResource MutedForegroundBrush}" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <ItemsControl ItemsSource="{Binding MacdLevels}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="0"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Canvas>
+                                            <Line X1="0" X2="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Y1="0" Y2="0"
+                                                  Stroke="{DynamicResource AppBorderBrush}" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                            <TextBlock Canvas.Left="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Canvas.Top="{Binding LabelTop}"
+                                                       Margin="4,0,0,0"
+                                                       Text="{Binding Text}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="9"/>
+                                        </Canvas>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <ItemsControl ItemsSource="{Binding MacdHistogram}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -216,6 +241,31 @@
                         <Viewbox Stretch="Fill" Height="90"
                                  Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
                         <Canvas Width="{Binding ChartWidth}" Height="90" Background="{DynamicResource SurfaceAltBrush}">
+                            <ItemsControl ItemsSource="{Binding RsiLevels}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="0"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Canvas>
+                                            <Line X1="0" X2="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Y1="0" Y2="0"
+                                                  Stroke="{DynamicResource AppBorderBrush}" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                            <TextBlock Canvas.Left="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Canvas.Top="{Binding LabelTop}"
+                                                       Margin="4,0,0,0"
+                                                       Text="{Binding Text}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="9"/>
+                                        </Canvas>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="27" Y2="27" Stroke="{DynamicResource MutedForegroundBrush}" StrokeDashArray="3,3"/>
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="63" Y2="63" Stroke="{DynamicResource MutedForegroundBrush}" StrokeDashArray="3,3"/>
                             <Polyline Points="{Binding RsiLinePoints}" Stroke="Crimson" StrokeThickness="1.6"/>
@@ -235,6 +285,31 @@
                         <Viewbox Stretch="Fill" Height="100"
                                  Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
                         <Canvas Width="{Binding ChartWidth}" Height="100" Background="{DynamicResource SurfaceAltBrush}">
+                            <ItemsControl ItemsSource="{Binding VolumeLevels}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="0"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Canvas>
+                                            <Line X1="0" X2="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Y1="0" Y2="0"
+                                                  Stroke="{DynamicResource AppBorderBrush}" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                            <TextBlock Canvas.Left="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Canvas.Top="{Binding LabelTop}"
+                                                       Margin="4,0,0,0"
+                                                       Text="{Binding Text}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="9"/>
+                                        </Canvas>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="100" Y2="100"
                                   Stroke="{DynamicResource MutedForegroundBrush}" StrokeThickness="1"/>
                             <ItemsControl ItemsSource="{Binding VolumeBars}">
