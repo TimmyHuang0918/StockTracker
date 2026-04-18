@@ -1,11 +1,9 @@
-﻿using StockManager.Services;
-using StockTracker.Models;
+﻿using StockTracker.Models;
+using StockTracker.Services;
 using StockTracker.ViewModels;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Windows;
 using System.Windows.Input;
 
@@ -13,11 +11,11 @@ namespace StockTracker
 {
     public partial class MainWindow : Window
     {
-	private readonly SKAPI m_api = App.Api;
+	private CapitalApiService _apiService;
 	public MainWindow()
         {
             InitializeComponent();
-	    m_api.OnNotifyKLineData += OnNotifyKLineData;
+	    DataContextChanged += MainWindow_DataContextChanged;
         }
 
         private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -80,74 +78,7 @@ namespace StockTracker
 
 	    BuildDateRangeForBars(symbol, (DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, 120, out var startDate, out var endDate);
 	    ResolveKLineRequest((DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, out var kLineType, out var minuteNumber);
-	    m_api.SKQuoteLib_RequestKLineAMByDate(symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
-	}
-
-	private void OnNotifyKLineData(string bstrStockNo, string bstrData)
-	{
-	    if (!TryParseKLineData(bstrData, out var candle))
-	    {
-		return;
-	    }
-
-	    Dispatcher.BeginInvoke(new Action(() =>
-	    {
-		(DataContext as MainWindowViewModel)?.ApplyKLineData(bstrStockNo, candle);
-	    }));
-	}
-
-	private static bool TryParseKLineData(string raw, out CandleData candle)
-	{
-	    candle = null;
-	    if (string.IsNullOrWhiteSpace(raw))
-	    {
-		return false;
-	    }
-
-	    var parts = raw.Split(',');
-	    if (parts.Length < 6)
-	    {
-		return false;
-	    }
-
-	    string timeText;
-	    int valueStartIndex;
-	    if (parts.Length >= 7)
-	    {
-		timeText = $"{parts[0].Trim()} {parts[1].Trim()}";
-		valueStartIndex = 2;
-	    }
-	    else
-	    {
-		timeText = parts[0].Trim();
-		valueStartIndex = 1;
-	    }
-
-	    if (!DateTime.TryParse(timeText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time))
-	    {
-		return false;
-	    }
-
-	    if (!decimal.TryParse(parts[valueStartIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var open) ||
-		!decimal.TryParse(parts[valueStartIndex + 1], NumberStyles.Any, CultureInfo.InvariantCulture, out var high) ||
-		!decimal.TryParse(parts[valueStartIndex + 2], NumberStyles.Any, CultureInfo.InvariantCulture, out var low) ||
-		!decimal.TryParse(parts[valueStartIndex + 3], NumberStyles.Any, CultureInfo.InvariantCulture, out var close) ||
-		!long.TryParse(parts[valueStartIndex + 4], NumberStyles.Any, CultureInfo.InvariantCulture, out var volume))
-	    {
-		return false;
-	    }
-
-	    candle = new CandleData
-	    {
-		Time = time,
-		Open = open,
-		High = high,
-		Low = low,
-		Close = close,
-		Volume = volume
-	    };
-
-	    return true;
+	    _apiService?.RequestKLineByDate(symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
 	}
 
 	private void comboBoxChangeInterval_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -164,8 +95,30 @@ namespace StockTracker
 		int.TryParse(vm.SelectedGlobalKLineCount, out var kLineCount);
 		BuildDateRangeForBars(stock.Symbol, vm.SelectedGlobalKLineInterval, kLineCount, out var startDate, out var endDate);
 		stock.ClearData();
-		m_api.SKQuoteLib_RequestKLineAMByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
+		_apiService?.RequestKLineByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
 	    }
+	}
+
+	private void MainWindow_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+	{
+	    if (_apiService != null)
+	    {
+		_apiService.KLineDataReceived -= ApiService_OnKLineDataReceived;
+	    }
+
+	    _apiService = (DataContext as MainWindowViewModel)?.ApiService;
+	    if (_apiService != null)
+	    {
+		_apiService.KLineDataReceived += ApiService_OnKLineDataReceived;
+	    }
+	}
+
+	private void ApiService_OnKLineDataReceived(string symbol, CandleData candle)
+	{
+	    Dispatcher.BeginInvoke(new Action(() =>
+	    {
+		(DataContext as MainWindowViewModel)?.ApplyKLineData(symbol, candle);
+	    }));
 	}
 
 	private static void ResolveKLineRequest(string interval, out short kLineType, out short minuteNumber)

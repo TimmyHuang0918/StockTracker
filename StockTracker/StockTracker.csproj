@@ -84,7 +84,7 @@
     <Compile Include="LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Services\FakeCapitalApiService.cs" />
+    <Compile Include="Services\CapitalApiService.cs" />
     <Compile Include="Services\SKAPI.cs" />
     <Compile Include="StockDetailWindow.xaml.cs">
       <DependentUpon>StockDetailWindow.xaml</DependentUpon>

@@ -1,13 +1,10 @@
 using SKCOMLib;
-using StockManager.Services;
 using StockTracker.Services;
 using StockTracker.Models;
 using StockTracker.ViewModels;
 using System;
-using System.Globalization;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -15,10 +12,7 @@ namespace StockTracker
 {
     public partial class LoginWindow : Window
     {
-	private readonly SKAPI m_api = App.Api;
-	private bool _isSkEventsRegistered = false;
-	private bool _isSkQuoteConnectionReady;
-	private TaskCompletionSource<bool> _quoteConnectionReadyTcs;
+	private CapitalApiService _capitalApiService;
 	private MainWindowViewModel _mainWindowViewModel;
 	private string CredentialFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "login.dat");
 
@@ -26,7 +20,7 @@ namespace StockTracker
         {
             InitializeComponent();
 
-            var vm = new LoginViewModel(new FakeCapitalApiService());
+            var vm = new LoginViewModel(new CapitalApiService());
             vm.LoginSucceeded += OnLoginSucceeded;
             DataContext = vm;
 	    LoadSavedCredentials();
@@ -40,8 +34,16 @@ namespace StockTracker
             }
         }
 
-        private async void OnLoginSucceeded(FakeCapitalApiService apiService)
+        private async void OnLoginSucceeded(CapitalApiService apiService)
         {
+            if (DataContext is LoginViewModel loginVm)
+            {
+		PersistCredentials(loginVm.Account?.Trim() ?? string.Empty, loginVm.Password ?? string.Empty);
+            }
+
+	    _capitalApiService = apiService;
+	    _capitalApiService.KLineDataReceived += OnNotifyKLineData;
+
             var mainWindow = new MainWindow
             {
                 DataContext = new MainWindowViewModel(apiService)
@@ -67,102 +69,14 @@ namespace StockTracker
             Close();
         }
 
-	private async void btnLogin_Click(object sender, RoutedEventArgs e)
+	protected override void OnClosed(EventArgs e)
 	{
-	    if (!(DataContext is LoginViewModel vm))
+	    if (_capitalApiService != null)
 	    {
-		return;
+		_capitalApiService.KLineDataReceived -= OnNotifyKLineData;
 	    }
 
-	    var loginId = vm.Account?.Trim();
-	    var password = vm.Password ?? string.Empty;
-	    if (string.IsNullOrWhiteSpace(loginId) || string.IsNullOrWhiteSpace(password))
-	    {
-		vm.StatusMessage = "請輸入帳號與密碼";
-		return;
-	    }
-
-	    RegisterSkEventsIfNeeded();
-	    vm.StatusMessage = "登入中...";
-	    var resultCode = m_api.SKCenterLib_Login(loginId, password);
-	    Console.WriteLine($"登入結果: {resultCode}");
-
-	    if (resultCode == 0)
-	    {
-		PersistCredentials(loginId, password);
-
-		vm.StatusMessage = "登入成功";
-		var nCode = m_api.SKQuoteLib_EnterMonitorLONG();
-		if (nCode != 0)
-		{
-		    var monitorMessage = m_api.SKCenterLib_GetReturnCodeMessage(nCode);
-		    vm.StatusMessage = $"報價連線啟動失敗({nCode}) {monitorMessage}";
-		    return;
-		}
-
-		vm.StatusMessage = "等待報價伺服器...";
-		var connected = await WaitForQuoteConnectionReadyAsync(15000);
-		if (!connected)
-		{
-		    vm.StatusMessage = "報價伺服器連線逾時，請稍後重試";
-		    return;
-		}
-
-		OnLoginSucceeded(new FakeCapitalApiService());
-		return;
-	    }
-
-
-	    var message = m_api.SKCenterLib_GetReturnCodeMessage(resultCode);
-	    vm.StatusMessage = $"登入失敗({resultCode}) {message}";
-	}
-
-
-	private void RegisterSkEventsIfNeeded()
-	{
-	    if (_isSkEventsRegistered)
-	    {
-		return;
-	    }
-
-	    m_api.OnReplyMessage += OnAnnouncement;
-
-	    m_api.OnConnection += (nKind, code) =>
-	    {
-		Console.WriteLine($"[OnConnection] nKind={nKind}, code={code}");
-
-		if (nKind == 3003)
-		{
-		    _isSkQuoteConnectionReady = true;
-		    _quoteConnectionReadyTcs?.TrySetResult(true);
-		}
-	    };
-
-	    m_api.OnNotifyQuoteLONG += (nMarketNo, nIndex) =>
-	    {
-		var skStock = new SKSTOCKLONG();
-		var code = m_api.SKQuoteLib_GetStockByIndexLONG(nMarketNo, nIndex, ref skStock);
-		if (code == 0)
-		{
-		    
-		}
-	    };
-
-	    m_api.OnNotifyKLineData += OnNotifyKLineData;
-
-	    _isSkEventsRegistered = true;
-	}
-
-	private async Task<bool> WaitForQuoteConnectionReadyAsync(int timeoutMs)
-	{
-	    if (_isSkQuoteConnectionReady)
-	    {
-		return true;
-	    }
-
-	    _quoteConnectionReadyTcs = new TaskCompletionSource<bool>();
-	    var completedTask = await Task.WhenAny(_quoteConnectionReadyTcs.Task, Task.Delay(timeoutMs));
-	    return completedTask == _quoteConnectionReadyTcs.Task && _quoteConnectionReadyTcs.Task.Result;
+	    base.OnClosed(e);
 	}
 
 	private void LoadSavedCredentials()
@@ -217,21 +131,11 @@ namespace StockTracker
 	    }
 	}
 
-	private void OnAnnouncement(string strUserID, string bstrMessage, out short nConfirmCode)
+	private void OnNotifyKLineData(string symbol, CandleData candle)
 	{
-	    nConfirmCode = -1;
-	}
-
-	private void OnNotifyKLineData(string bstrStockNo, string bstrData)
-	{
-	    if (!TryParseKLineData(bstrData, out var candle))
-	    {
-		return;
-	    }
-
 	    Dispatcher.BeginInvoke(new Action(() =>
 	    {
-		_mainWindowViewModel?.ApplyKLineData(bstrStockNo, candle);
+		_mainWindowViewModel?.ApplyKLineData(symbol, candle);
 	    }));
 	}
 
@@ -246,7 +150,7 @@ namespace StockTracker
             foreach (var stock in _mainWindowViewModel.Stocks)
             {
 		MainWindow.BuildDateRangeForBars(stock.Symbol, interval, 120, out var startDate, out var endDate);
-		m_api.SKQuoteLib_RequestKLineAMByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
+		_capitalApiService?.RequestKLineByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
             }
 	}
 
@@ -273,93 +177,5 @@ namespace StockTracker
 	    }
 	}
 
-	private static void BuildDateRangeFor120Bars(string symbol, string interval, out string startDate, out string endDate)
-	{
-	    var minutesPerDay = ResolveTradingMinutesPerDay(symbol);
-	    int requiredTradingDays;
-	    switch (interval)
-	    {
-		case "日K":
-		    requiredTradingDays = 30;
-		    break;
-		case "5分K":
-		    requiredTradingDays = (int)Math.Ceiling(30 * 5d / minutesPerDay);
-		    break;
-		case "3分K":
-		    requiredTradingDays = (int)Math.Ceiling(30 * 3d / minutesPerDay);
-		    break;
-		default:
-		    requiredTradingDays = (int)Math.Ceiling(30d * 1d / minutesPerDay);
-		    break;
-	    }
-
-	    var calendarLookbackDays = Math.Max(5, (int)Math.Ceiling(requiredTradingDays * 7d / 5d) + 5);
-	    startDate = DateTime.Today.AddDays(-calendarLookbackDays).ToString("yyyyMMdd");
-	    endDate = DateTime.Today.ToString("yyyyMMdd");
-	}
-
-	private static int ResolveTradingMinutesPerDay(string symbol)
-	{
-	    if (!string.IsNullOrWhiteSpace(symbol) && symbol.Length == 4 && char.IsDigit(symbol[0]))
-	    {
-		return 240;
-	    }
-
-	    return 300;
-	}
-
-	private static bool TryParseKLineData(string raw, out CandleData candle)
-	{
-	    candle = null;
-	    if (string.IsNullOrWhiteSpace(raw))
-	    {
-		return false;
-	    }
-
-	    var parts = raw.Split(',');
-	    if (parts.Length < 6)
-	    {
-		return false;
-	    }
-
-	    string timeText;
-	    int valueStartIndex;
-	    if (parts.Length >= 7)
-	    {
-		timeText = $"{parts[0].Trim()} {parts[1].Trim()}";
-		valueStartIndex = 2;
-	    }
-	    else
-	    {
-		timeText = parts[0].Trim();
-		valueStartIndex = 1;
-	    }
-
-	    if (!DateTime.TryParse(timeText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time))
-	    {
-		return false;
-	    }
-
-	    if (!decimal.TryParse(parts[valueStartIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var open) ||
-		!decimal.TryParse(parts[valueStartIndex + 1], NumberStyles.Any, CultureInfo.InvariantCulture, out var high) ||
-		!decimal.TryParse(parts[valueStartIndex + 2], NumberStyles.Any, CultureInfo.InvariantCulture, out var low) ||
-		!decimal.TryParse(parts[valueStartIndex + 3], NumberStyles.Any, CultureInfo.InvariantCulture, out var close) ||
-		!long.TryParse(parts[valueStartIndex + 4], NumberStyles.Any, CultureInfo.InvariantCulture, out var volume))
-	    {
-		return false;
-	    }
-
-	    candle = new CandleData
-	    {
-		Time = time,
-		Open = open,
-		High = high,
-		Low = low,
-		Close = close,
-		Volume = volume
-	    };
-
-	    return true;
-	}
     }
 }

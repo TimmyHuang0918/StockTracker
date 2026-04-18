@@ -13,12 +13,12 @@ namespace StockTracker.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
-        private readonly FakeCapitalApiService _apiService;
+        private readonly CapitalApiService _apiService;
         private string _newSymbol;
         private string _systemMessage;
         private string _selectedGlobalKLineInterval = "日K";
         private string _selectedGlobalKLineCount = "120";
-	public MainWindowViewModel(FakeCapitalApiService apiService)
+	public MainWindowViewModel(CapitalApiService apiService)
         {
             _apiService = apiService;
             Stocks = new ObservableCollection<StockViewModel>();
@@ -27,6 +27,7 @@ namespace StockTracker.ViewModels
         }
 
         public ObservableCollection<StockViewModel> Stocks { get; }
+        public CapitalApiService ApiService => _apiService;
         public IReadOnlyList<string> GlobalKLineIntervals { get; } = new[] { "日K", "5分K", "3分K", "1分K" };
 	public IReadOnlyList<string> GlobalKLineCount { get; } = new[] { "30","60", "120", "150","240" };
 

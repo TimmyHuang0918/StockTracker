@@ -43,7 +43,7 @@
         <CheckBox Grid.Row="7" x:Name="RememberCredentialsCheckBox" Content="記住帳號密碼" VerticalAlignment="Center" Foreground="#FFFFF9F9"/>
 
         <StackPanel Grid.Row="9" Orientation="Horizontal" VerticalAlignment="Center">
-            <Button Content="登入群益 API" Name="btnLogin" Width="140" Height="34" Click="btnLogin_Click" />
+            <Button Content="登入群益 API" Name="btnLogin" Width="140" Height="34"  Command="{Binding LoginCommand}" />
             <TextBlock Text="{Binding StatusMessage}" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
         </StackPanel>
     </Grid>
