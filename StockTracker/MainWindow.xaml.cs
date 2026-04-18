@@ -50,11 +50,13 @@ namespace StockTracker
         {
             if ((e.OriginalSource as FrameworkElement)?.DataContext is StockViewModel stock)
             {
+                var detailVm = stock.CreateDetailViewModel();
                 var detailWindow = new StockDetailWindow
                 {
                     Owner = this,
-                    DataContext = stock
+                    DataContext = detailVm
                 };
+                detailWindow.Closed += (_, __) => stock.DetachDetailViewModel(detailVm);
                 detailWindow.Show();
             }
         }

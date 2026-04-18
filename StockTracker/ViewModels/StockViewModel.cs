@@ -17,6 +17,7 @@ namespace StockTracker.ViewModels
         private const int MinDisplayPoints = 20;
 
         private readonly List<CandleData> _candles = new List<CandleData>();
+        private readonly List<StockViewModel> _detailViewModels = new List<StockViewModel>();
         private readonly List<double> _macdSeries = new List<double>();
         private readonly List<double> _signalSeries = new List<double>();
         private readonly List<SignalMarkerData> _signalHistory = new List<SignalMarkerData>();
@@ -157,6 +158,35 @@ namespace StockTracker.ViewModels
                 OnPropertyChanged(nameof(_chartPaddingWidth));
                 RebuildVisuals();
             }
+        }
+
+        public StockViewModel CreateDetailViewModel()
+        {
+            var detailVm = new StockViewModel(Symbol, Name)
+            {
+                _selectedKLineInterval = _selectedKLineInterval
+            };
+
+            detailVm.OnPropertyChanged(nameof(SelectedKLineInterval));
+            detailVm.OnPropertyChanged(nameof(ChartWidth));
+
+            foreach (var candle in _candles)
+            {
+                detailVm.UpdateFromKLine(candle);
+            }
+
+            _detailViewModels.Add(detailVm);
+            return detailVm;
+        }
+
+        public void DetachDetailViewModel(StockViewModel detailVm)
+        {
+            if (detailVm == null)
+            {
+                return;
+            }
+
+            _detailViewModels.Remove(detailVm);
         }
 
         public double ChartWidth => CalculateChartWidth(GetDisplayCandles().Count);
@@ -348,6 +378,11 @@ namespace StockTracker.ViewModels
             UpdateSignal();
             RebuildVisuals();
             OnPropertyChanged(nameof(LatestVolume));
+
+	    foreach (var detailVm in _detailViewModels.ToList())
+	    {
+		detailVm.UpdateFromKLine(normalized);
+	    }
         }
 
 	public void ClearData()
@@ -382,6 +417,11 @@ namespace StockTracker.ViewModels
 	    _lastDisplayRsiSeries.Clear();
 	    ClearCrosshair();
 	    OnPropertyChanged(nameof(LatestVolume));
+
+	    foreach (var detailVm in _detailViewModels.ToList())
+	    {
+		detailVm.ClearData();
+	    }
 	}
 
         private double CalculateMa(int period)
