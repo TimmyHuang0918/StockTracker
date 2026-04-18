@@ -184,6 +184,14 @@
                 <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
             </Style>
 
+            <Style TargetType="ToolTip">
+                <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
+                <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="6"/>
+            </Style>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

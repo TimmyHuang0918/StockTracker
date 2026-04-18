@@ -39,7 +39,31 @@
                                    Text="Y軸：價格(元)    X軸：時間(由左到右)"/>
                         <Viewbox Stretch="Fill" Height="220" SizeChanged="ChartViewbox_OnSizeChanged"
                                  Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
-                        <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}">
+                        <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}"
+                                MouseMove="KLineCanvas_OnMouseMove" MouseLeave="KLineCanvas_OnMouseLeave"
+                                ToolTip="{Binding HoverInfo}">
+                            <ItemsControl ItemsSource="{Binding PriceLevels}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="0"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Line X1="0" X2="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=Canvas}}" Y1="0" Y2="0"
+                                                  Stroke="Gray" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                            <TextBlock Text="{Binding Text}" FontSize="9" Foreground="{DynamicResource MutedForegroundBrush}" Margin="2,-10,0,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <ItemsControl ItemsSource="{Binding Candles}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -110,6 +134,28 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding TimeLabels}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="0"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Line X1="0" X2="0" Y1="0" Y2="220" Stroke="{DynamicResource AppBorderBrush}" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Line X1="{Binding CrosshairX}" X2="{Binding CrosshairX}" Y1="0" Y2="220"
+                                  Visibility="{Binding CrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
+                            <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding CrosshairY}" Y2="{Binding CrosshairY}"
+                                  Visibility="{Binding CrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
                         </Canvas>
                         </Viewbox>
                     </StackPanel>

@@ -54,4 +54,10 @@ namespace StockTracker.Models
         public double Left { get; set; }
         public string Text { get; set; }
     }
+
+    public class PriceLevelVisual
+    {
+        public double Y { get; set; }
+        public string Text { get; set; }
+    }
 }

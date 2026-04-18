@@ -33,6 +33,14 @@ namespace StockTracker.ViewModels
         private string _signal = "中立";
         private string _lastNotifiedSignal = string.Empty;
         private int _maxDisplayPoints = 60;
+        private readonly List<CandleData> _lastDisplayCandles = new List<CandleData>();
+        private double _lastMinPrice;
+        private double _lastPriceRange = 1;
+        private double _crosshairX;
+        private double _crosshairY;
+        private Visibility _crosshairVisibility = Visibility.Collapsed;
+        private string _hoverInfo;
+        private double _chartPaddingWidth { get { return ChartWidth - 20; } }
 
         public StockViewModel(string symbol, string name)
         {
@@ -44,6 +52,7 @@ namespace StockTracker.ViewModels
             VolumeBars = new ObservableCollection<HistogramBarVisual>();
             SignalMarkers = new ObservableCollection<SignalMarkerVisual>();
             TimeLabels = new ObservableCollection<TimeLabelVisual>();
+            PriceLevels = new ObservableCollection<PriceLevelVisual>();
 
             Ma5Points = new PointCollection();
             Ma20Points = new PointCollection();
@@ -139,7 +148,7 @@ namespace StockTracker.ViewModels
 
                 _selectedKLineInterval = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(ChartWidth));
+                OnPropertyChanged(nameof(_chartPaddingWidth));
                 RebuildVisuals();
             }
         }
@@ -181,6 +190,47 @@ namespace StockTracker.ViewModels
         public ObservableCollection<HistogramBarVisual> VolumeBars { get; }
         public ObservableCollection<SignalMarkerVisual> SignalMarkers { get; }
         public ObservableCollection<TimeLabelVisual> TimeLabels { get; }
+        public ObservableCollection<PriceLevelVisual> PriceLevels { get; }
+
+        public double CrosshairX
+        {
+            get => _crosshairX;
+            private set
+            {
+                _crosshairX = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double CrosshairY
+        {
+            get => _crosshairY;
+            private set
+            {
+                _crosshairY = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public Visibility CrosshairVisibility
+        {
+            get => _crosshairVisibility;
+            private set
+            {
+                _crosshairVisibility = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string HoverInfo
+        {
+            get => _hoverInfo;
+            private set
+            {
+                _hoverInfo = value;
+                OnPropertyChanged();
+            }
+        }
 
         public event Action<StockViewModel, string> SignalTriggered;
 
@@ -198,8 +248,36 @@ namespace StockTracker.ViewModels
             }
 
             _maxDisplayPoints = candidate;
-            OnPropertyChanged(nameof(ChartWidth));
+
+	    OnPropertyChanged(nameof(ChartWidth));
             RebuildVisuals();
+        }
+
+        public void UpdateCrosshair(double x, double y)
+        {
+            if (_lastDisplayCandles.Count == 0)
+            {
+                CrosshairVisibility = Visibility.Collapsed;
+                HoverInfo = null;
+                return;
+            }
+
+            var clampedY = Math.Max(0, Math.Min(CandleChartHeight, y));
+            var nearestIndex = GetNearestCandleIndex(x, _lastDisplayCandles.Count, _chartPaddingWidth);
+            var centerX = CalculateCenterX(nearestIndex, _lastDisplayCandles.Count, _chartPaddingWidth);
+            var candle = _lastDisplayCandles[nearestIndex];
+            var priceAtCursor = _lastMinPrice + ((_lastPriceRange * (CandleChartHeight - clampedY - 5)) / Math.Max(1, CandleChartHeight - 10));
+
+            CrosshairX = centerX;
+            CrosshairY = clampedY;
+            CrosshairVisibility = Visibility.Visible;
+            HoverInfo = $"時間: {candle.Time:yyyy/MM/dd HH:mm}\n價格: {priceAtCursor:F2}\n成交量: {candle.Volume:N0}";
+        }
+
+        public void ClearCrosshair()
+        {
+            CrosshairVisibility = Visibility.Collapsed;
+            HoverInfo = null;
         }
 
         public void UpdateFromKLine(CandleData candle)
@@ -276,6 +354,8 @@ namespace StockTracker.ViewModels
 	    VolumeBars.Clear();
 	    SignalMarkers.Clear();
 	    TimeLabels.Clear();
+	    PriceLevels.Clear();
+	    ClearCrosshair();
 	    OnPropertyChanged(nameof(LatestVolume));
 	}
 
@@ -424,15 +504,19 @@ namespace StockTracker.ViewModels
             var minPrice = (double)candles.Min(x => x.Low);
             var maxPrice = (double)candles.Max(x => x.High);
             var priceRange = Math.Max(0.01, maxPrice - minPrice);
+            _lastDisplayCandles.Clear();
+            _lastDisplayCandles.AddRange(candles);
+            _lastMinPrice = minPrice;
+            _lastPriceRange = priceRange;
 
             Candles.Clear();
             var ma5Points = new PointCollection();
             var ma20Points = new PointCollection();
 
-            for (var i = 0; i < candles.Count; i++)
+	    for (var i = 0; i < candles.Count; i++)
             {
                 var item = candles[i];
-                var centerX = CalculateCenterX(i, candles.Count, ChartWidth);
+                var centerX = CalculateCenterX(i, candles.Count, _chartPaddingWidth);
                 var x = centerX - 4;
                 var openY = Scale((double)item.Open, minPrice, priceRange, CandleChartHeight);
                 var closeY = Scale((double)item.Close, minPrice, priceRange, CandleChartHeight);
@@ -467,7 +551,7 @@ namespace StockTracker.ViewModels
             LatestPriceY = Scale((double)LatestPrice, minPrice, priceRange, CandleChartHeight);
             OnPropertyChanged(nameof(Ma5Points));
             OnPropertyChanged(nameof(Ma20Points));
-            OnPropertyChanged(nameof(ChartWidth));
+            OnPropertyChanged(nameof(_chartPaddingWidth));
 
             SignalMarkers.Clear();
             foreach (var signal in _signalHistory.Where(x => x.Index >= 0))
@@ -478,7 +562,7 @@ namespace StockTracker.ViewModels
                     continue;
                 }
 
-                var x = CalculateCenterX(displayIndex, candles.Count, ChartWidth);
+                var x = CalculateCenterX(displayIndex, candles.Count, _chartPaddingWidth);
                 var y = Scale((double)signal.Price, minPrice, priceRange, CandleChartHeight);
                 var isBuy = signal.Signal == "買進訊號";
                 SignalMarkers.Add(new SignalMarkerVisual
@@ -494,7 +578,7 @@ namespace StockTracker.ViewModels
             var labelStep = Math.Max(1, candles.Count / 8);
             for (var i = 0; i < candles.Count; i += labelStep)
             {
-                var x = CalculateCenterX(i, candles.Count, ChartWidth);
+                var x = CalculateCenterX(i, candles.Count, _chartPaddingWidth);
                 var timeText = candles[i].Time.ToString(SelectedKLineInterval == "日K" ? "MM/dd" : "MM/dd HH:mm");
                 TimeLabels.Add(new TimeLabelVisual
                 {
@@ -509,10 +593,23 @@ namespace StockTracker.ViewModels
                 var lastIndex = candles.Count - 1;
                 TimeLabels.Add(new TimeLabelVisual
                 {
-                    X = CalculateCenterX(lastIndex, candles.Count, ChartWidth),
+                    X = CalculateCenterX(lastIndex, candles.Count, _chartPaddingWidth),
                     Text = candles[lastIndex].Time.ToString(SelectedKLineInterval == "日K" ? "MM/dd" : "MM/dd HH:mm")
                 });
                 TimeLabels[TimeLabels.Count - 1].Left = TimeLabels[TimeLabels.Count - 1].X - TimeLabels[TimeLabels.Count - 1].Text.Length * 2.8;
+            }
+
+            PriceLevels.Clear();
+            const int priceLevelCount = 5;
+            for (var i = 0; i < priceLevelCount; i++)
+            {
+                var ratio = i / (double)(priceLevelCount - 1);
+                var price = maxPrice - priceRange * ratio;
+                PriceLevels.Add(new PriceLevelVisual
+                {
+                    Y = Scale(price, minPrice, priceRange, CandleChartHeight),
+                    Text = price.ToString("F2")
+                });
             }
 
             RebuildMacdVisuals(candles);
@@ -559,7 +656,7 @@ namespace StockTracker.ViewModels
 
             for (var i = 0; i < _macdSeries.Count; i++)
             {
-                var centerX = CalculateCenterX(i, _macdSeries.Count, ChartWidth);
+                var centerX = CalculateCenterX(i, _macdSeries.Count, _chartPaddingWidth);
                 var x = centerX - 4;
                 var macdY = Scale(_macdSeries[i], min, range, MacdChartHeight);
                 var signalY = Scale(_signalSeries[i], min, range, MacdChartHeight);
@@ -603,7 +700,7 @@ namespace StockTracker.ViewModels
             {
                 var rsi = CalculateRsiAt(i, 14, closes);
                 var y = RsiChartHeight - (rsi / 100.0 * RsiChartHeight);
-                rsiPoints.Add(new Point(CalculateCenterX(i, closes.Count, ChartWidth), y));
+                rsiPoints.Add(new Point(CalculateCenterX(i, closes.Count, _chartPaddingWidth), y));
             }
 
             RSI = CalculateRsiAt(closes.Count - 1, 14, closes);
@@ -628,7 +725,7 @@ namespace StockTracker.ViewModels
                 var height = volume / maxVolume * VolumeChartHeight;
                 VolumeBars.Add(new HistogramBarVisual
                 {
-                    X = CalculateCenterX(i, sourceCandles.Count, ChartWidth) - 4,
+                    X = CalculateCenterX(i, sourceCandles.Count, _chartPaddingWidth) - 4,
                     Top = VolumeChartHeight - height,
                     Height = Math.Max(1, height),
                     Brush = Brushes.SteelBlue
@@ -697,6 +794,18 @@ namespace StockTracker.ViewModels
 
             var usableWidth = Math.Max(1, chartWidth - 20);
             return 10 + index * (usableWidth / (count - 1));
+        }
+
+        private static int GetNearestCandleIndex(double x, int count, double chartWidth)
+        {
+            if (count <= 1)
+            {
+                return 0;
+            }
+
+            var usableWidth = Math.Max(1, chartWidth - 20);
+            var ratio = Math.Max(0, Math.Min(1, (x - 10) / usableWidth));
+            return (int)Math.Round(ratio * (count - 1));
         }
 
         private class SignalMarkerData
