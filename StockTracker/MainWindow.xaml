@@ -26,36 +26,73 @@
         </Border>
 
         <DockPanel Grid.Row="1">
-            <TextBlock Text="已訂閱股票" FontSize="20" FontWeight="SemiBold" DockPanel.Dock="Left"/>
+            <TextBlock Text="已訂閱股票" FontSize="20" FontWeight="SemiBold" DockPanel.Dock="Left" Margin="0,10,0,0"/>
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                <ComboBox Width="120" Height="30" Margin="10,5,10,5" ItemsSource="{Binding GlobalKLineIntervals}" SelectedItem="{Binding SelectedGlobalKLineInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                      SelectionChanged="comboBoxChangeInterval_SelectionChanged">   
+                <ComboBox Width="125" Height="30" Margin="10,5,10,5" ItemsSource="{Binding GlobalKLineIntervals}" SelectedItem="{Binding SelectedGlobalKLineInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      SelectionChanged="comboBoxChangeInterval_SelectionChanged">
                     <ComboBox.Template>
-                            <ControlTemplate TargetType="ComboBox">
-                                <Grid>
-                                    <!-- 外框改成橢圓 -->
-                                    <Border CornerRadius="5" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
-                                        <DockPanel>
-                                            <!-- 顯示選取文字 -->
-                                            <ContentPresenter Margin="8,0,24,0"
+                        <ControlTemplate TargetType="ComboBox">
+                            <Grid>
+                                <!-- 外框改成橢圓 -->
+                                <Border CornerRadius="5" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                                    <DockPanel>
+                                        <!-- 顯示選取文字 -->
+                                        <ContentPresenter Margin="8,0,24,0"
                                               VerticalAlignment="Center"
                                               HorizontalAlignment="Left"
                                               Content="{TemplateBinding SelectionBoxItem}"
                                               ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                               ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
-                                            <!-- 下拉箭頭 -->
-                                            <ToggleButton DockPanel.Dock="Right" Width="20"
+                                        <!-- 下拉箭頭 -->
+                                        <ToggleButton DockPanel.Dock="Right" Width="20" Margin="30,0,4,0"
                                                   IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                                   Focusable="False"
                                                   ClickMode="Press"
                                                   Background="Transparent"
                                                   BorderThickness="0">
-                                                <Path VerticalAlignment="Center" HorizontalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="{TemplateBinding Foreground}"/>
-                                            </ToggleButton>
-                                        </DockPanel>
+                                            <Path VerticalAlignment="Center" HorizontalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="{TemplateBinding Foreground}"/>
+                                        </ToggleButton>
+                                    </DockPanel>
+                                </Border>
+                                <!-- 下拉清單 -->
+                                <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                    <Border CornerRadius="10" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                                        <ScrollViewer>
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
                                     </Border>
-                                    <!-- 下拉清單 -->
-                                    <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                </Popup>
+                            </Grid>
+                        </ControlTemplate>
+                    </ComboBox.Template>
+                </ComboBox>
+                <ComboBox Width="100" Margin="10,10,10,10" Height="30" ItemsSource="{Binding GlobalKLineCount}" SelectedItem="{Binding SelectedGlobalKLineCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    SelectionChanged="comboBoxChangeInterval_SelectionChanged">
+                    <ComboBox.Template>
+                        <ControlTemplate TargetType="{x:Type ComboBox}">
+                            <Grid>
+                                <!-- 外框改成橢圓 -->
+                                <Border CornerRadius="5" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                                    <DockPanel>
+                                        <!-- 顯示選取文字 -->
+                                        <ContentPresenter Margin="8,0,24,0"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Left"
+                                            Content="{TemplateBinding SelectionBoxItem}"
+                                            ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                            ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+                                        <ToggleButton DockPanel.Dock="Right" Width="20" Margin="20,0,4,0"
+                                            IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource Mode=TemplatedParent}}"
+                                            Focusable="False"
+                                            ClickMode="Press"
+                                            Background="Transparent"
+                                            BorderThickness="0">
+                                            <Path VerticalAlignment="Center" HorizontalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="{TemplateBinding Foreground}"/>
+                                        </ToggleButton>
+                                    </DockPanel>
+                                </Border>
+                                <!-- 下拉清單 -->
+                                <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
                                     <Border CornerRadius="10" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
                                         <ScrollViewer>
                                             <ItemsPresenter/>
@@ -102,7 +139,7 @@
                                             <Run Text=" - "/>
                                             <Run Text="{Binding Name, Mode=OneWay}"/>
                                         </TextBlock>
-                                        
+
                                     </DockPanel>
 
                                     <TextBlock DockPanel.Dock="Top">

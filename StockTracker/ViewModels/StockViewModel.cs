@@ -31,7 +31,8 @@ namespace StockTracker.ViewModels
         private double _latestPriceY;
         private double _macdZeroY;
         private string _selectedKLineInterval = "1分K";
-        private string _signal = "中立";
+	private string _selectedKLineCount= "120";
+	private string _signal = "中立";
         private string _lastNotifiedSignal = string.Empty;
         private int _maxDisplayPoints = 60;
         private readonly List<CandleData> _lastDisplayCandles = new List<CandleData>();
@@ -160,7 +161,24 @@ namespace StockTracker.ViewModels
             }
         }
 
-        public StockViewModel CreateDetailViewModel()
+	public string SelectedKLineCount
+	{
+	    get => _selectedKLineCount;
+	    set
+	    {
+		if (_selectedKLineCount == value || string.IsNullOrWhiteSpace(value))
+		{
+		    return;
+		}
+
+		_selectedKLineCount = value;
+		OnPropertyChanged();
+		OnPropertyChanged(nameof(_chartPaddingWidth));
+		RebuildVisuals();
+	    }
+	}
+
+	public StockViewModel CreateDetailViewModel()
         {
             var detailVm = new StockViewModel(Symbol, Name)
             {
