@@ -104,12 +104,14 @@ namespace StockTracker
 	    if (_apiService != null)
 	    {
 		_apiService.KLineDataReceived -= ApiService_OnKLineDataReceived;
+		_apiService.InstantCandleReceived -= ApiService_OnInstantCandleReceived;
 	    }
 
 	    _apiService = (DataContext as MainWindowViewModel)?.ApiService;
 	    if (_apiService != null)
 	    {
 		_apiService.KLineDataReceived += ApiService_OnKLineDataReceived;
+		_apiService.InstantCandleReceived += ApiService_OnInstantCandleReceived;
 	    }
 	}
 
@@ -118,6 +120,23 @@ namespace StockTracker
 	    Dispatcher.BeginInvoke(new Action(() =>
 	    {
 		(DataContext as MainWindowViewModel)?.ApplyKLineData(symbol, candle);
+	    }));
+	}
+
+	private void ApiService_OnInstantCandleReceived(string symbol, CandleData candle)
+	{
+	    Dispatcher.BeginInvoke(new Action(() =>
+	    {
+		if (!(DataContext is MainWindowViewModel vm))
+		{
+		    return;
+		}
+
+		var normalized = symbol?.Trim() ?? string.Empty;
+		var stock = vm.Stocks.FirstOrDefault(x =>
+		    string.Equals(x.Symbol, normalized, StringComparison.OrdinalIgnoreCase) ||
+		    normalized.EndsWith(x.Symbol, StringComparison.OrdinalIgnoreCase));
+		stock?.ApplyInstantCandle(candle, stock.SelectedKLineInterval);
 	    }));
 	}
 

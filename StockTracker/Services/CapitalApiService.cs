@@ -19,6 +19,7 @@ namespace StockTracker.Services
 
         public event Action<string, CandleData> KLineDataReceived;
 	public event Action<string, SKSTOCKLONG> InstantDataRecevied;
+	public event Action<string, CandleData> InstantCandleReceived;
 
         public bool IsLoggedIn { get; private set; }
 
@@ -117,6 +118,10 @@ namespace StockTracker.Services
 		if(code == 0)
 		{
 		    InstantDataRecevied?.Invoke(skStock.bstrStockNo, skStock);
+		    if (TryBuildInstantCandle(skStock, out var candle))
+		    {
+			InstantCandleReceived?.Invoke(skStock.bstrStockNo, candle);
+		    }
 		}
 	    };
 
@@ -187,7 +192,30 @@ namespace StockTracker.Services
 	    };
 
 	    return true;
+	}
 
-        }
+	private static bool TryBuildInstantCandle(SKSTOCKLONG skStock, out CandleData candle)
+	{
+	    candle = null;
+	    var close = skStock.nClose / 100;
+	    var open = skStock.nOpen / 100;
+	    var high = skStock.nHigh / 100;
+	    var low = skStock.nLow / 100;
+	    var volume = skStock.nYQty;
+	    var time = skStock.nTradingDay.ToString() + (skStock.nDealTime / 100).ToString();
+	    var date = DateTime.TryParseExact(time, "yyyyMMddHHmm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedTime);
+
+	    candle = new CandleData
+	    {
+		Time = parsedTime,
+		Open = open,
+		High = high,
+		Low = low,
+		Close = close,
+		Volume = volume
+	    };
+
+	    return true;
+	}
     }
 }

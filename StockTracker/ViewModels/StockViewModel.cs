@@ -347,6 +347,36 @@ namespace StockTracker.ViewModels
             HoverInfo = null;
         }
 
+	public void ApplyInstantCandle(CandleData instantCandle, string interval)
+	{
+	    if (instantCandle == null)
+	    {
+		return;
+	    }
+
+	    var alignedTime = AlignTimeToInterval(instantCandle.Time, interval);
+	    var incoming = new CandleData
+	    {
+		Time = alignedTime,
+		Open = instantCandle.Open,
+		High = instantCandle.High,
+		Low = instantCandle.Low,
+		Close = instantCandle.Close,
+		Volume = instantCandle.Volume
+	    };
+
+	    var existing = _candles.FirstOrDefault(x => x.Time == alignedTime);
+	    if (existing != null)
+	    {
+		incoming.Open = existing.Open;
+		incoming.High = Math.Max(existing.High, incoming.High);
+		incoming.Low = Math.Min(existing.Low, incoming.Low);
+		incoming.Volume = Math.Max(existing.Volume, incoming.Volume);
+	    }
+
+	    UpdateFromKLine(incoming);
+	}
+
         public void UpdateFromKLine(CandleData candle)
         {
             if (candle == null)
@@ -955,6 +985,27 @@ namespace StockTracker.ViewModels
             var ratio = Math.Max(0, Math.Min(1, (x - 50) / usableWidth));
             return (int)Math.Round(ratio * (count - 1));
         }
+
+	private static DateTime AlignTimeToInterval(DateTime time, string interval)
+	{
+	    switch (interval)
+	    {
+		case "5分K":
+		{
+		    var minute = (time.Minute / 5) * 5;
+		    return new DateTime(time.Year, time.Month, time.Day, time.Hour, minute, 0);
+		}
+		case "3分K":
+		{
+		    var minute = (time.Minute / 3) * 3;
+		    return new DateTime(time.Year, time.Month, time.Day, time.Hour, minute, 0);
+		}
+		case "日K":
+		    return time.Date;
+		default:
+		    return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0);
+	    }
+	}
 
         private class SignalMarkerData
         {
