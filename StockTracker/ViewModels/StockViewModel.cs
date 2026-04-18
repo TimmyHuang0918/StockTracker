@@ -34,6 +34,9 @@ namespace StockTracker.ViewModels
         private string _lastNotifiedSignal = string.Empty;
         private int _maxDisplayPoints = 60;
         private readonly List<CandleData> _lastDisplayCandles = new List<CandleData>();
+        private readonly List<double> _lastDisplayMacdSeries = new List<double>();
+        private readonly List<double> _lastDisplaySignalSeries = new List<double>();
+        private readonly List<double> _lastDisplayRsiSeries = new List<double>();
         private double _lastMinPrice;
         private double _lastPriceRange = 1;
         private double _crosshairX;
@@ -270,14 +273,24 @@ namespace StockTracker.ViewModels
 
             var clampedY = Math.Max(0, Math.Min(CandleChartHeight, y));
             var nearestIndex = GetNearestCandleIndex(x, _lastDisplayCandles.Count, _chartPaddingWidth);
-            var centerX = CalculateCenterX(nearestIndex, _lastDisplayCandles.Count, _chartPaddingWidth);
+            var clampedX = Math.Max(0, Math.Min(_chartPaddingWidth, x));
             var candle = _lastDisplayCandles[nearestIndex];
             var priceAtCursor = _lastMinPrice + ((_lastPriceRange * (CandleChartHeight - clampedY - 5)) / Math.Max(1, CandleChartHeight - 10));
+            var macd = nearestIndex < _lastDisplayMacdSeries.Count ? _lastDisplayMacdSeries[nearestIndex] : 0;
+            var signal = nearestIndex < _lastDisplaySignalSeries.Count ? _lastDisplaySignalSeries[nearestIndex] : 0;
+            var hist = macd - signal;
+            var rsi = nearestIndex < _lastDisplayRsiSeries.Count ? _lastDisplayRsiSeries[nearestIndex] : 50;
 
-            CrosshairX = centerX;
+            CrosshairX = clampedX;
             CrosshairY = clampedY;
             CrosshairVisibility = Visibility.Visible;
-            HoverInfo = $"時間: {candle.Time:yyyy/MM/dd HH:mm}\n價格: {priceAtCursor:F2}\n成交量: {candle.Volume:N0}";
+            HoverInfo =
+                $"時間: {candle.Time:yyyy/MM/dd HH:mm}" +
+                $"\n開: {candle.Open:F2} 高: {candle.High:F2} 低: {candle.Low:F2} 收: {candle.Close:F2}" +
+                $"\n游標價: {priceAtCursor:F2}" +
+                $"\n成交量: {candle.Volume:N0}" +
+                $"\nMACD: {macd:F4}  DEA: {signal:F4}  柱狀: {hist:F4}" +
+                $"\nRSI: {rsi:F2}";
         }
 
         public void ClearCrosshair()
@@ -364,6 +377,9 @@ namespace StockTracker.ViewModels
 	    MacdLevels.Clear();
 	    RsiLevels.Clear();
 	    VolumeLevels.Clear();
+	    _lastDisplayMacdSeries.Clear();
+	    _lastDisplaySignalSeries.Clear();
+	    _lastDisplayRsiSeries.Clear();
 	    ClearCrosshair();
 	    OnPropertyChanged(nameof(LatestVolume));
 	}
@@ -517,6 +533,27 @@ namespace StockTracker.ViewModels
             _lastDisplayCandles.AddRange(candles);
             _lastMinPrice = minPrice;
             _lastPriceRange = priceRange;
+            _lastDisplayMacdSeries.Clear();
+            _lastDisplaySignalSeries.Clear();
+            _lastDisplayRsiSeries.Clear();
+
+            var displayCloses = candles.Select(x => (double)x.Close).ToList();
+            if (displayCloses.Count > 0)
+            {
+                var ema12 = CalculateEmaSeries(displayCloses, 12);
+                var ema26 = CalculateEmaSeries(displayCloses, 26);
+                for (var i = 0; i < displayCloses.Count; i++)
+                {
+                    _lastDisplayMacdSeries.Add(ema12[i] - ema26[i]);
+                }
+
+                _lastDisplaySignalSeries.AddRange(CalculateEmaSeries(_lastDisplayMacdSeries, 9));
+
+                for (var i = 0; i < displayCloses.Count; i++)
+                {
+                    _lastDisplayRsiSeries.Add(CalculateRsiAt(i, 14, displayCloses));
+                }
+            }
 
             Candles.Clear();
             var ma5Points = new PointCollection();
@@ -856,8 +893,8 @@ namespace StockTracker.ViewModels
                 return 0;
             }
 
-            var usableWidth = Math.Max(1, chartWidth - 20);
-            var ratio = Math.Max(0, Math.Min(1, (x - 10) / usableWidth));
+            var usableWidth = Math.Max(1, chartWidth - 60);
+            var ratio = Math.Max(0, Math.Min(1, (x - 50) / usableWidth));
             return (int)Math.Round(ratio * (count - 1));
         }
 
