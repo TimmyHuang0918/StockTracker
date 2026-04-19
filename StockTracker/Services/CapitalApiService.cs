@@ -104,6 +104,7 @@ namespace StockTracker.Services
 	    }
 	    return pSKStock;
 	}
+
 	private void RegisterSkEventsIfNeeded()
 	{
 	    if (_isSkEventsRegistered)
