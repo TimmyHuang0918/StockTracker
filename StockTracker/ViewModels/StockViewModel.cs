@@ -90,7 +90,7 @@ namespace StockTracker.ViewModels
             private set
             {
                 _changePercent = value;
-                OnPropertyChanged();
+                OnPropertyChanged(nameof(ChangePercent));
             }
         }
 
@@ -337,7 +337,8 @@ namespace StockTracker.ViewModels
             HoverInfo =
                 $"時間: {candle.Time:yyyy/MM/dd HH:mm}" +
                 $"\n開: {candle.Open:F2} 高: {candle.High:F2} 低: {candle.Low:F2} 收: {candle.Close:F2}" +
-                $"\n游標價: {priceAtCursor:F2}" +
+                $"\n漲跌幅: {candle.PercentageChange:F2} %" +
+		$"\n游標價: {priceAtCursor:F2}" +
                 $"\n成交量: {candle.Volume:N0}" +
                 $"\nMACD: {macd:F4}  DEA: {signal:F4}  柱狀: {hist:F4}" +
                 $"\nRSI: {rsi:F2}" +
@@ -419,11 +420,9 @@ namespace StockTracker.ViewModels
 
             var latest = _candles.LastOrDefault();
             LatestPrice = latest?.Close ?? normalized.Close;
-            var first = _candles.FirstOrDefault()?.Open ?? LatestPrice;
-            ChangePercent = first == 0 ? 0 : Math.Round((LatestPrice - first) / first * 100, 2);
-
-            RecalculateIndicatorsOnCandles();
-            UpdateSignal();
+	    RecalculateIndicatorsOnCandles();
+	    ChangePercent = latest.PercentageChange;
+	    UpdateSignal();
             RebuildVisuals();
             OnPropertyChanged(nameof(LatestVolume));
 
@@ -509,7 +508,9 @@ namespace StockTracker.ViewModels
                 _candles[i].MacdSignal = signalSeries[i];
                 _candles[i].MacdHistogram = macdSeries[i] - signalSeries[i];
                 _candles[i].RSI = CalculateRsiAt(i, 14, closes);
-            }
+                if(i > 0)
+                    _candles[i].PercentageChange = (_candles[i].Close - _candles[i - 1].Close) / _candles[i - 1].Close * 100;
+	    }
 
             var latest = _candles[_candles.Count - 1];
             MA5 = latest.MA5;

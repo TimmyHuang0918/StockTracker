@@ -19,7 +19,8 @@ namespace StockTracker.Models
         public decimal High { get; set; }
         public decimal Low { get; set; }
         public decimal Close { get; set; }
-        public long Volume { get; set; }
+	public decimal PercentageChange { get; set; }
+	public long Volume { get; set; }
         public double MA5 { get; set; }
         public double MA20 { get; set; }
         public double MACD { get; set; }

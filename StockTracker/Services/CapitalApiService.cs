@@ -81,6 +81,16 @@ namespace StockTracker.Services
 	    return _api.SKCenterLib_GetReturnCodeMessage(code);
 	}
 
+	public SKSTOCKLONG GetRelativeStockMessage(string symbol)
+	{
+	    var pSKStock = new SKSTOCKLONG();
+	    int nCode = _api.SKQuoteLib_GetStockByNoLONG(symbol, ref pSKStock);
+	    if (nCode == 0)
+	    {
+		return pSKStock;
+	    }
+	    return pSKStock;
+	}
 	private void RegisterSkEventsIfNeeded()
 	{
 	    if (_isSkEventsRegistered)

@@ -22,8 +22,7 @@ namespace StockTracker.ViewModels
         {
             _apiService = apiService;
             Stocks = new ObservableCollection<StockViewModel>();
-            SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbol));
-            ExportCsvCommand = new RelayCommand(_ => ExportToCsv(), _ => Stocks.Any());
+            SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
         }
 
         public ObservableCollection<StockViewModel> Stocks { get; }
@@ -88,9 +87,20 @@ namespace StockTracker.ViewModels
             set
             {
                 _newSymbol = value;
-                OnPropertyChanged();
-            }
+                OnPropertyChanged(); 
+                OnPropertyChanged(nameof(NewSymbolRelativeName));
+	    }
         }
+
+        public string NewSymbolRelativeName
+        {
+            get
+            {
+                var stockInfo =  _apiService.GetRelativeStockMessage(_newSymbol);
+                var isEmpty = stockInfo.bstrStockName == "";
+		return isEmpty ? "None" : stockInfo.bstrStockName;
+	    }
+	}
 
         public ICommand SubscribeCommand { get; }
         public ICommand ExportCsvCommand { get; }
@@ -119,7 +129,7 @@ namespace StockTracker.ViewModels
                 return;
             }
 
-            await AddOrSubscribeAsync(symbol, $"{symbol} Corp");
+            await AddOrSubscribeAsync(symbol, NewSymbolRelativeName);
             NewSymbol = string.Empty;
         }
 
@@ -141,34 +151,6 @@ namespace StockTracker.ViewModels
         {
             var message = $"{DateTime.Now:HH:mm:ss} {stock.Symbol} {stock.Name} -> {signal}";
             SystemMessage = message;
-        }
-
-        private void ExportToCsv()
-        {
-            var exportDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Exports");
-            Directory.CreateDirectory(exportDir);
-
-            var filePath = Path.Combine(exportDir, $"StockSnapshot_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-            var sb = new StringBuilder();
-            sb.AppendLine("Symbol,Name,LatestPrice,ChangePercent,MA5,MA20,MACD,RSI,Signal");
-
-            foreach (var item in Stocks)
-            {
-                sb.AppendLine(string.Format(
-                    "{0},{1},{2:F2},{3:F2},{4:F2},{5:F2},{6:F4},{7:F2},{8}",
-                    item.Symbol,
-                    item.Name,
-                    item.LatestPrice,
-                    item.ChangePercent,
-                    item.MA5,
-                    item.MA20,
-                    item.MACD,
-                    item.RSI,
-                    item.Signal));
-            }
-
-            File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
-            SystemMessage = $"已匯出 CSV：{filePath}";
         }
     }
 }

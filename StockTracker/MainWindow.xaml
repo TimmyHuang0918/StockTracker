@@ -28,6 +28,7 @@
         <DockPanel Grid.Row="1">
             <TextBlock Text="已訂閱股票" FontSize="20" FontWeight="SemiBold" DockPanel.Dock="Left" Margin="0,10,0,0"/>
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <TextBlock Text="週期" FontSize="18" Margin="12" RenderTransformOrigin="-1.52,0.529" />
                 <ComboBox Width="125" Height="30" Margin="10,5,10,5" ItemsSource="{Binding GlobalKLineIntervals}" SelectedItem="{Binding SelectedGlobalKLineInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       SelectionChanged="comboBoxChangeInterval_SelectionChanged">
                     <ComboBox.Template>
@@ -66,7 +67,8 @@
                         </ControlTemplate>
                     </ComboBox.Template>
                 </ComboBox>
-                <ComboBox Width="100" Margin="10,10,10,10" Height="30" ItemsSource="{Binding GlobalKLineCount}" SelectedItem="{Binding SelectedGlobalKLineCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                <TextBlock Text="K棒數量" FontSize="18" Margin="12" RenderTransformOrigin="-1.52,0.529" />
+                <ComboBox Width="100" Margin="0,10,10,10" Height="30" ItemsSource="{Binding GlobalKLineCount}" SelectedItem="{Binding SelectedGlobalKLineCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                     SelectionChanged="comboBoxChangeInterval_SelectionChanged">
                     <ComboBox.Template>
                         <ControlTemplate TargetType="{x:Type ComboBox}">
@@ -106,8 +108,8 @@
 
                 <TextBox Width="120" Height="30" VerticalContentAlignment="Center" Name="textBoxSubscribe"
                          Text="{Binding NewSymbol, UpdateSourceTrigger=PropertyChanged}"/>
-                <Button Content="訂閱" Name="btnSubscribe" Width="80" Margin="8,0,0,0" Click="btnSubscribe_Click" />
-                <Button Content="匯出 CSV" Width="90" Margin="8,0,0,0" Command="{Binding ExportCsvCommand}"/>
+                <TextBlock  Text="{Binding NewSymbolRelativeName}" Foreground="Gray" FontSize="18" Margin="12" RenderTransformOrigin="-1.52,0.529" />
+                <Button Content="訂閱" Name="btnSubscribe" Width="80" Margin="8" Click="btnSubscribe_Click" />
             </StackPanel>
         </DockPanel>
 
@@ -150,7 +152,7 @@
                                     <TextBlock Margin="0,0,0,6">
                                         <Run Text="最新價格: "/>
                                         <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}"/>
-                                        <Run Text="   漲跌幅: "/>
+                                        <Run Text=" 漲跌幅: "/>
                                         <Run Text="{Binding ChangePercent, StringFormat=F2, Mode=OneWay}"/>
                                         <Run Text="%   MA5: "/>
                                         <Run Text="{Binding MA5, StringFormat=F2, Mode=OneWay}"/>

@@ -127,7 +127,7 @@ namespace StockTracker
 	{
 	    Dispatcher.BeginInvoke(new Action(() =>
 	    {
-		if (!(DataContext is MainWindowViewModel vm))
+		if (!(DataContext is MainWindowViewModel vm) || candle.Close == 0)
 		{
 		    return;
 		}
