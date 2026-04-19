@@ -138,6 +138,16 @@
                             <Border Padding="8" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceAltBrush}">
                                 <StackPanel>
                                     <DockPanel Margin="0,0,0,6">
+                                        <Border DockPanel.Dock="Right" Padding="6,3" Margin="8,0,0,0"
+                                                Background="#AA1E1E1E" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4">
+                                            <TextBlock FontSize="15" FontWeight="SemiBold">
+                                                <Run Text="現價 " Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}" Foreground="{Binding LatestChangeBrush, Mode=OneWay}"/>
+                                                <Run Text="  (" Foreground="{Binding LatestChangeBrush, Mode=OneWay}"/>
+                                                <Run Text="{Binding ChangePercentText, Mode=OneWay}" Foreground="{Binding LatestChangeBrush, Mode=OneWay}"/>
+                                                <Run Text=" )" Foreground="{Binding LatestChangeBrush, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Border>
                                         <TextBlock FontWeight="SemiBold" FontSize="14" DockPanel.Dock="Left">
                                             <Run Text="{Binding Symbol, Mode=OneWay}"/>
                                             <Run Text=" - "/>

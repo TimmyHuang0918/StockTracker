@@ -25,6 +25,7 @@ namespace StockTracker.ViewModels
 
         private decimal _latestPrice;
         private decimal _changePercent;
+        private Brush _latestChangeBrush = Brushes.Gainsboro;
         private double _ma5;
         private double _ma20;
         private double _macd;
@@ -91,6 +92,20 @@ namespace StockTracker.ViewModels
             {
                 _changePercent = value;
                 OnPropertyChanged(nameof(ChangePercent));
+                OnPropertyChanged(nameof(ChangePercentText));
+                UpdateLatestChangeBrush();
+            }
+        }
+
+        public string ChangePercentText => ChangePercent.ToString("+0.00;-0.00;0.00") + "%";
+
+        public Brush LatestChangeBrush
+        {
+            get => _latestChangeBrush;
+            private set
+            {
+                _latestChangeBrush = value;
+                OnPropertyChanged();
             }
         }
 
@@ -439,6 +454,7 @@ namespace StockTracker.ViewModels
 	    _lastNotifiedSignal = string.Empty;
 	    LatestPrice = 0;
 	    ChangePercent = 0;
+	    UpdateLatestChangeBrush();
 	    MA5 = 0;
 	    MA20 = 0;
 	    MACD = 0;
@@ -546,6 +562,23 @@ namespace StockTracker.ViewModels
             }
 
             return result;
+        }
+
+        private void UpdateLatestChangeBrush()
+        {
+            if (ChangePercent > 0)
+            {
+                LatestChangeBrush = Brushes.IndianRed;
+                return;
+            }
+
+            if (ChangePercent < 0)
+            {
+                LatestChangeBrush = Brushes.MediumSeaGreen;
+                return;
+            }
+
+            LatestChangeBrush = Brushes.Gainsboro;
         }
 
         private void UpdateSignal()
