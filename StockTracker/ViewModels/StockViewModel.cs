@@ -1,4 +1,5 @@
 using StockTracker.Models;
+using StockManager.Library;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -34,6 +35,7 @@ namespace StockTracker.ViewModels
 	private string _selectedKLineCount= "120";
 	private string _signal = "中立";
         private string _lastNotifiedSignal = string.Empty;
+        private List<string> _latestRecommendationReasons = new List<string>();
         private int _maxDisplayPoints = 60;
         private readonly List<CandleData> _lastDisplayCandles = new List<CandleData>();
         private readonly List<double> _lastDisplayMacdSeries = new List<double>();
@@ -338,7 +340,8 @@ namespace StockTracker.ViewModels
                 $"\n游標價: {priceAtCursor:F2}" +
                 $"\n成交量: {candle.Volume:N0}" +
                 $"\nMACD: {macd:F4}  DEA: {signal:F4}  柱狀: {hist:F4}" +
-                $"\nRSI: {rsi:F2}";
+                $"\nRSI: {rsi:F2}" +
+                BuildRecommendationTooltip(nearestIndex, candle);
         }
 
         public void ClearCrosshair()
@@ -570,40 +573,80 @@ namespace StockTracker.ViewModels
         private void UpdateSignal()
         {
             var analysisCandles = GetDisplayCandles();
-            if (analysisCandles.Count < 21)
+            if (!analysisCandles.Any())
             {
                 Signal = "資料不足";
+                _latestRecommendationReasons.Clear();
                 return;
             }
 
-            var previousMa5 = analysisCandles.Skip(analysisCandles.Count - 6).Take(5).Average(x => (double)x.Close);
-            var previousMa20 = analysisCandles.Skip(analysisCandles.Count - 21).Take(20).Average(x => (double)x.Close);
+            var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                analysisCandles,
+                (double)LatestPrice,
+                (double?)ChangePercent);
 
-            if (previousMa5 <= previousMa20 && MA5 > MA20)
-            {
-                Signal = "買進訊號";
-            }
-            else if (previousMa5 >= previousMa20 && MA5 < MA20)
-            {
-                Signal = "賣出訊號";
-            }
-            else
-            {
-                Signal = "中立";
-            }
+            _latestRecommendationReasons = recommendation.Reasons ?? new List<string>();
+            Signal = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
 
-            if ((Signal == "買進訊號" || Signal == "賣出訊號") && Signal != _lastNotifiedSignal)
+            var actionSignal = ResolveActionSignal(Signal);
+            if ((actionSignal == "買進訊號" || actionSignal == "賣出訊號") && actionSignal != _lastNotifiedSignal)
             {
-                _lastNotifiedSignal = Signal;
+                _lastNotifiedSignal = actionSignal;
                 _signalHistory.Add(new SignalMarkerData
                 {
                     Index = _candles.Count - 1,
                     Price = analysisCandles.Last().Close,
-                    Signal = Signal
+                    Signal = actionSignal
                 });
-                SignalTriggered?.Invoke(this, Signal);
+                SignalTriggered?.Invoke(this, actionSignal);
             }
         }
+
+	private static string ResolveActionSignal(string suggestion)
+	{
+	    if (string.IsNullOrWhiteSpace(suggestion))
+	    {
+		return "中立";
+	    }
+
+	    if (suggestion.Contains("買入") || suggestion.Contains("偏多"))
+	    {
+		return "買進訊號";
+	    }
+
+	    if (suggestion.Contains("賣出") || suggestion.Contains("偏空"))
+	    {
+		return "賣出訊號";
+	    }
+
+	    return "中立";
+	}
+
+	private string BuildRecommendationTooltip(int nearestIndex, CandleData candle)
+	{
+	    if (_lastDisplayCandles == null || _lastDisplayCandles.Count == 0 || nearestIndex < 0 || nearestIndex >= _lastDisplayCandles.Count)
+	    {
+		return string.Empty;
+	    }
+
+	    var slice = _lastDisplayCandles.Take(nearestIndex + 1).ToList();
+	    double? previousClose = null;
+	    if (nearestIndex > 0)
+	    {
+		previousClose = (double)_lastDisplayCandles[nearestIndex - 1].Close;
+	    }
+
+	    double? changePercent = null;
+	    if (previousClose.HasValue && previousClose.Value != 0)
+	    {
+		changePercent = ((double)candle.Close - previousClose.Value) / previousClose.Value * 100d;
+	    }
+
+	    var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(slice, (double)candle.Close, changePercent, previousClose);
+	    var suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
+	    var topReasons = (recommendation.Reasons ?? new List<string>()).Take(4).Select(r => $"- {r}");
+	    return $"\n建議: {suggestion} ({recommendation.Score})\n建議理由:\n" + string.Join("\n", topReasons);
+	}
 
         private void RebuildVisuals()
         {
