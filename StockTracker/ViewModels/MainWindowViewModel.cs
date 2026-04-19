@@ -18,11 +18,13 @@ namespace StockTracker.ViewModels
         private string _systemMessage;
         private string _selectedGlobalKLineInterval = "日K";
         private string _selectedGlobalKLineCount = "120";
+	private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
 	public MainWindowViewModel(CapitalApiService apiService)
         {
             _apiService = apiService;
             Stocks = new ObservableCollection<StockViewModel>();
             SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
+	    UnsubscribeCommand = new RelayCommand(async _ => await UnsubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbol));
         }
 
         public ObservableCollection<StockViewModel> Stocks { get; }
@@ -103,13 +105,23 @@ namespace StockTracker.ViewModels
 	}
 
         public ICommand SubscribeCommand { get; }
+        public ICommand UnsubscribeCommand { get; }
         public ICommand ExportCsvCommand { get; }
 
         public async Task InitializeAsync()
         {
-            await AddOrSubscribeAsync("2330", "台積電");
-            await AddOrSubscribeAsync("2317", "鴻海");
-            await AddOrSubscribeAsync("0050", "元大台灣50");
+	    var savedSymbols = LoadSavedSubscriptions();
+	    if (savedSymbols.Count == 0)
+	    {
+		savedSymbols.Add("2330");
+		savedSymbols.Add("2317");
+		savedSymbols.Add("0050");
+	    }
+
+	    foreach (var symbol in savedSymbols)
+	    {
+		await AddOrSubscribeAsync(symbol, _apiService.GetRelativeStockMessage(symbol).bstrStockName);
+	    }
         }
 
         public void ApplyKLineData(string symbol, CandleData candle)
@@ -131,7 +143,28 @@ namespace StockTracker.ViewModels
 
             await AddOrSubscribeAsync(symbol, NewSymbolRelativeName);
             NewSymbol = string.Empty;
+	    SaveSubscriptions();
         }
+
+	private async Task UnsubscribeSymbolAsync()
+	{
+	    var symbol = NewSymbol?.Trim();
+	    if (string.IsNullOrWhiteSpace(symbol))
+	    {
+		return;
+	    }
+
+	    var target = Stocks.FirstOrDefault(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+	    if (target == null)
+	    {
+		return;
+	    }
+
+	    Stocks.Remove(target);
+	    await _apiService.UnsubscribeAsync(symbol);
+	    SaveSubscriptions();
+	    NewSymbol = string.Empty;
+	}
 
         private async Task AddOrSubscribeAsync(string symbol, string name)
         {
@@ -145,6 +178,7 @@ namespace StockTracker.ViewModels
             stockVm.SelectedKLineInterval = SelectedGlobalKLineInterval;
             stockVm.SignalTriggered += StockVmOnSignalTriggered;
             Stocks.Add(stockVm);
+	    SaveSubscriptions();
         }
 
         private void StockVmOnSignalTriggered(StockViewModel stock, string signal)
@@ -152,5 +186,31 @@ namespace StockTracker.ViewModels
             var message = $"{DateTime.Now:HH:mm:ss} {stock.Symbol} {stock.Name} -> {signal}";
             SystemMessage = message;
         }
+
+	private List<string> LoadSavedSubscriptions()
+	{
+	    if (!File.Exists(SubscriptionFilePath))
+	    {
+		return new List<string>();
+	    }
+
+	    return File.ReadAllLines(SubscriptionFilePath, Encoding.UTF8)
+		.Select(x => x.Trim())
+		.Where(x => !string.IsNullOrWhiteSpace(x))
+		.Distinct(StringComparer.OrdinalIgnoreCase)
+		.ToList();
+	}
+
+	private void SaveSubscriptions()
+	{
+	    var dir = Path.GetDirectoryName(SubscriptionFilePath);
+	    if (!Directory.Exists(dir))
+	    {
+		Directory.CreateDirectory(dir);
+	    }
+
+	    var lines = Stocks.Select(x => x.Symbol).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+	    File.WriteAllLines(SubscriptionFilePath, lines, Encoding.UTF8);
+	}
     }
 }

@@ -81,6 +81,14 @@ namespace StockTracker
 	    _apiService?.RequestKLineByDate(symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
 	}
 
+	private void btnUnsubscribe_Click(object sender, RoutedEventArgs e)
+	{
+	    if (DataContext is MainWindowViewModel vm && vm.UnsubscribeCommand.CanExecute(null))
+	    {
+		vm.UnsubscribeCommand.Execute(null);
+	    }
+	}
+
 	private void comboBoxChangeInterval_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
 	{
 	    if (!(DataContext is MainWindowViewModel vm) || vm.Stocks.Count == 0)

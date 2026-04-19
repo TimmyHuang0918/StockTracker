@@ -64,11 +64,24 @@ namespace StockTracker.Services
             {
                 return;
             }
-
-            _subscribedSymbols.Add(normalized);
 	    _api.SKQuoteLib_RequestStocks(1, normalized);
+	    _subscribedSymbols.Add(normalized);
 
             await Task.CompletedTask;
+	}
+
+	public async Task UnsubscribeAsync(string symbol)
+	{
+	    var normalized = symbol?.Trim();
+	    if (string.IsNullOrWhiteSpace(normalized))
+	    {
+		return;
+	    }
+
+	    _subscribedSymbols.Remove(normalized);
+	    _api.SKQuoteLib_CancelRequestStocks(normalized);
+
+	    await Task.CompletedTask;
 	}
 
 	public int RequestKLineByDate(string symbol, short kLineType, short outType, short tradeSession, string startDate, string endDate, short minuteNumber)
