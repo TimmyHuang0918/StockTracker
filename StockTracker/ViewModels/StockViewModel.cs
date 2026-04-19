@@ -422,10 +422,7 @@ namespace StockTracker.ViewModels
             var first = _candles.FirstOrDefault()?.Open ?? LatestPrice;
             ChangePercent = first == 0 ? 0 : Math.Round((LatestPrice - first) / first * 100, 2);
 
-            MA5 = CalculateMa(5);
-            MA20 = CalculateMa(20);
-            CalculateMacd();
-            RSI = CalculateRsi(14);
+            RecalculateIndicatorsOnCandles();
             UpdateSignal();
             RebuildVisuals();
             OnPropertyChanged(nameof(LatestVolume));
@@ -475,41 +472,56 @@ namespace StockTracker.ViewModels
 	    }
 	}
 
-        private double CalculateMa(int period)
+        private void RecalculateIndicatorsOnCandles()
         {
-            var analysisCandles = GetDisplayCandles();
-            if (analysisCandles.Count == 0)
+            if (_candles.Count == 0)
             {
-                return 0;
-            }
-
-            var count = Math.Min(period, analysisCandles.Count);
-            return analysisCandles.Skip(analysisCandles.Count - count).Average(x => (double)x.Close);
-        }
-
-        private void CalculateMacd()
-        {
-            var closes = GetDisplayCandles().Select(x => (double)x.Close).ToList();
-            if (!closes.Any())
-            {
+                MA5 = 0;
+                MA20 = 0;
                 MACD = 0;
+                RSI = 0;
+                _macdSeries.Clear();
+                _signalSeries.Clear();
                 return;
             }
 
+            var closes = _candles.Select(x => (double)x.Close).ToList();
             var ema12 = CalculateEmaSeries(closes, 12);
             var ema26 = CalculateEmaSeries(closes, 26);
-
-            _macdSeries.Clear();
+            var macdSeries = new List<double>(_candles.Count);
             for (var i = 0; i < closes.Count; i++)
             {
-                _macdSeries.Add(ema12[i] - ema26[i]);
+                macdSeries.Add(ema12[i] - ema26[i]);
             }
 
-            var signal = CalculateEmaSeries(_macdSeries, 9);
-            _signalSeries.Clear();
-            _signalSeries.AddRange(signal);
+            var signalSeries = CalculateEmaSeries(macdSeries, 9);
 
-            MACD = _macdSeries.LastOrDefault();
+            for (var i = 0; i < _candles.Count; i++)
+            {
+                var ma5Start = Math.Max(0, i - 4);
+                var ma20Start = Math.Max(0, i - 19);
+                var ma5Count = i - ma5Start + 1;
+                var ma20Count = i - ma20Start + 1;
+
+                _candles[i].MA5 = closes.Skip(ma5Start).Take(ma5Count).Average();
+                _candles[i].MA20 = closes.Skip(ma20Start).Take(ma20Count).Average();
+                _candles[i].MACD = macdSeries[i];
+                _candles[i].MacdSignal = signalSeries[i];
+                _candles[i].MacdHistogram = macdSeries[i] - signalSeries[i];
+                _candles[i].RSI = CalculateRsiAt(i, 14, closes);
+            }
+
+            var latest = _candles[_candles.Count - 1];
+            MA5 = latest.MA5;
+            MA20 = latest.MA20;
+            MACD = latest.MACD;
+            RSI = latest.RSI;
+
+            _macdSeries.Clear();
+            _macdSeries.AddRange(macdSeries);
+            _signalSeries.Clear();
+            _signalSeries.AddRange(signalSeries);
+
             OnPropertyChanged(nameof(MacdSignal));
             OnPropertyChanged(nameof(MacdHistogramValue));
         }
@@ -533,41 +545,6 @@ namespace StockTracker.ViewModels
             }
 
             return result;
-        }
-
-        private double CalculateRsi(int period)
-        {
-            var analysisCandles = GetDisplayCandles();
-            if (analysisCandles.Count < 2)
-            {
-                return 50;
-            }
-
-            var closes = analysisCandles.Select(x => (double)x.Close).ToList();
-            var gains = 0.0;
-            var losses = 0.0;
-            var start = Math.Max(1, closes.Count - period + 1);
-
-            for (var i = start; i < closes.Count; i++)
-            {
-                var diff = closes[i] - closes[i - 1];
-                if (diff >= 0)
-                {
-                    gains += diff;
-                }
-                else
-                {
-                    losses -= diff;
-                }
-            }
-
-            if (losses == 0)
-            {
-                return 100;
-            }
-
-            var rs = gains / losses;
-            return 100 - (100 / (1 + rs));
         }
 
         private void UpdateSignal()
@@ -667,24 +644,9 @@ namespace StockTracker.ViewModels
             _lastDisplayMacdSeries.Clear();
             _lastDisplaySignalSeries.Clear();
             _lastDisplayRsiSeries.Clear();
-
-            var displayCloses = candles.Select(x => (double)x.Close).ToList();
-            if (displayCloses.Count > 0)
-            {
-                var ema12 = CalculateEmaSeries(displayCloses, 12);
-                var ema26 = CalculateEmaSeries(displayCloses, 26);
-                for (var i = 0; i < displayCloses.Count; i++)
-                {
-                    _lastDisplayMacdSeries.Add(ema12[i] - ema26[i]);
-                }
-
-                _lastDisplaySignalSeries.AddRange(CalculateEmaSeries(_lastDisplayMacdSeries, 9));
-
-                for (var i = 0; i < displayCloses.Count; i++)
-                {
-                    _lastDisplayRsiSeries.Add(CalculateRsiAt(i, 14, displayCloses));
-                }
-            }
+            _lastDisplayMacdSeries.AddRange(candles.Select(x => x.MACD));
+            _lastDisplaySignalSeries.AddRange(candles.Select(x => x.MacdSignal));
+            _lastDisplayRsiSeries.AddRange(candles.Select(x => x.RSI));
 
             Candles.Clear();
             var ma5Points = new PointCollection();
@@ -712,14 +674,12 @@ namespace StockTracker.ViewModels
 
                 if (i >= 4)
                 {
-                    var ma = candles.Skip(i - 4).Take(5).Average(c => (double)c.Close);
-                    ma5Points.Add(new Point(centerX, Scale(ma, minPrice, priceRange, CandleChartHeight)));
+                    ma5Points.Add(new Point(centerX, Scale(candles[i].MA5, minPrice, priceRange, CandleChartHeight)));
                 }
 
                 if (i >= 19)
                 {
-                    var ma = candles.Skip(i - 19).Take(20).Average(c => (double)c.Close);
-                    ma20Points.Add(new Point(centerX, Scale(ma, minPrice, priceRange, CandleChartHeight)));
+                    ma20Points.Add(new Point(centerX, Scale(candles[i].MA20, minPrice, priceRange, CandleChartHeight)));
                 }
             }
 
@@ -808,19 +768,11 @@ namespace StockTracker.ViewModels
                 return;
             }
 
-            var closes = sourceCandles.Select(x => (double)x.Close).ToList();
-            var ema12 = CalculateEmaSeries(closes, 12);
-            var ema26 = CalculateEmaSeries(closes, 26);
-
             _macdSeries.Clear();
-            for (var i = 0; i < closes.Count; i++)
-            {
-                _macdSeries.Add(ema12[i] - ema26[i]);
-            }
-
+            _macdSeries.AddRange(sourceCandles.Select(x => x.MACD));
             _signalSeries.Clear();
-            _signalSeries.AddRange(CalculateEmaSeries(_macdSeries, 9));
-            MACD = _macdSeries.LastOrDefault();
+            _signalSeries.AddRange(sourceCandles.Select(x => x.MacdSignal));
+            MACD = sourceCandles[sourceCandles.Count - 1].MACD;
             OnPropertyChanged(nameof(MacdSignal));
             OnPropertyChanged(nameof(MacdHistogramValue));
 
@@ -888,7 +840,6 @@ namespace StockTracker.ViewModels
             }
 
             var rsiPoints = new PointCollection();
-            var closes = sourceCandles.Select(x => (double)x.Close).ToList();
 
             RsiLevels.Clear();
             foreach (var level in new[] { 100d, 70d, 50d, 30d, 0d })
@@ -901,14 +852,14 @@ namespace StockTracker.ViewModels
                 });
             }
 
-            for (var i = 0; i < closes.Count; i++)
+            for (var i = 0; i < sourceCandles.Count; i++)
             {
-                var rsi = CalculateRsiAt(i, 14, closes);
+                var rsi = sourceCandles[i].RSI;
                 var y = RsiChartHeight - (rsi / 100.0 * RsiChartHeight);
-                rsiPoints.Add(new Point(CalculateCenterX(i, closes.Count, _chartPaddingWidth), y));
+                rsiPoints.Add(new Point(CalculateCenterX(i, sourceCandles.Count, _chartPaddingWidth), y));
             }
 
-            RSI = CalculateRsiAt(closes.Count - 1, 14, closes);
+            RSI = sourceCandles[sourceCandles.Count - 1].RSI;
             RsiLinePoints = rsiPoints;
             OnPropertyChanged(nameof(RsiLinePoints));
         }

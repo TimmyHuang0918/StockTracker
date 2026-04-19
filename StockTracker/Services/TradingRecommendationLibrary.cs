@@ -27,15 +27,16 @@ namespace StockManager.Library
                 };
             }
 
+            var getLastData = data.Last();
             var closes = data.Select(d => (double)d.Close).ToList();
-            var avgPrice = closes.Average();
-            var latest = data[data.Count - 1];
+            var avgPrice = getLastData.MA20;
+	    var latest = data[data.Count - 1];
 
             var score = 50;
 
-            var ma5 = CalculateMA(closes, 5);
-            var ma20 = CalculateMA(closes, 20);
-            if (currentPrice > ma5 && ma5 > ma20)
+            var ma5 = getLastData.MA5;
+	    var ma20 = getLastData.MA20;
+	    if (currentPrice > ma5 && ma5 > ma20)
             {
                 score += 12;
                 reasons.Add($"MA 多頭排列（現價 {currentPrice:F2} > MA5 {ma5:F2} > MA20 {ma20:F2}）");
@@ -50,13 +51,13 @@ namespace StockManager.Library
                 reasons.Add("MA 結構中性，趨勢尚未明確");
             }
 
-            var macdTuple = BuildMACDComponents(closes);
-            var macd = macdTuple.Item1[macdTuple.Item1.Count - 1];
-            var signal = macdTuple.Item2[macdTuple.Item2.Count - 1];
-            var hist = macdTuple.Item3[macdTuple.Item3.Count - 1];
-            var prevHist = macdTuple.Item3.Count > 1 ? macdTuple.Item3[macdTuple.Item3.Count - 2] : hist;
+            var macd = getLastData.MACD;
+	    var signal = getLastData.MacdSignal;
+            var hist = getLastData.MACD - getLastData.MacdSignal;
+	    var preData = data[data.Count - 2];
+            var prevHist = preData.MACD - preData.MacdSignal;
 
-            if (macd > signal)
+	    if (macd > signal)
             {
                 score += 14;
                 reasons.Add($"MACD 位於訊號線上方（MACD {macd:F3} > Signal {signal:F3}）");
@@ -78,7 +79,7 @@ namespace StockManager.Library
                 reasons.Add("MACD 柱狀體縮小，短線動能轉弱");
             }
 
-            var rsi = CalculateRSI(closes, 14);
+            var rsi = getLastData.RSI;
             if (rsi < 30)
             {
                 score += 10;

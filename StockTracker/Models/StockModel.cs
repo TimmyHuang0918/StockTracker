@@ -20,6 +20,12 @@ namespace StockTracker.Models
         public decimal Low { get; set; }
         public decimal Close { get; set; }
         public long Volume { get; set; }
+        public double MA5 { get; set; }
+        public double MA20 { get; set; }
+        public double MACD { get; set; }
+        public double MacdSignal { get; set; }
+        public double MacdHistogram { get; set; }
+        public double RSI { get; set; }
     }
 
     public class CandlestickVisual
