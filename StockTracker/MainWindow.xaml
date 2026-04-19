@@ -111,6 +111,7 @@
                 <TextBlock  Text="{Binding NewSymbolRelativeName}" Foreground="Gray" FontSize="18" Margin="12" RenderTransformOrigin="-1.52,0.529" />
                 <Button Content="訂閱" Name="btnSubscribe" Width="80" Margin="8" Click="btnSubscribe_Click" />
                 <Button Content="取消訂閱" Width="90" Margin="8" Click="btnUnsubscribe_Click"/>
+                <Button Content="Button" Click="Button_Click"/>
             </StackPanel>
         </DockPanel>
 

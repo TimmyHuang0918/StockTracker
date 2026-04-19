@@ -210,7 +210,7 @@ namespace StockTracker
 	private static List<DateTime> GetRecentTradingDays(int requiredDays)
 	{
 	    var days = new List<DateTime>();
-	    var current = DateTime.Today;
+	    var current = DateTime.Now;
 	    while (days.Count < requiredDays)
 	    {
 		if (IsTradingDay(current))
@@ -251,6 +251,14 @@ namespace StockTracker
 	    {
 		stock.ClearCrosshair();
 	    }
+	}
+
+	private void Button_Click(object sender, RoutedEventArgs e)
+	{
+	    TwseT86CsvClient test = new TwseT86CsvClient();
+	    var task = test.DownloadAndParseAsync(DateTime.Today.AddDays(-4));
+
+	    task.Wait();
 	}
     }
 }
