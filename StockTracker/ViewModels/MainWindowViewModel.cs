@@ -1,5 +1,5 @@
-using StockTracker.Services;
 using StockTracker.Models;
+using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Xml.Linq;
 
 namespace StockTracker.ViewModels
 {
@@ -117,12 +118,15 @@ namespace StockTracker.ViewModels
 		savedSymbols.Add("2317");
 		savedSymbols.Add("0050");
 	    }
-
+            List<string> symbols = new List<string>();
+            List<string> names = new List<string>();
 	    foreach (var symbol in savedSymbols)
 	    {
-		await AddOrSubscribeAsync(symbol, _apiService.GetRelativeStockMessage(symbol).bstrStockName);
+                symbols.Add(symbol);
+                names.Add(_apiService.GetRelativeStockMessage(symbol).bstrStockName);
 	    }
-        }
+	    await AddOrSubscribeAsync(symbols, names);
+	}
 
         public void ApplyKLineData(string symbol, CandleData candle)
         {
@@ -181,7 +185,37 @@ namespace StockTracker.ViewModels
 	    SaveSubscriptions();
         }
 
-        private void StockVmOnSignalTriggered(StockViewModel stock, string signal)
+        private async Task AddOrSubscribeAsync(List<string> symbolList, List<string> nameList)
+        {
+            int count = symbolList.Count;
+            if (count  != nameList.Count)
+                return;
+
+            List<Tuple<string, string>> applyStocks = new List<Tuple<string, string>>();
+	    for (int symbolIndex = 0; symbolIndex < count; symbolIndex++)
+            {
+		if (Stocks.Any(x => x.Symbol == symbolList[symbolIndex]))
+		{
+                    continue;
+		}
+                applyStocks.Add(new Tuple<string, string>(symbolList[symbolIndex], nameList[symbolIndex]));
+	    }
+
+            string subScribeString = string.Join(",", from s in applyStocks select s.Item1);
+	    await _apiService.SubscribeAsync(subScribeString);
+
+            foreach(var eachStock in applyStocks)
+            {
+		var stockVm = new StockViewModel(eachStock.Item1, eachStock.Item2);
+		stockVm.SelectedKLineInterval = SelectedGlobalKLineInterval;
+		stockVm.SignalTriggered += StockVmOnSignalTriggered;
+		Stocks.Add(stockVm);
+	    }
+	    SaveSubscriptions();
+	}
+
+
+	private void StockVmOnSignalTriggered(StockViewModel stock, string signal)
         {
             var message = $"{DateTime.Now:HH:mm:ss} {stock.Symbol} {stock.Name} -> {signal}";
             SystemMessage = message;

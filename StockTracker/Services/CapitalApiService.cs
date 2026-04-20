@@ -63,10 +63,12 @@ namespace StockTracker.Services
             if (string.IsNullOrWhiteSpace(normalized))
             {
                 return;
-            }
-	    _api.SKQuoteLib_RequestStocks(1, normalized);
-	    _subscribedSymbols.Add(normalized);
-
+	    }
+	    foreach(var eachStock in symbol.Split(','))
+	    {
+		_subscribedSymbols.Add(eachStock);
+	    }
+	    _api.SKQuoteLib_RequestStocks(1, GetSubscribedSymbolsAsCsv());
             await Task.CompletedTask;
 	}
 
@@ -78,9 +80,8 @@ namespace StockTracker.Services
 		return;
 	    }
 
-	    _subscribedSymbols.Remove(normalized);
 	    _api.SKQuoteLib_CancelRequestStocks(normalized);
-
+	    _subscribedSymbols.Remove(normalized);
 	    await Task.CompletedTask;
 	}
 
@@ -152,6 +153,11 @@ namespace StockTracker.Services
 	    _isSkEventsRegistered = true;
 	}
 
+	private string GetSubscribedSymbolsAsCsv()
+	{
+	    return string.Join(",", _subscribedSymbols);
+	}
+
 	private async Task<bool> WaitForQuoteConnectionReadyAsync(int timeoutMs)
 	{
 	    if (_isSkQuoteConnectionReady)
@@ -221,13 +227,35 @@ namespace StockTracker.Services
 	private static bool TryBuildInstantCandle(SKSTOCKLONG skStock, out CandleData candle)
 	{
 	    candle = null;
-	    var close = skStock.nClose / 100;
-	    var open = skStock.nOpen / 100;
-	    var high = skStock.nHigh / 100;
-	    var low = skStock.nLow / 100;
-	    var volume = skStock.nYQty;
-	    var time = skStock.nTradingDay.ToString() + (skStock.nDealTime / 100).ToString();
-	    var date = DateTime.TryParseExact(time, "yyyyMMddHHmm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedTime);
+	    var close = NormalizePrice(skStock.nClose);
+	    var open = NormalizePrice(skStock.nOpen);
+	    var high = NormalizePrice(skStock.nHigh);
+	    var low = NormalizePrice(skStock.nLow);
+
+	    if (close <= 0)
+	    {
+		close = open > 0 ? open : (high > 0 ? high : low);
+	    }
+
+	    if (open <= 0)
+	    {
+		open = close;
+	    }
+
+	    if (high <= 0)
+	    {
+		high = Math.Max(open, close);
+	    }
+
+	    if (low <= 0)
+	    {
+		low = Math.Min(open, close);
+	    }
+
+	    if (close <= 0 || !TryParseDealTime(skStock.nTradingDay, skStock.nDealTime, out var parsedTime))
+	    {
+		return false;
+	    }
 
 	    candle = new CandleData
 	    {
@@ -236,10 +264,47 @@ namespace StockTracker.Services
 		High = high,
 		Low = low,
 		Close = close,
-		Volume = volume
+		Volume = skStock.nYQty
 	    };
 
 	    return true;
+	}
+
+	private static decimal NormalizePrice(int rawPrice)
+	{
+	    return rawPrice / 100m;
+	}
+
+	private static bool TryParseDealTime(int tradingDay, int dealTime, out DateTime time)
+	{
+	    time = default(DateTime);
+	    if (tradingDay <= 0)
+	    {
+		return false;
+	    }
+
+	    var dayText = tradingDay.ToString("D8");
+	    var dealTimeText = Math.Abs(dealTime).ToString();
+
+	    if (string.IsNullOrWhiteSpace(dealTimeText))
+	    {
+		return false;
+	    }
+
+	    if (dealTimeText.Length > 6)
+	    {
+		dealTimeText = dealTimeText.Substring(0, 6);
+	    }
+
+	    dealTimeText = dealTimeText.PadLeft(6, '0');
+	    var fullTimeText = dayText + dealTimeText;
+	    if (DateTime.TryParseExact(fullTimeText, "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out time))
+	    {
+		return true;
+	    }
+
+	    var minuteTimeText = dayText + dealTimeText.Substring(0, 4);
+	    return DateTime.TryParseExact(minuteTimeText, "yyyyMMddHHmm", CultureInfo.InvariantCulture, DateTimeStyles.None, out time);
 	}
     }
 }

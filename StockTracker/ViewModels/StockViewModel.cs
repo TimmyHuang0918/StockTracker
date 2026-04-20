@@ -80,6 +80,8 @@ namespace StockTracker.ViewModels
             get => _latestPrice;
             private set
             {
+                if (_latestPrice == value)
+                    return;
                 _latestPrice = value;
                 OnPropertyChanged();
             }
@@ -90,6 +92,8 @@ namespace StockTracker.ViewModels
             get => _changePercent;
             private set
             {
+                if (_changePercent == value)
+                    return;
                 _changePercent = value;
                 OnPropertyChanged(nameof(ChangePercent));
                 OnPropertyChanged(nameof(ChangePercentText));

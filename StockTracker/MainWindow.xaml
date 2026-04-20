@@ -140,13 +140,26 @@
                                     <DockPanel Margin="0,0,0,6">
                                         <Border DockPanel.Dock="Right" Padding="6,3" Margin="8,0,0,0"
                                                 Background="#AA1E1E1E" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4">
-                                            <TextBlock FontSize="15" FontWeight="SemiBold">
+                                            <TextBlock FontSize="15" FontWeight="SemiBold" x:Name="PriceTextBlock">
                                                 <Run Text="現價 " Foreground="{DynamicResource MutedForegroundBrush}"/>
-                                                <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}" Foreground="{Binding LatestChangeBrush, Mode=OneWay}"/>
-                                                <Run Text="  (" Foreground="{Binding LatestChangeBrush, Mode=OneWay}"/>
-                                                <Run Text="{Binding ChangePercentText, Mode=OneWay}" Foreground="{Binding LatestChangeBrush, Mode=OneWay}"/>
-                                                <Run Text=" )" Foreground="{Binding LatestChangeBrush, Mode=OneWay}" />
+                                                <Run Text="{Binding LatestPrice, StringFormat={}{0:F2}, Mode=OneWay, NotifyOnTargetUpdated=True}" Foreground="{Binding LatestChangeBrush}"/>
+                                                <Run Text="  (" Foreground="{Binding LatestChangeBrush}"/>
+                                                <Run Text="{Binding ChangePercentText, Mode=OneWay, NotifyOnTargetUpdated=True}" Foreground="{Binding LatestChangeBrush}"/>
+                                                <Run Text=" )" Foreground="{Binding LatestChangeBrush}" />
+
+                                                <TextBlock.Triggers>
+                                                    <!-- 當 Binding 更新時觸發 -->
+                                                    <EventTrigger RoutedEvent="Binding.TargetUpdated">
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <!-- 透明度閃爍 -->
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1.0" To="0.3" Duration="0:0:0.2" AutoReverse="True"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger>
+                                                </TextBlock.Triggers>
                                             </TextBlock>
+
                                         </Border>
                                         <TextBlock FontWeight="SemiBold" FontSize="14" DockPanel.Dock="Left">
                                             <Run Text="{Binding Symbol, Mode=OneWay}"/>
