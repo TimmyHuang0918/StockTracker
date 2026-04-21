@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Xml.Linq;
 
 namespace StockTracker.ViewModels
@@ -22,15 +23,29 @@ namespace StockTracker.ViewModels
         private string _selectedGlobalKLineInterval = "日K";
         private string _selectedGlobalKLineCount = "120";
 	private TwseT86Record _latestTwseT86Record;
+	private DateTime _latestRankingDate;
 	private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
 	public MainWindowViewModel(CapitalApiService apiService)
         {
             _apiService = apiService;
 	    _twseT86CsvClient = new TwseT86CsvClient();
             Stocks = new ObservableCollection<StockViewModel>();
+            TwseRankingItems = new ObservableCollection<TwseT86RankingItem>();
             SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
 	    UnsubscribeCommand = new RelayCommand(async _ => await UnsubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbol));
         }
+
+	public ObservableCollection<TwseT86RankingItem> TwseRankingItems { get; }
+
+	public DateTime LatestRankingDate
+	{
+	    get => _latestRankingDate;
+	    private set
+	    {
+		_latestRankingDate = value;
+		OnPropertyChanged();
+	    }
+	}
 
         public ObservableCollection<StockViewModel> Stocks { get; }
         public CapitalApiService ApiService => _apiService;
@@ -245,6 +260,62 @@ namespace StockTracker.ViewModels
 		.ThenBy(x => x.Symbol)
 		.FirstOrDefault();
 	    LatestTwseT86Record = latest;
+	    BuildTwseRankingList();
+	}
+
+	private void BuildTwseRankingList()
+	{
+	    TwseRankingItems.Clear();
+	    var allRecords = _twseT86Histories.SelectMany(x => x.RecordsByDate.Values).ToList();
+	    if (allRecords.Count == 0)
+	    {
+		LatestRankingDate = DateTime.MinValue;
+		return;
+	    }
+
+	    var latestDate = allRecords.Max(x => x.TradeDate.Date);
+	    LatestRankingDate = latestDate;
+            OnPropertyChanged(nameof(LatestRankingDate));
+
+	    var latestRecords = allRecords
+		.Where(x => x.TradeDate.Date == latestDate)
+		.OrderByDescending(x => x.ThreeMajorNet)
+		.ThenBy(x => x.Symbol)
+		.ToList();
+
+	    var prevDate = allRecords.Where(x => x.TradeDate.Date < latestDate).Select(x => x.TradeDate.Date).DefaultIfEmpty(DateTime.MinValue).Max();
+	    var prevRanks = allRecords
+		.Where(x => prevDate != DateTime.MinValue && x.TradeDate.Date == prevDate)
+		.OrderByDescending(x => x.ThreeMajorNet)
+		.ThenBy(x => x.Symbol)
+		.Select((x, idx) => new { x.Symbol, Rank = idx + 1 })
+		.ToDictionary(x => x.Symbol, x => x.Rank, StringComparer.OrdinalIgnoreCase);
+
+	    for (var i = 0; i < latestRecords.Count; i++)
+	    {
+		var record = latestRecords[i];
+		int prevRank;
+		var hasPrev = prevRanks.TryGetValue(record.Symbol, out prevRank);
+		var rank = i + 1;
+		var rankDelta = hasPrev ? prevRank - rank : 0;
+
+		TwseRankingItems.Add(new TwseT86RankingItem
+		{
+		    Rank = rank,
+		    Symbol = record.Symbol,
+		    Name = record.Name,
+		    ThreeMajorNet = record.ThreeMajorNet,
+		    RankDeltaText = !hasPrev ? "NEW" : rankDelta > 0 ? $"▲{rankDelta}" : rankDelta < 0 ? $"▼{Math.Abs(rankDelta)}" : "-",
+		    RankDeltaBrush = !hasPrev ? Brushes.SkyBlue : rankDelta > 0 ? Brushes.IndianRed : rankDelta < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
+		    TooltipText =
+			$"日期: {record.TradeDate:yyyy/MM/dd}" +
+			$"\n代號: {record.Symbol} {record.Name}" +
+			$"\n外資 買:{record.ForeignBuy:N0} 賣:{record.ForeignSell:N0} 淨:{record.ForeignNet:N0}" +
+			$"\n投信 買:{record.InvestmentTrustBuy:N0} 賣:{record.InvestmentTrustSell:N0} 淨:{record.InvestmentTrustNet:N0}" +
+			$"\n自營商 淨:{record.DealerNet:N0} (自買:{record.DealerSelfNet:N0} / 避險:{record.DealerHedgeNet:N0})" +
+			$"\n三大法人買賣超: {record.ThreeMajorNet:N0}"
+		});
+	    }
 	}
 
 	private void ApplyTwseRecordsToStock(StockViewModel stockVm)
@@ -289,6 +360,17 @@ namespace StockTracker.ViewModels
 
 	    var lines = Stocks.Select(x => x.Symbol).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 	    File.WriteAllLines(SubscriptionFilePath, lines, Encoding.UTF8);
+	}
+
+	public class TwseT86RankingItem
+	{
+	    public int Rank { get; set; }
+	    public string Symbol { get; set; }
+	    public string Name { get; set; }
+	    public long ThreeMajorNet { get; set; }
+	    public string RankDeltaText { get; set; }
+	    public Brush RankDeltaBrush { get; set; }
+	    public string TooltipText { get; set; }
 	}
     }
 }

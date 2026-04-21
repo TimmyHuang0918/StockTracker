@@ -111,7 +111,6 @@
                 <TextBlock  Text="{Binding NewSymbolRelativeName}" Foreground="Gray" FontSize="18" Margin="12" RenderTransformOrigin="-1.52,0.529" />
                 <Button Content="訂閱" Name="btnSubscribe" Width="80" Margin="8" Click="btnSubscribe_Click" />
                 <Button Content="取消訂閱" Width="90" Margin="8" Click="btnUnsubscribe_Click"/>
-                <Button Content="Button" Click="Button_Click"/>
             </StackPanel>
         </DockPanel>
 
@@ -120,32 +119,45 @@
                 <TextBlock Text="全部訂閱股票 K 線總覽（雙擊可開啟詳細圖表）" FontWeight="Bold" Margin="0,0,0,8" DockPanel.Dock="Top"/>
                 <Border DockPanel.Dock="Right" Width="320" Margin="10,0,0,0" Padding="8"
                         BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceAltBrush}">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel>
-                            <TextBlock Text="最新三大法人資料" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,8"/>
-                            <TextBlock Margin="0,0,0,4"><Run Text="日期: "/><Run Text="{Binding LatestTwseT86Record.TradeDate, StringFormat=yyyy/MM/dd}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="代號: "/><Run Text="{Binding LatestTwseT86Record.Symbol}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="名稱: "/><Run Text="{Binding LatestTwseT86Record.Name}"/></TextBlock>
-                            <Separator Margin="0,6,0,6"/>
-                            <TextBlock Margin="0,0,0,4"><Run Text="外資買進: "/><Run Text="{Binding LatestTwseT86Record.ForeignBuy, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="外資賣出: "/><Run Text="{Binding LatestTwseT86Record.ForeignSell, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="外資買賣超: "/><Run Text="{Binding LatestTwseT86Record.ForeignNet, StringFormat=N0}"/></TextBlock>
-                            <Separator Margin="0,6,0,6"/>
-                            <TextBlock Margin="0,0,0,4"><Run Text="投信買進: "/><Run Text="{Binding LatestTwseT86Record.InvestmentTrustBuy, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="投信賣出: "/><Run Text="{Binding LatestTwseT86Record.InvestmentTrustSell, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="投信買賣超: "/><Run Text="{Binding LatestTwseT86Record.InvestmentTrustNet, StringFormat=N0}"/></TextBlock>
-                            <Separator Margin="0,6,0,6"/>
-                            <TextBlock Margin="0,0,0,4"><Run Text="自營商買賣超: "/><Run Text="{Binding LatestTwseT86Record.DealerNet, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="自營(自買)買進: "/><Run Text="{Binding LatestTwseT86Record.DealerSelfBuy, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="自營(自買)賣出: "/><Run Text="{Binding LatestTwseT86Record.DealerSelfSell, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="自營(自買)買賣超: "/><Run Text="{Binding LatestTwseT86Record.DealerSelfNet, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="自營(避險)買進: "/><Run Text="{Binding LatestTwseT86Record.DealerHedgeBuy, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="自營(避險)賣出: "/><Run Text="{Binding LatestTwseT86Record.DealerHedgeSell, StringFormat=N0}"/></TextBlock>
-                            <TextBlock Margin="0,0,0,4"><Run Text="自營(避險)買賣超: "/><Run Text="{Binding LatestTwseT86Record.DealerHedgeNet, StringFormat=N0}"/></TextBlock>
-                            <Separator Margin="0,6,0,6"/>
-                            <TextBlock FontWeight="SemiBold" Margin="0,0,0,4"><Run Text="三大法人買賣超: "/><Run Text="{Binding LatestTwseT86Record.ThreeMajorNet, StringFormat=N0}"/></TextBlock>
-                        </StackPanel>
-                    </ScrollViewer>
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,8"
+                                   Text="{Binding LatestRankingDate, StringFormat=三大法人買賣超排名（{0:yyyy/MM/dd}）}"/>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="35"/>
+                                <ColumnDefinition Width="50"/>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="70"/>
+                                <ColumnDefinition Width="60"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="#" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Grid.Column="1" Text="代號" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Grid.Column="2" Text="名稱" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Grid.Column="3" Text="買賣超" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="4" Text="升降" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Center"/>
+                        </Grid>
+                        <ListBox ItemsSource="{Binding TwseRankingItems}" BorderThickness="0" Background="{DynamicResource SurfaceAltBrush}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,1" ToolTip="{Binding TooltipText}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="35"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="60"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Rank}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Symbol}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding ThreeMajorNet, StringFormat=N0}" TextAlignment="Right"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding RankDeltaText}" Foreground="{Binding RankDeltaBrush}" TextAlignment="Center" FontWeight="SemiBold"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
                 </Border>
                 <ListBox ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" MouseDoubleClick="StockList_OnMouseDoubleClick"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"

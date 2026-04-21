@@ -252,12 +252,5 @@ namespace StockTracker
 		stock.ClearCrosshair();
 	    }
 	}
-
-	private void Button_Click(object sender, RoutedEventArgs e)
-	{
-	    TwseT86CsvClient test = new TwseT86CsvClient();
-	    var task = test.ParseAsync($@"T86_History\", DateTime.Today.AddDays(-1));
-	    task.Wait();
-	}
     }
 }
