@@ -1,4 +1,5 @@
 using StockTracker.Models;
+using StockTracker.Services;
 using StockManager.Library;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ namespace StockTracker.ViewModels
         private const double MacdChartHeight = 120;
         private const double RsiChartHeight = 90;
         private const double VolumeChartHeight = 100;
+        private const double ThreeMajorChartHeight = 100;
         private const int MinDisplayPoints = 20;
 
         private readonly List<CandleData> _candles = new List<CandleData>();
@@ -22,6 +24,7 @@ namespace StockTracker.ViewModels
         private readonly List<double> _macdSeries = new List<double>();
         private readonly List<double> _signalSeries = new List<double>();
         private readonly List<SignalMarkerData> _signalHistory = new List<SignalMarkerData>();
+        private readonly Dictionary<DateTime, TwseT86Record> _twseByDate = new Dictionary<DateTime, TwseT86Record>();
 
         private decimal _latestPrice;
         private decimal _changePercent;
@@ -32,6 +35,7 @@ namespace StockTracker.ViewModels
         private double _rsi;
         private double _latestPriceY;
         private double _macdZeroY;
+        private double _threeMajorZeroY;
         private string _selectedKLineInterval = "1分K";
 	private string _selectedKLineCount= "120";
 	private string _signal = "中立";
@@ -42,12 +46,16 @@ namespace StockTracker.ViewModels
         private readonly List<double> _lastDisplayMacdSeries = new List<double>();
         private readonly List<double> _lastDisplaySignalSeries = new List<double>();
         private readonly List<double> _lastDisplayRsiSeries = new List<double>();
+        private readonly List<ThreeMajorPointData> _lastDisplayThreeMajorSeries = new List<ThreeMajorPointData>();
         private double _lastMinPrice;
         private double _lastPriceRange = 1;
         private double _crosshairX;
         private double _crosshairY;
         private Visibility _crosshairVisibility = Visibility.Collapsed;
         private string _hoverInfo;
+        private double _threeMajorCrosshairX;
+        private Visibility _threeMajorCrosshairVisibility = Visibility.Collapsed;
+        private string _threeMajorHoverInfo;
         private double _chartPaddingWidth { get { return ChartWidth - 20; } }
 
         public StockViewModel(string symbol, string name)
@@ -70,6 +78,11 @@ namespace StockTracker.ViewModels
             MacdLinePoints = new PointCollection();
             SignalLinePoints = new PointCollection();
             RsiLinePoints = new PointCollection();
+            ThreeMajorNetPoints = new PointCollection();
+            ForeignNetPoints = new PointCollection();
+            InvestmentTrustNetPoints = new PointCollection();
+            DealerNetPoints = new PointCollection();
+            ThreeMajorLevels = new ObservableCollection<PriceLevelVisual>();
         }
 
         public string Symbol { get; }
@@ -83,6 +96,16 @@ namespace StockTracker.ViewModels
                 if (_latestPrice == value)
                     return;
                 _latestPrice = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double ThreeMajorZeroY
+        {
+            get => _threeMajorZeroY;
+            private set
+            {
+                _threeMajorZeroY = value;
                 OnPropertyChanged();
             }
         }
@@ -177,6 +200,7 @@ namespace StockTracker.ViewModels
 
                 _selectedKLineInterval = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ThreeMajorChartVisibility));
                 OnPropertyChanged(nameof(_chartPaddingWidth));
                 RebuildVisuals();
             }
@@ -213,6 +237,8 @@ namespace StockTracker.ViewModels
             {
                 detailVm.UpdateFromKLine(candle);
             }
+
+            detailVm.SetTwseT86Records(_twseByDate.Values);
 
             _detailViewModels.Add(detailVm);
             return detailVm;
@@ -262,6 +288,10 @@ namespace StockTracker.ViewModels
         public PointCollection SignalLinePoints { get; private set; }
 
         public PointCollection RsiLinePoints { get; private set; }
+        public PointCollection ThreeMajorNetPoints { get; private set; }
+        public PointCollection ForeignNetPoints { get; private set; }
+        public PointCollection InvestmentTrustNetPoints { get; private set; }
+        public PointCollection DealerNetPoints { get; private set; }
         public ObservableCollection<HistogramBarVisual> VolumeBars { get; }
         public ObservableCollection<SignalMarkerVisual> SignalMarkers { get; }
         public ObservableCollection<TimeLabelVisual> TimeLabels { get; }
@@ -269,6 +299,38 @@ namespace StockTracker.ViewModels
         public ObservableCollection<PriceLevelVisual> MacdLevels { get; }
         public ObservableCollection<PriceLevelVisual> RsiLevels { get; }
         public ObservableCollection<PriceLevelVisual> VolumeLevels { get; }
+        public ObservableCollection<PriceLevelVisual> ThreeMajorLevels { get; }
+        public Visibility ThreeMajorChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
+
+        public double ThreeMajorCrosshairX
+        {
+            get => _threeMajorCrosshairX;
+            private set
+            {
+                _threeMajorCrosshairX = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public Visibility ThreeMajorCrosshairVisibility
+        {
+            get => _threeMajorCrosshairVisibility;
+            private set
+            {
+                _threeMajorCrosshairVisibility = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string ThreeMajorHoverInfo
+        {
+            get => _threeMajorHoverInfo;
+            private set
+            {
+                _threeMajorHoverInfo = value;
+                OnPropertyChanged();
+            }
+        }
 
         public double CrosshairX
         {
@@ -479,6 +541,15 @@ namespace StockTracker.ViewModels
 	    MacdLevels.Clear();
 	    RsiLevels.Clear();
 	    VolumeLevels.Clear();
+	    ThreeMajorLevels.Clear();
+	    ThreeMajorNetPoints.Clear();
+	    ForeignNetPoints.Clear();
+	    InvestmentTrustNetPoints.Clear();
+	    DealerNetPoints.Clear();
+	    _lastDisplayThreeMajorSeries.Clear();
+	    ThreeMajorZeroY = 0;
+            ThreeMajorCrosshairVisibility = Visibility.Collapsed;
+            ThreeMajorHoverInfo = null;
 	    _lastDisplayMacdSeries.Clear();
 	    _lastDisplaySignalSeries.Clear();
 	    _lastDisplayRsiSeries.Clear();
@@ -490,6 +561,30 @@ namespace StockTracker.ViewModels
 		detailVm.ClearData();
 	    }
 	}
+
+        public void SetTwseT86Records(IEnumerable<TwseT86Record> records)
+        {
+            _twseByDate.Clear();
+            if (records != null)
+            {
+                foreach (var record in records)
+                {
+                    if (record == null)
+                    {
+                        continue;
+                    }
+
+                    _twseByDate[record.TradeDate.Date] = record;
+                }
+            }
+
+            RebuildVisuals();
+
+            foreach (var detailVm in _detailViewModels.ToList())
+            {
+                detailVm.SetTwseT86Records(_twseByDate.Values);
+            }
+        }
 
         private void RecalculateIndicatorsOnCandles()
         {
@@ -595,10 +690,15 @@ namespace StockTracker.ViewModels
                 return;
             }
 
+	    var latestCandle = analysisCandles[analysisCandles.Count - 1];
+
             var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
                 analysisCandles,
                 (double)LatestPrice,
-                (double?)ChangePercent);
+                (double?)ChangePercent,
+                null,
+                BuildTwseHistorySnapshot(),
+                latestCandle.Time);
 
             _latestRecommendationReasons = recommendation.Reasons ?? new List<string>();
             Signal = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
@@ -657,9 +757,15 @@ namespace StockTracker.ViewModels
 		changePercent = ((double)candle.Close - previousClose.Value) / previousClose.Value * 100d;
 	    }
 
-	    var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(slice, (double)candle.Close, changePercent, previousClose);
+	    var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+		slice,
+		(double)candle.Close,
+		changePercent,
+		previousClose,
+		BuildTwseHistorySnapshot(),
+		candle.Time);
 	    var suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
-	    var topReasons = (recommendation.Reasons ?? new List<string>()).Take(4).Select(r => $"- {r}");
+	    var topReasons = (recommendation.Reasons ?? new List<string>()).Take(50).Select(r => $"- {r}");
 	    return $"\n建議: {suggestion} ({recommendation.Score})\n建議理由:\n" + string.Join("\n", topReasons);
 	}
 
@@ -791,6 +897,143 @@ namespace StockTracker.ViewModels
             RebuildMacdVisuals(candles);
             RebuildRsiVisuals(candles);
             RebuildVolumeVisuals(candles);
+            RebuildThreeMajorVisuals(candles);
+        }
+
+        private void RebuildThreeMajorVisuals(IReadOnlyList<CandleData> sourceCandles)
+        {
+            if (SelectedKLineInterval != "日K" || sourceCandles == null || sourceCandles.Count == 0)
+            {
+                ThreeMajorLevels.Clear();
+                ThreeMajorNetPoints = new PointCollection();
+                ForeignNetPoints = new PointCollection();
+                InvestmentTrustNetPoints = new PointCollection();
+                DealerNetPoints = new PointCollection();
+                _lastDisplayThreeMajorSeries.Clear();
+                ThreeMajorZeroY = 0;
+                OnPropertyChanged(nameof(ThreeMajorNetPoints));
+                OnPropertyChanged(nameof(ForeignNetPoints));
+                OnPropertyChanged(nameof(InvestmentTrustNetPoints));
+                OnPropertyChanged(nameof(DealerNetPoints));
+                return;
+            }
+
+            var values = sourceCandles.Select(c =>
+            {
+                TwseT86Record record;
+                if (_twseByDate.TryGetValue(c.Time.Date, out record))
+                {
+                    return new ThreeMajorPointData
+                    {
+                        Time = c.Time,
+                        ForeignNet = record.ForeignNet,
+                        InvestmentTrustNet = record.InvestmentTrustNet,
+                        DealerNet = record.DealerNet,
+                        ThreeMajorNet = record.ThreeMajorNet
+                    };
+                }
+
+                return new ThreeMajorPointData
+                {
+                    Time = c.Time,
+                    ForeignNet = 0,
+                    InvestmentTrustNet = 0,
+                    DealerNet = 0,
+                    ThreeMajorNet = 0
+                };
+            }).ToList();
+
+            var min = Math.Min(0d, new[]
+            {
+                values.Min(x => (double)x.ForeignNet),
+                values.Min(x => (double)x.InvestmentTrustNet),
+                values.Min(x => (double)x.DealerNet)
+            }.Min());
+            var max = Math.Max(0d, new[]
+            {
+                values.Max(x => (double)x.ForeignNet),
+                values.Max(x => (double)x.InvestmentTrustNet),
+                values.Max(x => (double)x.DealerNet)
+            }.Max());
+            var range = Math.Max(1d, max - min);
+
+            ThreeMajorLevels.Clear();
+            const int levelCount = 5;
+            for (var i = 0; i < levelCount; i++)
+            {
+                var ratio = i / (double)(levelCount - 1);
+                var value = max - range * ratio;
+                var y = Scale(value, min, range, ThreeMajorChartHeight);
+                ThreeMajorLevels.Add(new PriceLevelVisual
+                {
+                    Y = y,
+                    LabelTop = Math.Max(2, Math.Min(ThreeMajorChartHeight - 14, y - 7)),
+                    Text = value.ToString("N0")
+                });
+            }
+
+            var totalPoints = new PointCollection();
+            var foreignPoints = new PointCollection();
+            var trustPoints = new PointCollection();
+            var dealerPoints = new PointCollection();
+            _lastDisplayThreeMajorSeries.Clear();
+            for (var i = 0; i < values.Count; i++)
+            {
+                var x = CalculateCenterX(i, values.Count, _chartPaddingWidth);
+                foreignPoints.Add(new Point(x, Scale(values[i].ForeignNet, min, range, ThreeMajorChartHeight)));
+                trustPoints.Add(new Point(x, Scale(values[i].InvestmentTrustNet, min, range, ThreeMajorChartHeight)));
+                dealerPoints.Add(new Point(x, Scale(values[i].DealerNet, min, range, ThreeMajorChartHeight)));
+                totalPoints.Add(new Point(x, Scale(values[i].ThreeMajorNet, min, range, ThreeMajorChartHeight)));
+                _lastDisplayThreeMajorSeries.Add(values[i]);
+            }
+
+            ThreeMajorNetPoints = totalPoints;
+            ForeignNetPoints = foreignPoints;
+            InvestmentTrustNetPoints = trustPoints;
+            DealerNetPoints = dealerPoints;
+            ThreeMajorZeroY = Scale(0d, min, range, ThreeMajorChartHeight);
+            OnPropertyChanged(nameof(ThreeMajorNetPoints));
+            OnPropertyChanged(nameof(ForeignNetPoints));
+            OnPropertyChanged(nameof(InvestmentTrustNetPoints));
+            OnPropertyChanged(nameof(DealerNetPoints));
+        }
+
+        public void UpdateThreeMajorCrosshair(double x)
+        {
+            if (_lastDisplayThreeMajorSeries.Count == 0)
+            {
+                ThreeMajorCrosshairVisibility = Visibility.Collapsed;
+                ThreeMajorHoverInfo = null;
+                return;
+            }
+
+            var clampedX = Math.Max(0, Math.Min(_chartPaddingWidth, x));
+            var nearestIndex = GetNearestCandleIndex(clampedX, _lastDisplayThreeMajorSeries.Count, _chartPaddingWidth);
+            var item = _lastDisplayThreeMajorSeries[nearestIndex];
+            ThreeMajorCrosshairX = CalculateCenterX(nearestIndex, _lastDisplayThreeMajorSeries.Count, _chartPaddingWidth);
+            ThreeMajorCrosshairVisibility = Visibility.Visible;
+            ThreeMajorHoverInfo =
+                $"日期: {item.Time:yyyy/MM/dd}" +
+                $"\n外資: {item.ForeignNet:N0}" +
+                $"\n投信: {item.InvestmentTrustNet:N0}" +
+                $"\n自營商: {item.DealerNet:N0}" +
+                $"\n合計: {item.ThreeMajorNet:N0}";
+        }
+
+        public void ClearThreeMajorCrosshair()
+        {
+            ThreeMajorCrosshairVisibility = Visibility.Collapsed;
+            ThreeMajorHoverInfo = null;
+        }
+
+        private TwseT86History BuildTwseHistorySnapshot()
+        {
+            return new TwseT86History
+            {
+                Symbol = Symbol,
+                Name = Name,
+                RecordsByDate = new Dictionary<DateTime, TwseT86Record>(_twseByDate)
+            };
         }
 
         private void RebuildMacdVisuals(IReadOnlyList<CandleData> sourceCandles)
@@ -1044,6 +1287,15 @@ namespace StockTracker.ViewModels
             public int Index { get; set; }
             public decimal Price { get; set; }
             public string Signal { get; set; }
+        }
+
+        private class ThreeMajorPointData
+        {
+            public DateTime Time { get; set; }
+            public long ForeignNet { get; set; }
+            public long InvestmentTrustNet { get; set; }
+            public long DealerNet { get; set; }
+            public long ThreeMajorNet { get; set; }
         }
     }
 }

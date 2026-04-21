@@ -15,14 +15,18 @@ namespace StockTracker.ViewModels
     public class MainWindowViewModel : ViewModelBase
     {
         private readonly CapitalApiService _apiService;
+	private readonly TwseT86CsvClient _twseT86CsvClient;
+	private readonly List<TwseT86History> _twseT86Histories = new List<TwseT86History>();
         private string _newSymbol;
         private string _systemMessage;
         private string _selectedGlobalKLineInterval = "日K";
         private string _selectedGlobalKLineCount = "120";
+	private TwseT86Record _latestTwseT86Record;
 	private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
 	public MainWindowViewModel(CapitalApiService apiService)
         {
             _apiService = apiService;
+	    _twseT86CsvClient = new TwseT86CsvClient();
             Stocks = new ObservableCollection<StockViewModel>();
             SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
 	    UnsubscribeCommand = new RelayCommand(async _ => await UnsubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbol));
@@ -52,6 +56,16 @@ namespace StockTracker.ViewModels
                 }
             }
         }
+
+	public TwseT86Record LatestTwseT86Record
+	{
+	    get => _latestTwseT86Record;
+	    private set
+	    {
+		_latestTwseT86Record = value;
+		OnPropertyChanged();
+	    }
+	}
 
 
 	public string SelectedGlobalKLineCount
@@ -111,6 +125,8 @@ namespace StockTracker.ViewModels
 
         public async Task InitializeAsync()
         {
+	    await LoadTwseT86HistoryAsync();
+
 	    var savedSymbols = LoadSavedSubscriptions();
 	    if (savedSymbols.Count == 0)
 	    {
@@ -180,6 +196,7 @@ namespace StockTracker.ViewModels
             await _apiService.SubscribeAsync(symbol);
             var stockVm = new StockViewModel(symbol, name);
             stockVm.SelectedKLineInterval = SelectedGlobalKLineInterval;
+	    ApplyTwseRecordsToStock(stockVm);
             stockVm.SignalTriggered += StockVmOnSignalTriggered;
             Stocks.Add(stockVm);
 	    SaveSubscriptions();
@@ -208,10 +225,37 @@ namespace StockTracker.ViewModels
             {
 		var stockVm = new StockViewModel(eachStock.Item1, eachStock.Item2);
 		stockVm.SelectedKLineInterval = SelectedGlobalKLineInterval;
+		ApplyTwseRecordsToStock(stockVm);
 		stockVm.SignalTriggered += StockVmOnSignalTriggered;
 		Stocks.Add(stockVm);
 	    }
 	    SaveSubscriptions();
+	}
+
+	private async Task LoadTwseT86HistoryAsync()
+	{
+	    var folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History");
+	    var histories = await _twseT86CsvClient.ParseAsync(folderPath, DateTime.Today);
+	    _twseT86Histories.Clear();
+	    _twseT86Histories.AddRange(histories.Where(x => x != null));
+
+	    var latest = _twseT86Histories
+		.SelectMany(x => x.RecordsByDate.Values)
+		.OrderByDescending(x => x.TradeDate)
+		.ThenBy(x => x.Symbol)
+		.FirstOrDefault();
+	    LatestTwseT86Record = latest;
+	}
+
+	private void ApplyTwseRecordsToStock(StockViewModel stockVm)
+	{
+	    if (stockVm == null)
+	    {
+		return;
+	    }
+
+	    var history = _twseT86Histories.FirstOrDefault(x => string.Equals(x.Symbol, stockVm.Symbol, StringComparison.OrdinalIgnoreCase));
+	    stockVm.SetTwseT86Records(history == null ? null : history.RecordsByDate.Values);
 	}
 
 

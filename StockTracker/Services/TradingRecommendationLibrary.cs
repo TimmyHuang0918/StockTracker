@@ -1,4 +1,5 @@
 using StockTracker.Models;
+using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +14,13 @@ namespace StockManager.Library
 
     public static class TradingRecommendationLibrary
     {
-        public static TrendRecommendationResult CalculateAdvancedRecommendation(List<CandleData> data, double currentPrice, double? changePercent, double? previousClose = null)
+        public static TrendRecommendationResult CalculateAdvancedRecommendation(
+            List<CandleData> data,
+            double currentPrice,
+            double? changePercent,
+            double? previousClose = null,
+            TwseT86History twseHistory = null,
+            DateTime? analysisDate = null)
         {
             var reasons = new List<string>();
             if (data == null || data.Count < 20)
@@ -137,7 +144,79 @@ namespace StockManager.Library
                 else if (changePercent.Value <= -3) score -= 2;
             }
 
-            score = Math.Max(0, Math.Min(100, score));
+	    if (twseHistory != null && twseHistory.RecordsByDate != null && twseHistory.RecordsByDate.Count > 0)
+	    {
+		var targetDate = (analysisDate ?? latest.Time).Date;
+		var orderedInstitutional = twseHistory.RecordsByDate
+		    .Where(x => x.Key.Date <= targetDate)
+		    .OrderBy(x => x.Key)
+		    .Select(x => x.Value)
+		    .ToList();
+
+		var latestInstitutional = orderedInstitutional.LastOrDefault();
+		var previousInstitutional = orderedInstitutional.Count > 1
+		    ? orderedInstitutional[orderedInstitutional.Count - 2]
+		    : null;
+
+		if (latestInstitutional != null)
+		{
+		    var f = latestInstitutional.ForeignNet;
+		    var t = latestInstitutional.InvestmentTrustNet;
+		    var d = latestInstitutional.DealerSelfNet; // 建議改用自行買賣
+
+		    // --- 絕對值方向判斷 ---
+		    if (f > 0) { score += 4; reasons.Add($"外資買超 {f:N0} 股，偏多加分"); }
+		    else if (f < 0) { score -= 4; reasons.Add($"外資賣超 {Math.Abs(f):N0} 股，偏空扣分"); }
+
+		    if (t > 0) { score += 3; reasons.Add($"投信買超 {t:N0} 股，趨勢支撐"); }
+		    else if (t < 0) { score -= 3; reasons.Add($"投信賣超 {Math.Abs(t):N0} 股，趨勢轉弱"); }
+
+		    if (d > 0) { score += 2; reasons.Add($"自營商自行買超 {d:N0} 股，短線偏多"); }
+		    else if (d < 0) { score -= 2; reasons.Add($"自營商自行賣超 {Math.Abs(d):N0} 股，短線偏空"); }
+
+		    // --- 三大法人同向 ---
+		    var sameDirectionBuy = f > 0 && t > 0 && d > 0;
+		    var sameDirectionSell = f < 0 && t < 0 && d < 0;
+		    if (sameDirectionBuy) { score += 4; reasons.Add("三大法人同向買超，籌碼共振偏多"); }
+		    else if (sameDirectionSell) { score -= 4; reasons.Add("三大法人同向賣超，籌碼共振偏空"); }
+		}
+
+		// --- 前一日比較，算百分比變化率 ---
+		if (previousInstitutional != null && latestInstitutional != null)
+		{
+		    // 外資
+		    if (previousInstitutional.ForeignNet != 0)
+		    {
+			var fRate = (double)(latestInstitutional.ForeignNet - previousInstitutional.ForeignNet) / Math.Abs(previousInstitutional.ForeignNet) * 100.0;
+			score = BuySellRating(reasons, score, fRate, "外資", 3);
+		    }
+
+		    // 投信
+		    if (previousInstitutional.InvestmentTrustNet != 0)
+		    {
+			var tRate = (double)(latestInstitutional.InvestmentTrustNet - previousInstitutional.InvestmentTrustNet) / Math.Abs(previousInstitutional.InvestmentTrustNet) * 100.0;
+			score = BuySellRating(reasons, score, tRate, "投信", 1.5);
+		    }
+
+		    // 自營商 (自行買賣)
+		    if (previousInstitutional.DealerSelfNet != 0)
+		    {
+			var dRate = (double)(latestInstitutional.DealerSelfNet - previousInstitutional.DealerSelfNet) / Math.Abs(previousInstitutional.DealerSelfNet) * 100.0;
+			score = BuySellRating(reasons, score, dRate, "自營商", 1);
+		    }
+		}
+
+		// --- 近五日累計 ---
+		var recent5 = orderedInstitutional.Skip(Math.Max(0, orderedInstitutional.Count - 5)).ToList();
+		if (recent5.Count > 0)
+		{
+		    var rollingSum = recent5.Sum(x => x.ThreeMajorNet);
+		    if (rollingSum > 0) { score += 4; reasons.Add($"近 {recent5.Count} 日三大法人累計買超 {rollingSum:N0} 股"); }
+		    else if (rollingSum < 0) { score -= 4; reasons.Add($"近 {recent5.Count} 日三大法人累計賣超 {Math.Abs(rollingSum):N0} 股"); }
+		}
+	    }
+
+	    score = Math.Max(0, Math.Min(100, score));
 
             return new TrendRecommendationResult
             {
@@ -146,7 +225,19 @@ namespace StockManager.Library
             };
         }
 
-        public static int CalculateSimpleScore(double? price, double? previousClose, double? changePercent)
+	private static int BuySellRating(List<string> reasons, int score, double fRate, string name , double scoreScale = 1)
+	{
+	    if (fRate >= 200) { score += (int)(6 * scoreScale); reasons.Add($"外資淨買賣超相較前一日增加 {fRate:F2}%，強烈改善"); }
+	    else if (fRate >= 100) { score += (int)(3 * scoreScale); reasons.Add($"外資淨買賣超相較前一日增加 {fRate:F2}%，中度改善"); }
+	    else if (fRate > 0) { score += (int)(1 * scoreScale); reasons.Add($"外資淨買賣超相較前一日增加 {fRate:F2}%，輕微改善"); }
+	    else if (fRate <= -90) { score -= (int)(6 * scoreScale); reasons.Add($"外資淨買賣超相較前一日減少 {Math.Abs(fRate):F2}%，強烈轉弱"); }
+	    else if (fRate <= -50) { score -=  (int)(3 * scoreScale); reasons.Add($"外資淨買賣超相較前一日減少 {Math.Abs(fRate):F2}%，中度轉弱"); }
+	    else if (fRate < 0) { score -= (int)(1 * scoreScale); reasons.Add($"外資淨買賣超相較前一日減少 {Math.Abs(fRate):F2}%，輕微轉弱"); }
+
+	    return score;
+	}
+
+	public static int CalculateSimpleScore(double? price, double? previousClose, double? changePercent)
         {
             var score = 50;
 

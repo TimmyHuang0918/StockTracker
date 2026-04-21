@@ -109,7 +109,6 @@
     <Compile Include="StockDetailWindow.xaml.cs">
       <DependentUpon>StockDetailWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UnitTest\TwseT86UnitTest.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="ViewModels\RelayCommand.cs" />

@@ -198,7 +198,7 @@ namespace StockTracker
 	    // 需要多少交易日
 	    int requiredTradingDays = (int)Math.Ceiling((double)requiredBars / barsPerDay);
 
-	    // 取得最近交易日清單 (你需要自己實作，例如從交易所日曆或 API)
+	    // 取得最近交易日清單
 	    List<DateTime> tradingDays = GetRecentTradingDays(requiredTradingDays);
 
 	    // 起始日是最早的交易日，結束日是今天或最近交易日
@@ -256,8 +256,7 @@ namespace StockTracker
 	private void Button_Click(object sender, RoutedEventArgs e)
 	{
 	    TwseT86CsvClient test = new TwseT86CsvClient();
-	    var task = test.DownloadAndParseAsync(DateTime.Today.AddDays(-4));
-
+	    var task = test.ParseAsync($@"T86_History\", DateTime.Today.AddDays(-1));
 	    task.Wait();
 	}
     }

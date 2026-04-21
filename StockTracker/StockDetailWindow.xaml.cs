@@ -35,5 +35,22 @@ namespace StockTracker
                 stock.ClearCrosshair();
             }
         }
+
+        private void ThreeMajorCanvas_OnMouseMove(object sender, MouseEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is StockViewModel stock)
+            {
+                var point = e.GetPosition((IInputElement)sender);
+                stock.UpdateThreeMajorCrosshair(point.X);
+            }
+        }
+
+        private void ThreeMajorCanvas_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is StockViewModel stock)
+            {
+                stock.ClearThreeMajorCrosshair();
+            }
+        }
     }
 }

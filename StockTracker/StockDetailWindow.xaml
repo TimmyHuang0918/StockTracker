@@ -336,6 +336,60 @@
                     </StackPanel>
                 </Border>
 
+                <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="8" Background="{DynamicResource SurfaceBrush}" Margin="0,0,0,10"
+                        Visibility="{Binding ThreeMajorChartVisibility}">
+                    <StackPanel>
+                        <TextBlock Margin="0,0,0,6">
+                            <Run Text="三大法人買賣超曲線"/>
+                        </TextBlock>
+                        <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
+                                   Text="Y軸：買賣超股數    X軸：時間(由左到右)"/>
+                        <Viewbox Stretch="Fill" Height="100"
+                                 Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
+                            <Canvas Width="{Binding ChartWidth}" Height="110
+                                    " Background="{DynamicResource SurfaceAltBrush}"
+                                    MouseMove="ThreeMajorCanvas_OnMouseMove" MouseLeave="ThreeMajorCanvas_OnMouseLeave"
+                                    ToolTip="{Binding ThreeMajorHoverInfo}">
+                                <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding ThreeMajorZeroY}" Y2="{Binding ThreeMajorZeroY}"
+                                      Stroke="{DynamicResource MutedForegroundBrush}" StrokeThickness="1" StrokeDashArray="3,3"/>
+                                <ItemsControl ItemsSource="{Binding ThreeMajorLevels}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="0"/>
+                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Canvas>
+                                                <Line X1="0" X2="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Y1="0" Y2="0"
+                                                      Stroke="Gray" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                                <TextBlock Canvas.Left="2" Canvas.Top="{Binding LabelTop}" Margin="0,0,0,0"
+                                                           Text="{Binding Text}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="9"/>
+                                            </Canvas>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Polyline Points="{Binding ForeignNetPoints}" Stroke="#FF66C2FF" StrokeThickness="1.8"/>
+                                <Polyline Points="{Binding InvestmentTrustNetPoints}" Stroke="#FFFFC857" StrokeThickness="1.8"/>
+                                <Polyline Points="{Binding DealerNetPoints}" Stroke="#FFFF7A7A" StrokeThickness="1.8"/>
+                                <Line X1="{Binding ThreeMajorCrosshairX}" X2="{Binding ThreeMajorCrosshairX}" Y1="0" Y2="100"
+                                      Visibility="{Binding ThreeMajorCrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
+                            </Canvas>
+                        </Viewbox>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Foreground="#FF66C2FF" FontSize="11" Text="外資" Margin="0,0,12,0"/>
+                            <TextBlock Foreground="#FFFFC857" FontSize="11" Text="投信" Margin="0,0,12,0"/>
+                            <TextBlock Foreground="#FFFF7A7A" FontSize="11" Text="自營商"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <Label Content="{Binding Signal, Mode=OneWay}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
             </StackPanel>
         </ScrollViewer>
