@@ -159,7 +159,9 @@
                         </ListBox>
                     </DockPanel>
                 </Border>
-                <ListBox ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" MouseDoubleClick="StockList_OnMouseDoubleClick"
+                <ListBox ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" 
+                         SelectionChanged="ListBox_SelectionStockChanged"
+                         MouseDoubleClick="StockList_OnMouseDoubleClick"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          ScrollViewer.CanContentScroll="False">
@@ -170,7 +172,7 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
-                            <Setter Property="Width" Value="560"/>
+                            <Setter Property="Width" Value="430"/>
                             <Setter Property="Margin" Value="0,0,10,10"/>
                         </Style>
                     </ListBox.ItemContainerStyle>

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace StockTracker
@@ -250,6 +251,14 @@ namespace StockTracker
 	    if ((sender as FrameworkElement)?.DataContext is StockViewModel stock)
 	    {
 		stock.ClearCrosshair();
+	    }
+	}
+
+	private void ListBox_SelectionStockChanged(object sender, SelectionChangedEventArgs e)
+	{
+	    if (e.AddedItems.Count > 0 && e.AddedItems[0] is StockViewModel stock)
+	    {
+		textBoxSubscribe.Text = stock.Symbol;
 	    }
 	}
     }
