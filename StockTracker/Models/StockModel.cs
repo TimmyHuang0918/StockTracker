@@ -37,6 +37,7 @@ namespace StockTracker.Models
         public double BodyTop { get; set; }
         public double BodyHeight { get; set; }
         public Brush BodyBrush { get; set; }
+        public DateTime DateTime { get; set; }
     }
 
     public class HistogramBarVisual

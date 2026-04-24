@@ -47,6 +47,8 @@ namespace StockTracker.ViewModels
         private readonly List<double> _lastDisplaySignalSeries = new List<double>();
         private readonly List<double> _lastDisplayRsiSeries = new List<double>();
         private readonly List<ThreeMajorPointData> _lastDisplayThreeMajorSeries = new List<ThreeMajorPointData>();
+        private readonly Dictionary<DateTime, int> _recommendationScoreCache = new Dictionary<DateTime, int>();
+        private readonly Dictionary<DateTime, List<string>> _recommendationReasonsCache = new Dictionary<DateTime, List<string>>();
         private double _lastMinPrice;
         private double _lastPriceRange = 1;
         private double _crosshairX;
@@ -546,6 +548,8 @@ namespace StockTracker.ViewModels
 	    ForeignNetPoints.Clear();
 	    InvestmentTrustNetPoints.Clear();
 	    DealerNetPoints.Clear();
+	    _recommendationScoreCache.Clear();
+	    _recommendationReasonsCache.Clear();
 	    _lastDisplayThreeMajorSeries.Clear();
 	    ThreeMajorZeroY = 0;
             ThreeMajorCrosshairVisibility = Visibility.Collapsed;
@@ -683,7 +687,7 @@ namespace StockTracker.ViewModels
         private void UpdateSignal()
         {
             var analysisCandles = GetDisplayCandles();
-            if (!analysisCandles.Any())
+            if (analysisCandles.Count < 20)
             {
                 Signal = "資料不足";
                 _latestRecommendationReasons.Clear();
@@ -696,24 +700,34 @@ namespace StockTracker.ViewModels
                 analysisCandles,
                 (double)LatestPrice,
                 (double?)ChangePercent,
-                null,
+		(double)analysisCandles[analysisCandles.Count - 2].Close,
                 BuildTwseHistorySnapshot(),
                 latestCandle.Time);
 
             _latestRecommendationReasons = recommendation.Reasons ?? new List<string>();
             Signal = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
+            _recommendationScoreCache[latestCandle.Time] = recommendation.Score;
+            _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
 
             var actionSignal = ResolveActionSignal(Signal);
-            if ((actionSignal == "買進訊號" || actionSignal == "賣出訊號") && actionSignal != _lastNotifiedSignal)
+            var shouldRecord = recommendation.Score >= 70 || recommendation.Score <= 30;
+            var signalKey = $"{actionSignal}_{recommendation.Score / 15}";
+
+            if (shouldRecord && signalKey != _lastNotifiedSignal)
             {
-                _lastNotifiedSignal = actionSignal;
+                _lastNotifiedSignal = signalKey;
                 _signalHistory.Add(new SignalMarkerData
                 {
                     Index = _candles.Count - 1,
+                    Time = analysisCandles.Last().Time,
                     Price = analysisCandles.Last().Close,
-                    Signal = actionSignal
+                    Signal = actionSignal,
+                    Score = recommendation.Score
                 });
-                SignalTriggered?.Invoke(this, actionSignal);
+                if (actionSignal == "買進訊號" || actionSignal == "賣出訊號")
+                {
+                    SignalTriggered?.Invoke(this, actionSignal);
+                }
             }
         }
 
@@ -744,29 +758,28 @@ namespace StockTracker.ViewModels
 		return string.Empty;
 	    }
 
-	    var slice = _lastDisplayCandles.Take(nearestIndex + 1).ToList();
-	    double? previousClose = null;
-	    if (nearestIndex > 0)
+	    var marker = _signalHistory.LastOrDefault(x => x.Time == candle.Time);
+
+	    int score;
+	    List<string> reasons;
+	    if (!_recommendationScoreCache.TryGetValue(candle.Time, out score))
 	    {
-		previousClose = (double)_lastDisplayCandles[nearestIndex - 1].Close;
+		if (marker == null)
+		{
+		    return string.Empty;
+		}
+		score = marker.Score;
 	    }
 
-	    double? changePercent = null;
-	    if (previousClose.HasValue && previousClose.Value != 0)
+	    if (!_recommendationReasonsCache.TryGetValue(candle.Time, out reasons))
 	    {
-		changePercent = ((double)candle.Close - previousClose.Value) / previousClose.Value * 100d;
+		reasons = new List<string>();
 	    }
 
-	    var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
-		slice,
-		(double)candle.Close,
-		changePercent,
-		previousClose,
-		BuildTwseHistorySnapshot(),
-		candle.Time);
-	    var suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
-	    var topReasons = (recommendation.Reasons ?? new List<string>()).Take(50).Select(r => $"- {r}");
-	    return $"\n建議: {suggestion} ({recommendation.Score})\n建議理由:\n" + string.Join("\n", topReasons);
+	    var suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(score);
+	    var markerText = marker == null ? string.Empty : $"\n訊號標記: {marker.Signal}";
+	    var topReasons = reasons.Take(50).Select(r => $"- {r}");
+	    return $"\n建議: {suggestion} ({score}){markerText}\n建議理由:\n" + string.Join("\n", topReasons);
 	}
 
         private void RebuildVisuals()
@@ -809,7 +822,8 @@ namespace StockTracker.ViewModels
                 Candles.Add(new CandlestickVisual
                 {
                     X = x,
-                    WickTop = Math.Min(highY, lowY),
+		    DateTime = item.Time,
+		    WickTop = Math.Min(highY, lowY),
                     WickBottom = Math.Max(highY, lowY),
                     BodyTop = Math.Min(openY, closeY),
                     BodyHeight = Math.Max(2, Math.Abs(openY - closeY)),
@@ -834,26 +848,94 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(Ma20Points));
             OnPropertyChanged(nameof(_chartPaddingWidth));
 
-            SignalMarkers.Clear();
-            foreach (var signal in _signalHistory.Where(x => x.Index >= 0))
-            {
-                var displayIndex = signal.Index - displayOffset;
-                if (displayIndex < 0 || displayIndex >= candles.Count)
-                {
-                    continue;
-                }
+	    SignalMarkers.Clear();
+	    var listCandles = Candles.ToList();
 
-                var x = CalculateCenterX(displayIndex, candles.Count, _chartPaddingWidth);
-                var y = Scale((double)signal.Price, minPrice, priceRange, CandleChartHeight);
-                var isBuy = signal.Signal == "買進訊號";
-                SignalMarkers.Add(new SignalMarkerVisual
-                {
-                    X = x,
-                    Y = isBuy ? y - 18 : y + 6,
-                    Text = isBuy ? "▲買" : "▼賣",
-                    Brush = isBuy ? Brushes.OrangeRed : Brushes.LimeGreen
-                });
-            }
+	    // Collect valid signals with their display indices
+	    var validSignals = new List<System.Tuple<int, SignalMarkerData>>();
+	    foreach (var signal in _signalHistory.Where(x => x.Index >= 0))
+	    {
+		var displayIndex = listCandles.FindIndex(c => c.DateTime == signal.Time);
+		if (displayIndex < 0)
+		{
+		    displayIndex = signal.Index - displayOffset;
+		}
+		if (displayIndex >= 0 && displayIndex < candles.Count)
+		{
+		    validSignals.Add(System.Tuple.Create(displayIndex, signal));
+		}
+	    }
+
+	    // Filter: prefer strongest signal, keep min 5-candle gap
+	    var filteredSignals = new List<System.Tuple<int, SignalMarkerData>>();
+	    foreach (var item in validSignals.OrderByDescending(x => Math.Abs(x.Item2.Score - 50)))
+	    {
+		if (!filteredSignals.Any(f => Math.Abs(f.Item1 - item.Item1) < 5))
+		{
+		    filteredSignals.Add(item);
+		}
+	    }
+
+	    foreach (var entry in filteredSignals)
+	    {
+		var displayIndex = entry.Item1;
+		var signal = entry.Item2;
+
+		var x = Candles[displayIndex].X;
+		var candleHigh = (double)candles[displayIndex].High;
+		var candleLow = (double)candles[displayIndex].Low;
+		var highY = Scale(candleHigh, minPrice, priceRange, CandleChartHeight);
+		var lowY = Scale(candleLow, minPrice, priceRange, CandleChartHeight);
+
+		string text;
+		Brush brush;
+		double offsetY;
+
+		if (signal.Score >= 85)
+		{
+		    text = "▲";
+		    brush = Brushes.Red;
+		    offsetY = highY - 22;
+		}
+		else if (signal.Score >= 70)
+		{
+		    text = "▲";
+		    brush = Brushes.OrangeRed;
+		    offsetY = highY - 20;
+		}
+		else if (signal.Score >= 55)
+		{
+		    text = "▲";
+		    brush = Brushes.Orange;
+		    offsetY = highY - 18;
+		}
+		else if (signal.Score <= 15)
+		{
+		    text = "▼";
+		    brush = Brushes.DarkGreen;
+		    offsetY = lowY + 8;
+		}
+		else if (signal.Score <= 30)
+		{
+		    text = "▼";
+		    brush = Brushes.MediumSeaGreen;
+		    offsetY = lowY + 8;
+		}
+		else
+		{
+		    text = "▼";
+		    brush = Brushes.LightGreen;
+		    offsetY = lowY + 8;
+		}
+
+		SignalMarkers.Add(new SignalMarkerVisual
+		{
+		    X = x - 2,
+		    Y = offsetY,
+		    Text = text,
+		    Brush = brush
+		});
+	    }
 
             TimeLabels.Clear();
             var labelStep = Math.Max(1, candles.Count / 8);
@@ -1285,8 +1367,10 @@ namespace StockTracker.ViewModels
         private class SignalMarkerData
         {
             public int Index { get; set; }
+            public DateTime Time { get; set; }
             public decimal Price { get; set; }
             public string Signal { get; set; }
+            public int Score { get; set; }
         }
 
         private class ThreeMajorPointData
