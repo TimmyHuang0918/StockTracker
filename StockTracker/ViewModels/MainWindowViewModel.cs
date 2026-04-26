@@ -3,6 +3,7 @@ using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,12 +19,14 @@ namespace StockTracker.ViewModels
         private readonly CapitalApiService _apiService;
 	private readonly TwseT86CsvClient _twseT86CsvClient;
 	private readonly List<TwseT86History> _twseT86Histories = new List<TwseT86History>();
-        private string _newSymbol;
-        private string _systemMessage;
-        private string _selectedGlobalKLineInterval = "日K";
-        private string _selectedGlobalKLineCount = "120";
+	private string _newSymbol;
+	private string _systemMessage;
+	private string _selectedGlobalKLineInterval = "日K";
+	private string _selectedGlobalKLineCount = "120";
 	private TwseT86Record _latestTwseT86Record;
 	private DateTime _latestRankingDate;
+	private DateTime _twseHistoryStartDate = DateTime.Today;
+	private bool _isUpdatingTwseHistory;
 	private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
 	public MainWindowViewModel(CapitalApiService apiService)
         {
@@ -31,9 +34,35 @@ namespace StockTracker.ViewModels
 	    _twseT86CsvClient = new TwseT86CsvClient();
             Stocks = new ObservableCollection<StockViewModel>();
             TwseRankingItems = new ObservableCollection<TwseT86RankingItem>();
-            SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
+	    SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
 	    UnsubscribeCommand = new RelayCommand(async _ => await UnsubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbol));
-        }
+	    UpdateTwseHistoryCommand = new RelayCommand(async _ => await UpdateTwseHistoryAsync(), _ => !IsUpdatingTwseHistory);
+	}
+
+	public ICommand UpdateTwseHistoryCommand { get; }
+
+	public DateTime TwseHistoryStartDate
+	{
+	    get => _twseHistoryStartDate;
+	    set
+	    {
+		_twseHistoryStartDate = value;
+		OnPropertyChanged();
+	    }
+	}
+
+	public bool IsUpdatingTwseHistory
+	{
+	    get => _isUpdatingTwseHistory;
+	    private set
+	    {
+		_isUpdatingTwseHistory = value;
+		OnPropertyChanged();
+		OnPropertyChanged(nameof(UpdateTwseHistoryButtonText));
+	    }
+	}
+
+	public string UpdateTwseHistoryButtonText => IsUpdatingTwseHistory ? "更新中…" : "更新資料";
 
 	public ObservableCollection<TwseT86RankingItem> TwseRankingItems { get; }
 
@@ -245,6 +274,65 @@ namespace StockTracker.ViewModels
 		Stocks.Add(stockVm);
 	    }
 	    SaveSubscriptions();
+	}
+
+	private async Task UpdateTwseHistoryAsync()
+	{
+	    if (IsUpdatingTwseHistory)
+	    {
+		return;
+	    }
+
+	    IsUpdatingTwseHistory = true;
+	    SystemMessage = "三大法人資料更新中…";
+	    try
+	    {
+		var outDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History");
+		Directory.CreateDirectory(outDir);
+		var pythonScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,  "twse_tpex_institutional.py");
+		if (!File.Exists(pythonScript))
+		{
+		    SystemMessage = "找不到 Python 腳本: " + pythonScript;
+		    return;
+		}
+
+		var startStr = TwseHistoryStartDate.ToString("yyyyMMdd");
+		var endStr   = DateTime.Today.ToString("yyyyMMdd");
+		var psi = new ProcessStartInfo
+		{
+		    FileName = "python",
+		    Arguments = $"\"{pythonScript}\" {startStr} {endStr} \"{outDir}\"",
+		    UseShellExecute = false,
+		    RedirectStandardOutput = true,
+		    RedirectStandardError = true,
+		    CreateNoWindow = true,
+		    StandardOutputEncoding = System.Text.Encoding.UTF8
+		};
+
+		await Task.Run(() =>
+		{
+		    using (var process = Process.Start(psi))
+		    {
+			if (process == null) return;
+			process.WaitForExit();
+		    }
+		});
+
+		await LoadTwseT86HistoryAsync();
+		foreach (var stock in Stocks)
+		{
+		    ApplyTwseRecordsToStock(stock);
+		}
+		SystemMessage = $"三大法人資料已更新至 {DateTime.Today:yyyy/MM/dd}";
+	    }
+	    catch (Exception ex)
+	    {
+		SystemMessage = "更新失敗: " + ex.Message;
+	    }
+	    finally
+	    {
+		IsUpdatingTwseHistory = false;
+	    }
 	}
 
 	private async Task LoadTwseT86HistoryAsync()

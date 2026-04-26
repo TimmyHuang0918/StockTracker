@@ -120,8 +120,22 @@
                 <Border DockPanel.Dock="Right" Width="320" Margin="10,0,0,0" Padding="8"
                         BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceAltBrush}">
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,8"
+                        <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,6"
                                    Text="{Binding LatestRankingDate, StringFormat=三大法人買賣超排名（{0:yyyy/MM/dd}）}"/>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="歷史起始日："  VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <DatePicker Width="120" Height="26" SelectedDate="{Binding TwseHistoryStartDate, Mode=TwoWay}"
+                                        FontSize="12" VerticalContentAlignment="Center" Foreground="White"/>
+                            <Button Content="{Binding UpdateTwseHistoryButtonText}" Width="72" Height="26" Margin="6,0,0,0"
+                                    Command="{Binding UpdateTwseHistoryCommand}"
+                                    IsEnabled="{Binding IsUpdatingTwseHistory, Converter={StaticResource InverseBoolConverter}}"/>
+                        </StackPanel>
+                        <ProgressBar DockPanel.Dock="Top" Height="4" Margin="0,0,0,6"
+                                     IsIndeterminate="True"
+                                     Visibility="{Binding IsUpdatingTwseHistory, Converter={StaticResource BoolToVisibilityConverter}}"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     Background="Transparent"
+                                     BorderThickness="0"/>
                         <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="35"/>

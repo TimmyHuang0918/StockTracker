@@ -9,6 +9,7 @@ namespace StockTracker.Services
 {
     public class TwseT86Record
     {
+	public string Market { get; set; } // 新增市場欄位
 	/// <summary>
 	/// 交易日期
 	/// </summary>
@@ -167,66 +168,69 @@ namespace StockTracker.Services
 	    return ParseCsv(csv, tradeDate);
 	}
 	public static IReadOnlyList<TwseT86Record> ParseCsv(string csv, DateTime tradeDate)
-        {
-            var result = new List<TwseT86Record>();
-            if (string.IsNullOrWhiteSpace(csv))
-            {
-                return result;
-            }
+	{
+	    var result = new List<TwseT86Record>();
+	    if (string.IsNullOrWhiteSpace(csv))
+	    {
+		return result;
+	    }
 
-            var lines = csv.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var rawLine in lines)
-            {
-                var line = rawLine.Trim();
-                if (line.StartsWith("=") || line.StartsWith("\"證券代號\"") || line.StartsWith("\"說明\""))
-                {
-                    continue;
-                }
+	    var lines = csv.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+	    foreach (var rawLine in lines)
+	    {
+		var line = rawLine.Trim();
+		if (line.StartsWith("=") || line.StartsWith("\"證券代號\"") || line.StartsWith("\"說明\""))
+		{
+		    continue;
+		}
 
-                var cols = ParseCsvLine(line);
-                if (cols.Count < 19)
-                {
-                    continue;
-                }
+		var cols = ParseCsvLine(line);
+		if (cols.Count < 23) // 至少要有 23 欄
+		{
+		    continue;
+		}
+		cols[2] = cols[2].Replace("=", "");
 
-                if (string.IsNullOrWhiteSpace(cols[0]) || !char.IsDigit(cols[0].FirstOrDefault()))
-                {
-                    continue;
-                }
+		// 證券代號在第 3 欄 (cols[2])
+		if (string.IsNullOrWhiteSpace(cols[2]) || !char.IsDigit(cols[2].FirstOrDefault()))
+		{
+		    continue;
+		}
 
 		result.Add(new TwseT86Record
 		{
 		    TradeDate = tradeDate.Date,
-		    Symbol = cols[0],
-		    Name = cols[1],
+		    Market = cols[1], // 直接取 CSV 的市場欄位
+		    Symbol = cols[2],
+		    Name = cols[3],
 
-		    ForeignBuy = ParseLong(cols[2]),
-		    ForeignSell = ParseLong(cols[3]),
-		    ForeignNet = ParseLong(cols[4]),
+		    ForeignBuy = ParseLong(cols[4]),
+		    ForeignSell = ParseLong(cols[5]),
+		    ForeignNet = ParseLong(cols[6]),
 
-		    InvestmentTrustBuy = ParseLong(cols[8]),
-		    InvestmentTrustSell = ParseLong(cols[9]),
-		    InvestmentTrustNet = ParseLong(cols[10]),
+		    InvestmentTrustBuy = ParseLong(cols[10]),
+		    InvestmentTrustSell = ParseLong(cols[11]),
+		    InvestmentTrustNet = ParseLong(cols[12]),
 
-		    DealerNet = ParseLong(cols[11]),
+		    DealerNet = ParseLong(cols[15]),
 
-		    DealerSelfBuy = ParseLong(cols[12]),
-		    DealerSelfSell = ParseLong(cols[13]),
-		    DealerSelfNet = ParseLong(cols[14]),
+		    DealerSelfBuy = ParseLong(cols[16]),
+		    DealerSelfSell = ParseLong(cols[17]),
+		    DealerSelfNet = ParseLong(cols[18]),
 
-		    DealerHedgeBuy = ParseLong(cols[15]),
-		    DealerHedgeSell = ParseLong(cols[16]),
-		    DealerHedgeNet = ParseLong(cols[17]),
+		    DealerHedgeBuy = ParseLong(cols[19]),
+		    DealerHedgeSell = ParseLong(cols[20]),
+		    DealerHedgeNet = ParseLong(cols[21]),
 
-		    ThreeMajorNet = ParseLong(cols[18])
+		    ThreeMajorNet = ParseLong(cols[22])
 		});
-
 	    }
 
 	    return result;
-        }
+	}
 
-        private static List<string> ParseCsvLine(string line)
+
+	private static List<string> ParseCsvLine(string line)
         {
             var values = new List<string>();
             var current = string.Empty;
@@ -253,22 +257,31 @@ namespace StockTracker.Services
             values.Add(current.Trim());
             return values;
         }
+	private static long ParseLong(string input)
+	{
+	    if (string.IsNullOrWhiteSpace(input))
+		return 0;
 
-        private static long ParseLong(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return 0;
-            }
+	    // 去掉引號、逗號、空白
+	    var normalized = input.Trim().Trim('"').Replace(",", "");
 
-            var normalized = text.Replace(",", string.Empty).Trim();
-            long value;
-            if (long.TryParse(normalized, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value))
-            {
-                return value;
-            }
+	    // 如果是 "30466564.0" 這種格式，先嘗試轉 double 再轉 long
+	    if (normalized.Contains("."))
+	    {
+		if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var dval))
+		{
+		    return (long)dval;
+		}
+	    }
 
-            return 0;
-        }
+	    // 一般整數格式
+	    if (long.TryParse(normalized, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value))
+	    {
+		return value;
+	    }
+
+	    return 0;
+	}
+
     }
 }
