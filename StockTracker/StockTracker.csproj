@@ -81,6 +81,7 @@
     <Reference Include="System.ValueTuple, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.ValueTuple.4.4.0\lib\net47\System.ValueTuple.dll</HintPath>
     </Reference>
+        <Reference Include="System.Data.SQLite"><HintPath>lib\System.Data.SQLite.dll</HintPath></Reference>
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -107,6 +108,7 @@
     <Compile Include="Services\SKAPI.cs" />
     <Compile Include="Services\TradingRecommendationLibrary.cs" />
     <Compile Include="Services\TwseT86CsvClient.cs" />
+    <Compile Include="Services\TwseT86Repository.cs" />
     <Compile Include="StockDetailWindow.xaml.cs">
       <DependentUpon>StockDetailWindow.xaml</DependentUpon>
     </Compile>
@@ -171,4 +173,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\NUnit.4.5.1\build\NUnit.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\NUnit.4.5.1\build\NUnit.props'))" />
   </Target>
-</Project>
+
+  <Target Name="CopySQLiteInterop" AfterTargets="Build">
+    <Copy SourceFiles="lib\x64\SQLite.Interop.dll" DestinationFolder="$(OutputPath)" Condition="Exists('lib\x64\SQLite.Interop.dll')" />
+  </Target></Project>

@@ -158,10 +158,10 @@ namespace StockTracker.Services
 	    return histories;
 	}
 
-        public static IReadOnlyList<TwseT86Record> ParseCsvFile(string csvFile, DateTime tradeDate)
-        {
-            string csv = string.Empty;
-	    using (StreamReader sr = new StreamReader(csvFile, System.Text.Encoding.GetEncoding("Big5")))
+	public static IReadOnlyList<TwseT86Record> ParseCsvFile(string csvFile, DateTime tradeDate)
+	{
+	    string csv;
+	    using (var sr = new StreamReader(csvFile, System.Text.Encoding.UTF8))
 	    {
 		csv = sr.ReadToEnd();
 	    }

@@ -3,11 +3,14 @@ using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml.Linq;
@@ -16,8 +19,9 @@ namespace StockTracker.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
-        private readonly CapitalApiService _apiService;
+	private readonly CapitalApiService _apiService;
 	private readonly TwseT86CsvClient _twseT86CsvClient;
+	private readonly TwseT86Repository _twseT86Repository;
 	private readonly List<TwseT86History> _twseT86Histories = new List<TwseT86History>();
 	private string _newSymbol;
 	private string _systemMessage;
@@ -27,13 +31,18 @@ namespace StockTracker.ViewModels
 	private DateTime _latestRankingDate;
 	private DateTime _twseHistoryStartDate = DateTime.Today;
 	private bool _isUpdatingTwseHistory;
+	private string _updatingTwseText;
+	private string _rankingFilter = "全部顯示";
+	private ICollectionView _filteredTwseRankingItems;
 	private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
 	public MainWindowViewModel(CapitalApiService apiService)
-        {
-            _apiService = apiService;
+	{
+	    _apiService = apiService;
 	    _twseT86CsvClient = new TwseT86CsvClient();
-            Stocks = new ObservableCollection<StockViewModel>();
-            TwseRankingItems = new ObservableCollection<TwseT86RankingItem>();
+	    var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_t86.db");
+	    _twseT86Repository = new TwseT86Repository(dbPath);
+	    Stocks = new ObservableCollection<StockViewModel>();
+	    TwseRankingItems = new ObservableCollection<TwseT86RankingItem>();
 	    SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
 	    UnsubscribeCommand = new RelayCommand(async _ => await UnsubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbol));
 	    UpdateTwseHistoryCommand = new RelayCommand(async _ => await UpdateTwseHistoryAsync(), _ => !IsUpdatingTwseHistory);
@@ -62,9 +71,46 @@ namespace StockTracker.ViewModels
 	    }
 	}
 
+	public string UpdatingTwseText
+	{
+	    get => _updatingTwseText;
+	    set
+	    {
+		_updatingTwseText = value;
+		OnPropertyChanged();
+	    }
+	}
+
 	public string UpdateTwseHistoryButtonText => IsUpdatingTwseHistory ? "更新中…" : "更新資料";
 
 	public ObservableCollection<TwseT86RankingItem> TwseRankingItems { get; }
+
+	public ICollectionView FilteredTwseRankingItems
+	{
+	    get => _filteredTwseRankingItems;
+	    private set
+	    {
+		_filteredTwseRankingItems = value;
+		OnPropertyChanged();
+	    }
+	}
+
+	public IReadOnlyList<string> RankingFilterOptions { get; } = new[]
+	{
+	    "全部顯示", "上市櫃（4碼）", "上市櫃（5碼）", "僅上市", "僅上櫃"
+	};
+
+	public string RankingFilter
+	{
+	    get => _rankingFilter;
+	    set
+	    {
+		if (_rankingFilter == value) return;
+		_rankingFilter = value;
+		OnPropertyChanged();
+		ApplyRankingFilter();
+	    }
+	}
 
 	public DateTime LatestRankingDate
 	{
@@ -278,10 +324,7 @@ namespace StockTracker.ViewModels
 
 	private async Task UpdateTwseHistoryAsync()
 	{
-	    if (IsUpdatingTwseHistory)
-	    {
-		return;
-	    }
+	    if (IsUpdatingTwseHistory) return;
 
 	    IsUpdatingTwseHistory = true;
 	    SystemMessage = "三大法人資料更新中…";
@@ -289,7 +332,7 @@ namespace StockTracker.ViewModels
 	    {
 		var outDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History");
 		Directory.CreateDirectory(outDir);
-		var pythonScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,  "twse_tpex_institutional.py");
+		var pythonScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "twse_tpex_institutional.py");
 		if (!File.Exists(pythonScript))
 		{
 		    SystemMessage = "找不到 Python 腳本: " + pythonScript;
@@ -304,25 +347,48 @@ namespace StockTracker.ViewModels
 		    Arguments = $"\"{pythonScript}\" {startStr} {endStr} \"{outDir}\"",
 		    UseShellExecute = false,
 		    RedirectStandardOutput = true,
-		    RedirectStandardError = true,
+		    RedirectStandardError  = true,
 		    CreateNoWindow = true,
-		    StandardOutputEncoding = System.Text.Encoding.UTF8
+		    StandardOutputEncoding = System.Text.Encoding.UTF8,
+		    StandardErrorEncoding  = System.Text.Encoding.UTF8
 		};
 
+		UpdatingTwseText = "下載中…";
 		await Task.Run(() =>
 		{
-		    using (var process = Process.Start(psi))
+		    using (var process = new Process { StartInfo = psi })
 		    {
-			if (process == null) return;
+			process.OutputDataReceived += (_, e) =>
+			{
+			    if (!string.IsNullOrEmpty(e.Data))
+				Application.Current.Dispatcher.Invoke(() =>
+				    UpdatingTwseText = e.Data.Split('→')[0].Trim());
+			};
+			process.ErrorDataReceived += (_, e) =>
+			{
+			    if (!string.IsNullOrEmpty(e.Data))
+				Application.Current.Dispatcher.Invoke(() =>
+				    UpdatingTwseText = e.Data.Trim());
+			};
+			process.Start();
+			process.BeginOutputReadLine();
+			process.BeginErrorReadLine();
 			process.WaitForExit();
 		    }
 		});
 
+		// 只把 CSV 資料夾中尚未入庫的日期寫入 SQLite，不全部 reload
+		UpdatingTwseText = "寫入資料庫…";
+		var textProgress = new Progress<string>(msg =>
+		    Application.Current.Dispatcher.Invoke(() => UpdatingTwseText = msg));
+		await _twseT86Repository.ImportMissingCsvAsync(outDir, textProgress);
+
+		// 從 SQLite 全量讀取並重建排行（帶進度條）
 		await LoadTwseT86HistoryAsync();
 		foreach (var stock in Stocks)
-		{
 		    ApplyTwseRecordsToStock(stock);
-		}
+
+		UpdatingTwseText = string.Empty;
 		SystemMessage = $"三大法人資料已更新至 {DateTime.Today:yyyy/MM/dd}";
 	    }
 	    catch (Exception ex)
@@ -337,18 +403,40 @@ namespace StockTracker.ViewModels
 
 	private async Task LoadTwseT86HistoryAsync()
 	{
-	    var folderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History");
-	    var histories = await _twseT86CsvClient.ParseAsync(folderPath, DateTime.Today);
-	    _twseT86Histories.Clear();
-	    _twseT86Histories.AddRange(histories.Where(x => x != null));
+	    IsUpdatingTwseHistory = true;
+	    UpdatingTwseText = "讀取資料庫…";
+	    try
+	    {
+		// 先把 CSV 資料夾中尚未入庫的日期補入 SQLite
+		var csvFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History");
+		var textProgress = new Progress<string>(msg =>
+		    Application.Current.Dispatcher.Invoke(() => UpdatingTwseText = msg));
+		await _twseT86Repository.ImportMissingCsvAsync(csvFolder, textProgress);
 
-	    var latest = _twseT86Histories
-		.SelectMany(x => x.RecordsByDate.Values)
-		.OrderByDescending(x => x.TradeDate)
-		.ThenBy(x => x.Symbol)
-		.FirstOrDefault();
-	    LatestTwseT86Record = latest;
-	    BuildTwseRankingList();
+		// 從 SQLite 讀取全量資料（有進度回報）
+		var dbProgress = new Progress<(int current, int total)>(p =>
+		    Application.Current.Dispatcher.Invoke(() =>
+			UpdatingTwseText = p.total > 0
+			    ? $"載入中 {p.current:N0} / {p.total:N0}"
+			    : "載入中…"));
+
+		var histories = await _twseT86Repository.LoadAllHistoriesAsync(dbProgress);
+		_twseT86Histories.Clear();
+		_twseT86Histories.AddRange(histories.Where(x => x != null));
+
+		var latest = _twseT86Histories
+		    .SelectMany(x => x.RecordsByDate.Values)
+		    .OrderByDescending(x => x.TradeDate)
+		    .ThenBy(x => x.Symbol)
+		    .FirstOrDefault();
+		LatestTwseT86Record = latest;
+		BuildTwseRankingList();
+	    }
+	    finally
+	    {
+		UpdatingTwseText = string.Empty;
+		IsUpdatingTwseHistory = false;
+	    }
 	}
 
 	private void BuildTwseRankingList()
@@ -363,7 +451,7 @@ namespace StockTracker.ViewModels
 
 	    var latestDate = allRecords.Max(x => x.TradeDate.Date);
 	    LatestRankingDate = latestDate;
-            OnPropertyChanged(nameof(LatestRankingDate));
+	    OnPropertyChanged(nameof(LatestRankingDate));
 
 	    var latestRecords = allRecords
 		.Where(x => x.TradeDate.Date == latestDate)
@@ -392,6 +480,7 @@ namespace StockTracker.ViewModels
 		    Rank = rank,
 		    Symbol = record.Symbol,
 		    Name = record.Name,
+		    Market = record.Market ?? string.Empty,
 		    ThreeMajorNet = record.ThreeMajorNet,
 		    RankDeltaText = !hasPrev ? "NEW" : rankDelta > 0 ? $"▲{rankDelta}" : rankDelta < 0 ? $"▼{Math.Abs(rankDelta)}" : "-",
 		    RankDeltaBrush = !hasPrev ? Brushes.SkyBlue : rankDelta > 0 ? Brushes.IndianRed : rankDelta < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
@@ -403,6 +492,42 @@ namespace StockTracker.ViewModels
 			$"\n自營商 淨:{record.DealerNet:N0} (自買:{record.DealerSelfNet:N0} / 避險:{record.DealerHedgeNet:N0})" +
 			$"\n三大法人買賣超: {record.ThreeMajorNet:N0}"
 		});
+	    }
+
+	    // 建立 / 刷新 CollectionView
+	    if (FilteredTwseRankingItems == null)
+	    {
+		FilteredTwseRankingItems = CollectionViewSource.GetDefaultView(TwseRankingItems);
+	    }
+	    ApplyRankingFilter();
+	}
+
+	private void ApplyRankingFilter()
+	{
+	    if (FilteredTwseRankingItems == null)
+	    {
+		FilteredTwseRankingItems = CollectionViewSource.GetDefaultView(TwseRankingItems);
+	    }
+
+	    switch (_rankingFilter)
+	    {
+		case "上市櫃（4碼）":
+		    FilteredTwseRankingItems.Filter = o => o is TwseT86RankingItem item && item.Symbol.Length == 4;
+		    break;
+		case "上市櫃（5碼）":
+		    FilteredTwseRankingItems.Filter = o => o is TwseT86RankingItem item && item.Symbol.Length == 5;
+		    break;
+		case "僅上市":
+		    FilteredTwseRankingItems.Filter = o => o is TwseT86RankingItem item &&
+			(item.Market == "上市" || item.Market.Contains("上市"));
+		    break;
+		case "僅上櫃":
+		    FilteredTwseRankingItems.Filter = o => o is TwseT86RankingItem item &&
+			(item.Market == "上櫃" || item.Market.Contains("上櫃"));
+		    break;
+		default:
+		    FilteredTwseRankingItems.Filter = null;
+		    break;
 	    }
 	}
 
@@ -455,6 +580,7 @@ namespace StockTracker.ViewModels
 	    public int Rank { get; set; }
 	    public string Symbol { get; set; }
 	    public string Name { get; set; }
+	    public string Market { get; set; }
 	    public long ThreeMajorNet { get; set; }
 	    public string RankDeltaText { get; set; }
 	    public Brush RankDeltaBrush { get; set; }

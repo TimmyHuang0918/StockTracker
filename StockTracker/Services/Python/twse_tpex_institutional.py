@@ -1,8 +1,12 @@
 import requests
 import pandas as pd
-import time
 from datetime import datetime
 from io import StringIO
+import sys
+import io
+import time
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # ════════════════════════════════════════════════
 # 欄位對應表：以上市為主
@@ -148,7 +152,7 @@ if __name__ == "__main__":
             date_str = cur.strftime("%Y%m%d")
             if date_str not in existing:
                 fetch_and_save(date_str, out_dir)
-                time.sleep(2)  # 每次抓完等 2 秒，避免太快被鎖
+                time.sleep(5)  # 每次抓完等 2 秒，避免太快被鎖
             else:
                 print(f"⏩ {date_str} 已存在，跳過")
             cur += timedelta(days=1)

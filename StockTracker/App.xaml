@@ -97,6 +97,51 @@
                 <Setter Property="Background" Value="{StaticResource DarkControlBackground}"/>
                 <Setter Property="Foreground" Value="{StaticResource DarkForeground}"/>
                 <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="6,0,4,0"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBox">
+                            <Grid>
+                                <Border x:Name="Border" CornerRadius="4"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}">
+                                    <DockPanel>
+                                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalAlignment="Left"
+                                                          Content="{TemplateBinding SelectionBoxItem}"
+                                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+                                        <ToggleButton DockPanel.Dock="Right" Width="20"
+                                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                                      Focusable="False" ClickMode="Press"
+                                                      Background="Transparent" BorderThickness="0">
+                                            <Path VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                  Data="M 0 0 L 4 4 L 8 0 Z"
+                                                  Fill="{TemplateBinding Foreground}"/>
+                                        </ToggleButton>
+                                    </DockPanel>
+                                </Border>
+                                <Popup Name="Popup" Placement="Bottom"
+                                       IsOpen="{TemplateBinding IsDropDownOpen}"
+                                       AllowsTransparency="True" Focusable="False"
+                                       PopupAnimation="Slide">
+                                    <Border CornerRadius="4" MinWidth="{TemplateBinding ActualWidth}"
+                                            Background="{StaticResource DarkControlBackground}"
+                                            BorderBrush="{StaticResource DarkBorder}"
+                                            BorderThickness="1">
+                                        <ScrollViewer MaxHeight="200"
+                                                      VerticalScrollBarVisibility="Auto">
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <!-- ComboBoxItem -->

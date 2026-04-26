@@ -115,64 +115,16 @@
         </DockPanel>
 
         <Border Grid.Row="3" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceBrush}" Padding="8">
-            <DockPanel>
-                <TextBlock Text="全部訂閱股票 K 線總覽（雙擊可開啟詳細圖表）" FontWeight="Bold" Margin="0,0,0,8" DockPanel.Dock="Top"/>
-                <Border DockPanel.Dock="Right" Width="320" Margin="10,0,0,0" Padding="8"
-                        BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceAltBrush}">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,6"
-                                   Text="{Binding LatestRankingDate, StringFormat=三大法人買賣超排名（{0:yyyy/MM/dd}）}"/>
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
-                            <TextBlock Text="歷史起始日："  VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <DatePicker Width="120" Height="26" SelectedDate="{Binding TwseHistoryStartDate, Mode=TwoWay}"
-                                        FontSize="12" VerticalContentAlignment="Center" Foreground="White"/>
-                            <Button Content="{Binding UpdateTwseHistoryButtonText}" Width="72" Height="26" Margin="6,0,0,0"
-                                    Command="{Binding UpdateTwseHistoryCommand}"
-                                    IsEnabled="{Binding IsUpdatingTwseHistory, Converter={StaticResource InverseBoolConverter}}"/>
-                        </StackPanel>
-                        <ProgressBar DockPanel.Dock="Top" Height="4" Margin="0,0,0,6"
-                                     IsIndeterminate="True"
-                                     Visibility="{Binding IsUpdatingTwseHistory, Converter={StaticResource BoolToVisibilityConverter}}"
-                                     Foreground="{DynamicResource AccentBrush}"
-                                     Background="Transparent"
-                                     BorderThickness="0"/>
-                        <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="35"/>
-                                <ColumnDefinition Width="50"/>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="70"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="#" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Grid.Column="1" Text="代號" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Grid.Column="2" Text="名稱" Foreground="{DynamicResource MutedForegroundBrush}"/>
-                            <TextBlock Grid.Column="3" Text="買賣超" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Right"/>
-                            <TextBlock Grid.Column="4" Text="升降" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Center"/>
-                        </Grid>
-                        <ListBox ItemsSource="{Binding TwseRankingItems}" BorderThickness="0" Background="{DynamicResource SurfaceAltBrush}"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,1" ToolTip="{Binding TooltipText}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="35"/>
-                                            <ColumnDefinition Width="50"/>
-                                            <ColumnDefinition Width="60"/>
-                                            <ColumnDefinition Width="70"/>
-                                            <ColumnDefinition Width="60"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Rank}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Symbol}"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding ThreeMajorNet, StringFormat=N0}" TextAlignment="Right"/>
-                                        <TextBlock Grid.Column="4" Text="{Binding RankDeltaText}" Foreground="{Binding RankDeltaBrush}" TextAlignment="Center" FontWeight="SemiBold"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </DockPanel>
-                </Border>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="200"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="320" MinWidth="180" MaxWidth="600" x:Name="RankingColumn"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- K線清單 -->
+                <DockPanel Grid.Column="0">
+                    <TextBlock Text="全部訂閱股票 K 線總覽（雙擊可開啟詳細圖表）" FontWeight="Bold" Margin="0,0,0,8" DockPanel.Dock="Top"/>
                 <ListBox ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" 
                          SelectionChanged="ListBox_SelectionStockChanged"
                          MouseDoubleClick="StockList_OnMouseDoubleClick"
@@ -369,7 +321,81 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-            </DockPanel>
+                </DockPanel>
+
+                <!-- 可拖曳分隔線 -->
+                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                              Background="{DynamicResource AppBorderBrush}" Cursor="SizeWE"/>
+
+                <!-- 三大法人排名面板 -->
+                <Border Grid.Column="2" Margin="4,0,0,0" Padding="8"
+                        BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceAltBrush}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,6"
+                                   Text="{Binding LatestRankingDate, StringFormat=三大法人買賣超排名（{0:yyyy/MM/dd}）}"/>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="歷史起始日：" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <DatePicker Width="116" Height="26" SelectedDate="{Binding TwseHistoryStartDate, Mode=TwoWay}"
+                                        FontSize="12" VerticalContentAlignment="Center" Foreground="White"/>
+                            <Button Content="{Binding UpdateTwseHistoryButtonText}" Width="70" Height="26" Margin="4,0,0,0"
+                                    Command="{Binding UpdateTwseHistoryCommand}"
+                                    IsEnabled="{Binding IsUpdatingTwseHistory, Converter={StaticResource InverseBoolConverter}}"/>
+                        </StackPanel>
+                        <Grid DockPanel.Dock="Top" Height="20" Margin="0,0,0,4">
+                            <ProgressBar IsIndeterminate="True"
+                                 Visibility="{Binding IsUpdatingTwseHistory, Converter={StaticResource BoolToVisibilityConverter}}"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Background="Transparent" BorderThickness="0"/>
+                            <TextBlock Text="{Binding UpdatingTwseText}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" FontWeight="Bold"/>
+                        </Grid>
+                        <!-- 篩選 -->
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="篩選：" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <ComboBox Width="130" Height="24" FontSize="12"
+                                      ItemsSource="{Binding RankingFilterOptions}"
+                                      SelectedItem="{Binding RankingFilter, Mode=TwoWay}">
+                            </ComboBox>
+                            
+                        </StackPanel>
+                        <!-- 表頭 -->
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="48"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="72"/>
+                                <ColumnDefinition Width="50"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="#"    Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Grid.Column="1" Text="代號"  Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Grid.Column="2" Text="名稱"  Foreground="{DynamicResource MutedForegroundBrush}"/>
+                            <TextBlock Grid.Column="3" Text="買賣超" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="4" Text="升降"  Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Center"/>
+                        </Grid>
+                        <ListBox ItemsSource="{Binding FilteredTwseRankingItems}" BorderThickness="0" Background="{DynamicResource SurfaceAltBrush}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,1" ToolTip="{Binding TooltipText}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40"/>
+                                            <ColumnDefinition Width="48"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="72"/>
+                                            <ColumnDefinition Width="50"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Rank}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Symbol}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding ThreeMajorNet, StringFormat=N0}" TextAlignment="Right"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding RankDeltaText}" Foreground="{Binding RankDeltaBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+            </Grid>
         </Border>
     </Grid>
 </Window>

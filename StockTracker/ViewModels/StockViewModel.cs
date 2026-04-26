@@ -226,11 +226,12 @@ namespace StockTracker.ViewModels
 	}
 
 	public StockViewModel CreateDetailViewModel()
-        {
-            var detailVm = new StockViewModel(Symbol, Name)
-            {
-                _selectedKLineInterval = _selectedKLineInterval
-            };
+	{
+	    var detailVm = new StockViewModel(Symbol, Name)
+	    {
+		_selectedKLineInterval = _selectedKLineInterval,
+		_maxDisplayPoints = _maxDisplayPoints
+	    };
 
             detailVm.OnPropertyChanged(nameof(SelectedKLineInterval));
             detailVm.OnPropertyChanged(nameof(ChartWidth));
@@ -684,25 +685,24 @@ namespace StockTracker.ViewModels
             LatestChangeBrush = Brushes.Gainsboro;
         }
 
-        private void UpdateSignal()
-        {
-            var analysisCandles = GetDisplayCandles();
-            if (analysisCandles.Count < 20)
-            {
-                Signal = "資料不足";
-                _latestRecommendationReasons.Clear();
-                return;
-            }
+	private void UpdateSignal()
+	{
+	    if (_candles.Count < 20)
+	    {
+		Signal = "資料不足";
+		_latestRecommendationReasons.Clear();
+		return;
+	    }
 
-	    var latestCandle = analysisCandles[analysisCandles.Count - 1];
+	    var latestCandle = _candles[_candles.Count - 1];
 
-            var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
-                analysisCandles,
-                (double)LatestPrice,
-                (double?)ChangePercent,
-		(double)analysisCandles[analysisCandles.Count - 2].Close,
-                BuildTwseHistorySnapshot(),
-                latestCandle.Time);
+	    var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+		_candles,
+		(double)LatestPrice,
+		(double?)ChangePercent,
+		(double)_candles[_candles.Count - 2].Close,
+		BuildTwseHistorySnapshot(),
+		latestCandle.Time);
 
             _latestRecommendationReasons = recommendation.Reasons ?? new List<string>();
             Signal = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
@@ -719,8 +719,8 @@ namespace StockTracker.ViewModels
                 _signalHistory.Add(new SignalMarkerData
                 {
                     Index = _candles.Count - 1,
-                    Time = analysisCandles.Last().Time,
-                    Price = analysisCandles.Last().Close,
+                    Time = latestCandle.Time,
+                    Price = latestCandle.Close,
                     Signal = actionSignal,
                     Score = recommendation.Score
                 });
