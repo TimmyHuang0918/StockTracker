@@ -23,10 +23,15 @@ namespace StockTracker.Models
 	public long Volume { get; set; }
         public double MA5 { get; set; }
         public double MA20 { get; set; }
+        public double MA120 { get; set; }
+        public double MA240 { get; set; }
         public double MACD { get; set; }
         public double MacdSignal { get; set; }
         public double MacdHistogram { get; set; }
         public double RSI { get; set; }
+        public double BollingerUpper { get; set; }
+        public double BollingerMiddle { get; set; }
+        public double BollingerLower { get; set; }
     }
 
     public class CandlestickVisual

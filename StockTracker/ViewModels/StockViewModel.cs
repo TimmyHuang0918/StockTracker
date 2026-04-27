@@ -31,13 +31,15 @@ namespace StockTracker.ViewModels
         private Brush _latestChangeBrush = Brushes.Gainsboro;
         private double _ma5;
         private double _ma20;
+        private double _ma120;
+        private double _ma240;
         private double _macd;
         private double _rsi;
         private double _latestPriceY;
         private double _macdZeroY;
         private double _threeMajorZeroY;
         private string _selectedKLineInterval = "1分K";
-	private string _selectedKLineCount= "120";
+	private string _selectedKLineCount= "300";
 	private string _signal = "中立";
         private string _lastNotifiedSignal = string.Empty;
         private List<string> _latestRecommendationReasons = new List<string>();
@@ -77,6 +79,11 @@ namespace StockTracker.ViewModels
 
             Ma5Points = new PointCollection();
             Ma20Points = new PointCollection();
+            Ma120Points = new PointCollection();
+            Ma240Points = new PointCollection();
+            BollingerUpperPoints = new PointCollection();
+            BollingerMiddlePoints = new PointCollection();
+            BollingerLowerPoints = new PointCollection();
             MacdLinePoints = new PointCollection();
             SignalLinePoints = new PointCollection();
             RsiLinePoints = new PointCollection();
@@ -154,6 +161,26 @@ namespace StockTracker.ViewModels
             private set
             {
                 _ma20 = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double MA120
+        {
+            get => _ma120;
+            private set
+            {
+                _ma120 = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double MA240
+        {
+            get => _ma240;
+            private set
+            {
+                _ma240 = value;
                 OnPropertyChanged();
             }
         }
@@ -285,6 +312,11 @@ namespace StockTracker.ViewModels
         public ObservableCollection<CandlestickVisual> Candles { get; }
         public PointCollection Ma5Points { get; private set; }
         public PointCollection Ma20Points { get; private set; }
+        public PointCollection Ma120Points { get; private set; }
+        public PointCollection Ma240Points { get; private set; }
+        public PointCollection BollingerUpperPoints { get; private set; }
+        public PointCollection BollingerMiddlePoints { get; private set; }
+        public PointCollection BollingerLowerPoints { get; private set; }
 
         public ObservableCollection<HistogramBarVisual> MacdHistogram { get; }
         public PointCollection MacdLinePoints { get; private set; }
@@ -415,18 +447,18 @@ namespace StockTracker.ViewModels
             var hist = macd - signal;
             var rsi = nearestIndex < _lastDisplayRsiSeries.Count ? _lastDisplayRsiSeries[nearestIndex] : 50;
 
-            CrosshairX = clampedX;
-            CrosshairY = clampedY;
-            CrosshairVisibility = Visibility.Visible;
-            HoverInfo =
-                $"時間: {candle.Time:yyyy/MM/dd HH:mm}" +
-                $"\n開: {candle.Open:F2} 高: {candle.High:F2} 低: {candle.Low:F2} 收: {candle.Close:F2}" +
-                $"\n漲跌幅: {candle.PercentageChange:F2} %" +
-		$"\n游標價: {priceAtCursor:F2}" +
-                $"\n成交量: {candle.Volume:N0}" +
-                $"\nMACD: {macd:F4}  DEA: {signal:F4}  柱狀: {hist:F4}" +
-                $"\nRSI: {rsi:F2}" +
-                BuildRecommendationTooltip(nearestIndex, candle);
+	    CrosshairX = clampedX;
+	    CrosshairY = clampedY;
+	    CrosshairVisibility = Visibility.Visible;
+	    HoverInfo =
+		$"時間: {candle.Time:yyyy/MM/dd HH:mm}" +
+		$"\n開: {candle.Open:F2}  高: {candle.High:F2}  低: {candle.Low:F2}  收: {candle.Close:F2}" +
+		$"\n漲跌幅: {candle.PercentageChange:F2}%  游標價: {priceAtCursor:F2}  成交量: {candle.Volume:N0}" +
+		$"\nMA5: {candle.MA5:F2}  MA20: {candle.MA20:F2}  MA120: {candle.MA120:F2}  MA240: {candle.MA240:F2}" +
+		$"\nBB上軌: {candle.BollingerUpper:F2}  中軌: {candle.BollingerMiddle:F2}  下軌: {candle.BollingerLower:F2}" +
+		$"\nMACD: {macd:F4}  DEA: {signal:F4}  柱狀: {hist:F4}" +
+		$"\nRSI: {rsi:F2}" +
+		BuildRecommendationTooltip(nearestIndex, candle);
         }
 
         public void ClearCrosshair()
@@ -591,61 +623,79 @@ namespace StockTracker.ViewModels
             }
         }
 
-        private void RecalculateIndicatorsOnCandles()
-        {
-            if (_candles.Count == 0)
-            {
-                MA5 = 0;
-                MA20 = 0;
-                MACD = 0;
-                RSI = 0;
-                _macdSeries.Clear();
-                _signalSeries.Clear();
-                return;
-            }
-
-            var closes = _candles.Select(x => (double)x.Close).ToList();
-            var ema12 = CalculateEmaSeries(closes, 12);
-            var ema26 = CalculateEmaSeries(closes, 26);
-            var macdSeries = new List<double>(_candles.Count);
-            for (var i = 0; i < closes.Count; i++)
-            {
-                macdSeries.Add(ema12[i] - ema26[i]);
-            }
-
-            var signalSeries = CalculateEmaSeries(macdSeries, 9);
-
-            for (var i = 0; i < _candles.Count; i++)
-            {
-                var ma5Start = Math.Max(0, i - 4);
-                var ma20Start = Math.Max(0, i - 19);
-                var ma5Count = i - ma5Start + 1;
-                var ma20Count = i - ma20Start + 1;
-
-                _candles[i].MA5 = closes.Skip(ma5Start).Take(ma5Count).Average();
-                _candles[i].MA20 = closes.Skip(ma20Start).Take(ma20Count).Average();
-                _candles[i].MACD = macdSeries[i];
-                _candles[i].MacdSignal = signalSeries[i];
-                _candles[i].MacdHistogram = macdSeries[i] - signalSeries[i];
-                _candles[i].RSI = CalculateRsiAt(i, 14, closes);
-                if(i > 0)
-                    _candles[i].PercentageChange = (_candles[i].Close - _candles[i - 1].Close) / _candles[i - 1].Close * 100;
+	private void RecalculateIndicatorsOnCandles()
+	{
+	    if (_candles.Count == 0)
+	    {
+		MA5 = 0;
+		MA20 = 0;
+		MA120 = 0;
+		MACD = 0;
+		RSI = 0;
+		_macdSeries.Clear();
+		_signalSeries.Clear();
+		return;
 	    }
 
-            var latest = _candles[_candles.Count - 1];
-            MA5 = latest.MA5;
-            MA20 = latest.MA20;
-            MACD = latest.MACD;
-            RSI = latest.RSI;
+	    var closes = _candles.Select(x => (double)x.Close).ToList();
+	    var ema12 = CalculateEmaSeries(closes, 12);
+	    var ema26 = CalculateEmaSeries(closes, 26);
+	    var macdSeries = new List<double>(_candles.Count);
+	    for (var i = 0; i < closes.Count; i++)
+	    {
+		macdSeries.Add(ema12[i] - ema26[i]);
+	    }
 
-            _macdSeries.Clear();
-            _macdSeries.AddRange(macdSeries);
-            _signalSeries.Clear();
-            _signalSeries.AddRange(signalSeries);
+	    var signalSeries = CalculateEmaSeries(macdSeries, 9);
 
-            OnPropertyChanged(nameof(MacdSignal));
-            OnPropertyChanged(nameof(MacdHistogramValue));
-        }
+	    for (var i = 0; i < _candles.Count; i++)
+	    {
+		var ma5Start = Math.Max(0, i - 4);
+		var ma20Start = Math.Max(0, i - 19);
+		var ma120Start = Math.Max(0, i - 119);
+		var ma240Start = Math.Max(0, i - 239);
+		var ma5Count = i - ma5Start + 1;
+		var ma20Count = i - ma20Start + 1;
+		var ma120Count = i - ma120Start + 1;
+		var ma240Count = i - ma240Start + 1;
+
+		_candles[i].MA5 = closes.Skip(ma5Start).Take(ma5Count).Average();
+		_candles[i].MA20 = closes.Skip(ma20Start).Take(ma20Count).Average();
+		_candles[i].MA120 = closes.Skip(ma120Start).Take(ma120Count).Average();
+		_candles[i].MA240 = closes.Skip(ma240Start).Take(ma240Count).Average();
+		_candles[i].MACD = macdSeries[i];
+		_candles[i].MacdSignal = signalSeries[i];
+		_candles[i].MacdHistogram = macdSeries[i] - signalSeries[i];
+		_candles[i].RSI = CalculateRsiAt(i, 14, closes);
+		if(i > 0)
+		    _candles[i].PercentageChange = (_candles[i].Close - _candles[i - 1].Close) / _candles[i - 1].Close * 100;
+
+		// Bollinger Bands (20-period, 2 std dev)
+		var bbSlice = closes.Skip(ma20Start).Take(ma20Count).ToList();
+		var bbMid = _candles[i].MA20;
+		var variance = bbSlice.Sum(v => (v - bbMid) * (v - bbMid)) / bbSlice.Count;
+		var stdDev = Math.Sqrt(variance);
+		_candles[i].BollingerMiddle = bbMid;
+		_candles[i].BollingerUpper = bbMid + 2 * stdDev;
+		_candles[i].BollingerLower = bbMid - 2 * stdDev;
+	    }
+
+	    var latest = _candles[_candles.Count - 1];
+	    MA5 = latest.MA5;
+	    MA20 = latest.MA20;
+	    MA120 = latest.MA120;
+	    MA240 = latest.MA240;
+	    MACD = latest.MACD;
+	    RSI = latest.RSI;
+
+	    _macdSeries.Clear();
+	    _macdSeries.AddRange(macdSeries);
+	    _signalSeries.Clear();
+	    _signalSeries.AddRange(signalSeries);
+
+	    OnPropertyChanged(nameof(MacdSignal));
+	    OnPropertyChanged(nameof(MacdHistogramValue));
+	}
 
         private static List<double> CalculateEmaSeries(IReadOnlyList<double> source, int period)
         {
@@ -805,48 +855,65 @@ namespace StockTracker.ViewModels
             _lastDisplaySignalSeries.AddRange(candles.Select(x => x.MacdSignal));
             _lastDisplayRsiSeries.AddRange(candles.Select(x => x.RSI));
 
-            Candles.Clear();
-            var ma5Points = new PointCollection();
-            var ma20Points = new PointCollection();
+	    Candles.Clear();
+	    var ma5Points = new PointCollection();
+	    var ma20Points = new PointCollection();
+	    var ma120Points = new PointCollection();
+	    var ma240Points = new PointCollection();
+	    var bollingerUpperPoints = new PointCollection();
+	    var bollingerMiddlePoints = new PointCollection();
+	    var bollingerLowerPoints = new PointCollection();
 
 	    for (var i = 0; i < candles.Count; i++)
-            {
-                var item = candles[i];
-                var centerX = CalculateCenterX(i, candles.Count, _chartPaddingWidth);
-                var x = centerX - 4;
-                var openY = Scale((double)item.Open, minPrice, priceRange, CandleChartHeight);
-                var closeY = Scale((double)item.Close, minPrice, priceRange, CandleChartHeight);
-                var highY = Scale((double)item.High, minPrice, priceRange, CandleChartHeight);
-                var lowY = Scale((double)item.Low, minPrice, priceRange, CandleChartHeight);
+	    {
+		var item = candles[i];
+		var centerX = CalculateCenterX(i, candles.Count, _chartPaddingWidth);
+		var x = centerX - 4;
+		var openY = Scale((double)item.Open, minPrice, priceRange, CandleChartHeight);
+		var closeY = Scale((double)item.Close, minPrice, priceRange, CandleChartHeight);
+		var highY = Scale((double)item.High, minPrice, priceRange, CandleChartHeight);
+		var lowY = Scale((double)item.Low, minPrice, priceRange, CandleChartHeight);
 
-                Candles.Add(new CandlestickVisual
-                {
-                    X = x,
+		Candles.Add(new CandlestickVisual
+		{
+		    X = x,
 		    DateTime = item.Time,
 		    WickTop = Math.Min(highY, lowY),
-                    WickBottom = Math.Max(highY, lowY),
-                    BodyTop = Math.Min(openY, closeY),
-                    BodyHeight = Math.Max(2, Math.Abs(openY - closeY)),
-                    BodyBrush = item.Close >= item.Open ? Brushes.IndianRed : Brushes.SeaGreen
-                });
+		    WickBottom = Math.Max(highY, lowY),
+		    BodyTop = Math.Min(openY, closeY),
+		    BodyHeight = Math.Max(2, Math.Abs(openY - closeY)),
+		    BodyBrush = item.Close >= item.Open ? Brushes.IndianRed : Brushes.SeaGreen
+		});
+		ma5Points.Add(new Point(centerX, Scale(candles[i].MA5, minPrice, priceRange, CandleChartHeight)));
+		ma20Points.Add(new Point(centerX, Scale(candles[i].MA20, minPrice, priceRange, CandleChartHeight)));
+		if (candles[i].MA120 > 0)
+		    ma120Points.Add(new Point(centerX, Scale(candles[i].MA120, minPrice, priceRange, CandleChartHeight)));
+		if (candles[i].MA240 > 0)
+		    ma240Points.Add(new Point(centerX, Scale(candles[i].MA240, minPrice, priceRange, CandleChartHeight)));
+		if (candles[i].BollingerUpper > 0)
+		{
+		    bollingerUpperPoints.Add(new Point(centerX, Scale(candles[i].BollingerUpper, minPrice, priceRange, CandleChartHeight)));
+		    bollingerMiddlePoints.Add(new Point(centerX, Scale(candles[i].BollingerMiddle, minPrice, priceRange, CandleChartHeight)));
+		    bollingerLowerPoints.Add(new Point(centerX, Scale(candles[i].BollingerLower, minPrice, priceRange, CandleChartHeight)));
+		}
+	    }
 
-                if (i >= 4)
-                {
-                    ma5Points.Add(new Point(centerX, Scale(candles[i].MA5, minPrice, priceRange, CandleChartHeight)));
-                }
-
-                if (i >= 19)
-                {
-                    ma20Points.Add(new Point(centerX, Scale(candles[i].MA20, minPrice, priceRange, CandleChartHeight)));
-                }
-            }
-
-            Ma5Points = ma5Points;
-            Ma20Points = ma20Points;
-            LatestPriceY = Scale((double)LatestPrice, minPrice, priceRange, CandleChartHeight);
-            OnPropertyChanged(nameof(Ma5Points));
-            OnPropertyChanged(nameof(Ma20Points));
-            OnPropertyChanged(nameof(_chartPaddingWidth));
+	    Ma5Points = ma5Points;
+	    Ma20Points = ma20Points;
+	    Ma120Points = ma120Points;
+	    Ma240Points = ma240Points;
+	    BollingerUpperPoints = bollingerUpperPoints;
+	    BollingerMiddlePoints = bollingerMiddlePoints;
+	    BollingerLowerPoints = bollingerLowerPoints;
+	    LatestPriceY = Scale((double)LatestPrice, minPrice, priceRange, CandleChartHeight);
+	    OnPropertyChanged(nameof(Ma5Points));
+	    OnPropertyChanged(nameof(Ma20Points));
+	    OnPropertyChanged(nameof(Ma120Points));
+	    OnPropertyChanged(nameof(Ma240Points));
+	    OnPropertyChanged(nameof(BollingerUpperPoints));
+	    OnPropertyChanged(nameof(BollingerMiddlePoints));
+	    OnPropertyChanged(nameof(BollingerLowerPoints));
+	    OnPropertyChanged(nameof(_chartPaddingWidth));
 
 	    SignalMarkers.Clear();
 	    var listCandles = Candles.ToList();

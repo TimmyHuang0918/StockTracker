@@ -55,6 +55,73 @@ namespace StockManager.Library
 		reasons.Add("[趨勢±0] MA 交疊糾結，方向不明");
 	    }
 
+	    // MA120 長期趨勢
+	    if (latest.MA120 > 0)
+	    {
+		if (currentPrice > latest.MA120 && latest.MA20 > latest.MA120)
+		{
+		    trendScore += 10;
+		    reasons.Add($"[趨勢+10] 站上 MA120({latest.MA120:F2})，長多格局");
+		}
+		else if (currentPrice < latest.MA120 && latest.MA20 < latest.MA120)
+		{
+		    trendScore -= 10;
+		    reasons.Add($"[趨勢-10] 跌破 MA120({latest.MA120:F2})，長空格局");
+		}
+		else
+		{
+		    reasons.Add($"[趨勢±0] MA120({latest.MA120:F2}) 多空不明確");
+		}
+	    }
+
+	    // MA240 超長期趨勢
+	    if (latest.MA240 > 0)
+	    {
+		if (currentPrice > latest.MA240 && latest.MA120 > latest.MA240)
+		{
+		    trendScore += 8;
+		    reasons.Add($"[趨勢+8] 站上 MA240({latest.MA240:F2})，超長多頭");
+		}
+		else if (currentPrice < latest.MA240 && latest.MA120 < latest.MA240)
+		{
+		    trendScore -= 8;
+		    reasons.Add($"[趨勢-8] 跌破 MA240({latest.MA240:F2})，超長空頭");
+		}
+		else
+		{
+		    reasons.Add($"[趨勢±0] MA240({latest.MA240:F2}) 方向不明");
+		}
+	    }
+
+	    // 布林通道位置
+	    if (latest.BollingerUpper > 0 && latest.BollingerLower > 0)
+	    {
+		var bbWidth = latest.BollingerUpper - latest.BollingerLower;
+		if (bbWidth > 0)
+		{
+		    if (currentPrice >= latest.BollingerUpper)
+		    {
+			trendScore -= 8;
+			reasons.Add($"[趨勢-8] 觸及布林上軌({latest.BollingerUpper:F2})，短線過熱風險");
+		    }
+		    else if (currentPrice <= latest.BollingerLower)
+		    {
+			trendScore += 8;
+			reasons.Add($"[趨勢+8] 觸及布林下軌({latest.BollingerLower:F2})，超賣反彈機會");
+		    }
+		    else
+		    {
+			var bbPosition = (currentPrice - latest.BollingerLower) / bbWidth;
+			if (bbPosition > 0.8)
+			    reasons.Add($"[趨勢±0] 接近布林上軌 ({bbPosition * 100:F0}%)，留意壓力");
+			else if (bbPosition < 0.2)
+			    reasons.Add($"[趨勢±0] 接近布林下軌 ({bbPosition * 100:F0}%)，留意支撐");
+			else
+			    reasons.Add($"[趨勢±0] 布林通道中段 ({bbPosition * 100:F0}%)");
+		    }
+		}
+	    }
+
 	    // MA20 斜率
 	    double ma20Slope = (latest.MA20 - prev.MA20) / prev.MA20;
 	    if (ma20Slope > 0.002)

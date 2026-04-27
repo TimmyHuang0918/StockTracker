@@ -1,10 +1,15 @@
+using Mscc.GenerativeAI;
+using Mscc.GenerativeAI.Types;
 using SKCOMLib;
-using StockTracker.Services;
 using StockTracker.Models;
+using StockTracker.Services;
 using StockTracker.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -18,15 +23,13 @@ namespace StockTracker
 
 	public LoginWindow()
         {
-            InitializeComponent();
-
-            var vm = new LoginViewModel(new CapitalApiService());
+	    InitializeComponent(); 
+	    var vm = new LoginViewModel(new CapitalApiService());
             vm.LoginSucceeded += OnLoginSucceeded;
             DataContext = vm;
 	    LoadSavedCredentials();
         }
-
-        private void PasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
+	private void PasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
         {
             if (DataContext is LoginViewModel vm)
             {
@@ -149,7 +152,7 @@ namespace StockTracker
             ResolveKLineRequest(interval, out var kLineType, out var minuteNumber);
             foreach (var stock in _mainWindowViewModel.Stocks)
             {
-		MainWindow.BuildDateRangeForBars(stock.Symbol, interval, 120, out var startDate, out var endDate);
+		MainWindow.BuildDateRangeForBars(stock.Symbol, interval, 300, out var startDate, out var endDate);
 		_capitalApiService?.RequestKLineByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
             }
 	}

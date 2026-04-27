@@ -26,7 +26,7 @@ namespace StockTracker.ViewModels
 	private string _newSymbol;
 	private string _systemMessage;
 	private string _selectedGlobalKLineInterval = "日K";
-	private string _selectedGlobalKLineCount = "120";
+	private string _selectedGlobalKLineCount = "300";
 	private TwseT86Record _latestTwseT86Record;
 	private DateTime _latestRankingDate;
 	private DateTime _twseHistoryStartDate = DateTime.Today;
@@ -125,7 +125,7 @@ namespace StockTracker.ViewModels
         public ObservableCollection<StockViewModel> Stocks { get; }
         public CapitalApiService ApiService => _apiService;
         public IReadOnlyList<string> GlobalKLineIntervals { get; } = new[] { "日K", "5分K", "3分K", "1分K" };
-	public IReadOnlyList<string> GlobalKLineCount { get; } = new[] { "30","60", "120", "150","240" };
+	public IReadOnlyList<string> GlobalKLineCount { get; } = new[] { "30","60", "120", "150","240","300" };
 
 	public string SelectedGlobalKLineInterval
         {

@@ -37,9 +37,9 @@
                         </TextBlock>
                         <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
                                    Text="Y軸：價格(元)    X軸：時間(由左到右)"/>
-                        <Viewbox Stretch="Fill" Height="220" SizeChanged="ChartViewbox_OnSizeChanged"
+                        <Viewbox Stretch="Fill" Height="280" SizeChanged="ChartViewbox_OnSizeChanged"
                                  Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
-                        <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}" ClipToBounds="False"
+                            <Canvas Width="{Binding ChartWidth}" Margin="0,10,0,0"  Height="230" Background="{DynamicResource SurfaceAltBrush}" ClipToBounds="False"
                                 MouseMove="KLineCanvas_OnMouseMove" MouseLeave="KLineCanvas_OnMouseLeave"
                                 ToolTip="{Binding HoverInfo}">
                             <ItemsControl ItemsSource="{Binding PriceLevels}">
@@ -88,6 +88,11 @@
 
                             <Polyline Points="{Binding Ma5Points}" Stroke="Orange" StrokeThickness="1.6"/>
                             <Polyline Points="{Binding Ma20Points}" Stroke="DodgerBlue" StrokeThickness="1.6"/>
+                            <Polyline Points="{Binding Ma120Points}" Stroke="Violet" StrokeThickness="1.4"/>
+                                <Polyline Points="{Binding Ma240Points}" Stroke="#5E005E" StrokeThickness="1.4"/>
+                            <Polyline Points="{Binding BollingerUpperPoints}" Stroke="#00E3E3" StrokeThickness="1" StrokeDashArray="4,2"/>
+                            <Polyline Points="{Binding BollingerMiddlePoints}" Stroke="#60FFAA00" StrokeThickness="1" StrokeDashArray="2,2"/>
+                            <Polyline Points="{Binding BollingerLowerPoints}" Stroke="#00E3E3" StrokeThickness="1" StrokeDashArray="4,2"/>
                             <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding LatestPriceY}" Y2="{Binding LatestPriceY}"
                                   Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="4,2"/>
                             <Border Canvas.Left="6" Canvas.Top="{Binding LatestPriceY}" Padding="4,1"

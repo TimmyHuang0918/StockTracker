@@ -247,6 +247,11 @@
                                             </ItemsControl>
                                             <Polyline Points="{Binding Ma5Points}" Stroke="Orange" StrokeThickness="1.6"/>
                                             <Polyline Points="{Binding Ma20Points}" Stroke="DodgerBlue" StrokeThickness="1.6"/>
+                                            <Polyline Points="{Binding Ma120Points}" Stroke="Violet" StrokeThickness="1.4"/>
+                                                <Polyline Points="{Binding Ma240Points}" Stroke="#5E005E" StrokeThickness="1.4"/>
+                                            <Polyline Points="{Binding BollingerUpperPoints}" Stroke="#00E3E3" StrokeThickness="1" StrokeDashArray="4,2"/>
+                                            <Polyline Points="{Binding BollingerMiddlePoints}" Stroke="#60FFAA00" StrokeThickness="1" StrokeDashArray="2,2"/>
+                                            <Polyline Points="{Binding BollingerLowerPoints}" Stroke="#00E3E3" StrokeThickness="1" StrokeDashArray="4,2"/>
                                             <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding LatestPriceY}" Y2="{Binding LatestPriceY}"
                                                   Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="4,2"/>
                                             <Border Canvas.Left="6" Canvas.Top="{Binding LatestPriceY}" Padding="4,1"
