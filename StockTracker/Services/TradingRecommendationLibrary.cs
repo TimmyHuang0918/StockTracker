@@ -16,15 +16,14 @@ namespace StockManager.Library
     {
 	public static TrendRecommendationResult CalculateAdvancedRecommendation(
 	    List<CandleData> data,
-	    double currentPrice,
+	    double currentPriceDouble,
 	    double? changePercent,
 	    double? previousClose = null,
 	    TwseT86History twseHistory = null,
 	    DateTime? analysisDate = null)
 	{
-	    var reasons = new List<string>();
+	    decimal currentPrice = (decimal)currentPriceDouble;
 
-	    // 基礎檢查
 	    if (data == null || data.Count < 20)
 	    {
 		return new TrendRecommendationResult
@@ -36,56 +35,83 @@ namespace StockManager.Library
 
 	    var latest = data.Last();
 	    var prev = data[data.Count - 2];
-	    double trendScore = 0, momentumScore = 0, chipScore = 0, candlestickScore = 0, volScore = 0;
+	    var reasons = new List<string>();
 
-	    // --- 1. 趨勢類 (權重 40%) ---
-	    // MA 排列
-	    if (currentPrice > latest.MA5 && latest.MA5 > latest.MA20)
+	    double trendScore = 0, momentumScore = 0, chipScore = 0, candleScore = 0, volScore = 0;
+	    double Clamp(double val, double min, double max) => Math.Max(min, Math.Min(max, val));
+	    double cp = (double)currentPrice;
+
+	    // =====================================================================
+	    // --- 1. 趨勢類 ---
+	    // =====================================================================
+
+	    // MA5 / MA20 多空排列
+	    if (cp > latest.MA5 && latest.MA5 > latest.MA20)
 	    {
-		trendScore += 20;
-		reasons.Add($"[趨勢+20] MA 多頭排列：現價({currentPrice:F2}) > MA5({latest.MA5:F2}) > MA20({latest.MA20:F2})");
+		trendScore += 10;
+		reasons.Add($"[趨勢+10] 多頭排列：現價({cp:F2}) > MA5({latest.MA5:F2}) > MA20({latest.MA20:F2})");
 	    }
-	    else if (currentPrice < latest.MA5 && latest.MA5 < latest.MA20)
+	    else if (cp < latest.MA5 && latest.MA5 < latest.MA20)
 	    {
-		trendScore -= 20;
-		reasons.Add($"[趨勢-20] MA 空頭排列：現價({currentPrice:F2}) < MA5({latest.MA5:F2}) < MA20({latest.MA20:F2})");
+		trendScore -= 15;
+		reasons.Add($"[趨勢-15] 空頭排列：現價({cp:F2}) < MA5({latest.MA5:F2}) < MA20({latest.MA20:F2})");
 	    }
 	    else
 	    {
-		reasons.Add("[趨勢±0] MA 交疊糾結，方向不明");
+		reasons.Add($"[趨勢±0] MA5({latest.MA5:F2}) / MA20({latest.MA20:F2}) 糾結，方向不明");
+	    }
+
+	    // MA20 斜率
+	    if (prev.MA20 > 0)
+	    {
+		double ma20Slope = (latest.MA20 - prev.MA20) / prev.MA20;
+		if (ma20Slope > 0.002)
+		{
+		    trendScore += 5;
+		    reasons.Add($"[趨勢+5] MA20 斜率向上 ({ma20Slope * 100:F2}%)，中期多頭動能");
+		}
+		else if (ma20Slope < -0.002)
+		{
+		    trendScore -= 5;
+		    reasons.Add($"[趨勢-5] MA20 斜率向下 ({ma20Slope * 100:F2}%)，中期空頭壓力");
+		}
+		else
+		{
+		    reasons.Add($"[趨勢±0] MA20 斜率平緩 ({ma20Slope * 100:F2}%)，趨勢不明確");
+		}
 	    }
 
 	    // MA120 長期趨勢
 	    if (latest.MA120 > 0)
 	    {
-		if (currentPrice > latest.MA120 && latest.MA20 > latest.MA120)
+		if (cp > latest.MA120 && latest.MA20 > latest.MA120)
 		{
-		    trendScore += 10;
-		    reasons.Add($"[趨勢+10] 站上 MA120({latest.MA120:F2})，長多格局");
+		    trendScore += 8;
+		    reasons.Add($"[趨勢+8] 站上 MA120({latest.MA120:F2})，長多格局確立");
 		}
-		else if (currentPrice < latest.MA120 && latest.MA20 < latest.MA120)
+		else if (cp < latest.MA120 && latest.MA20 < latest.MA120)
 		{
-		    trendScore -= 10;
-		    reasons.Add($"[趨勢-10] 跌破 MA120({latest.MA120:F2})，長空格局");
+		    trendScore -= 8;
+		    reasons.Add($"[趨勢-8] 跌破 MA120({latest.MA120:F2})，長空格局確立");
 		}
 		else
 		{
-		    reasons.Add($"[趨勢±0] MA120({latest.MA120:F2}) 多空不明確");
+		    reasons.Add($"[趨勢±0] MA120({latest.MA120:F2}) 多空訊號混雜，觀望");
 		}
 	    }
 
 	    // MA240 超長期趨勢
 	    if (latest.MA240 > 0)
 	    {
-		if (currentPrice > latest.MA240 && latest.MA120 > latest.MA240)
+		if (cp > latest.MA240 && latest.MA120 > latest.MA240)
 		{
-		    trendScore += 8;
-		    reasons.Add($"[趨勢+8] 站上 MA240({latest.MA240:F2})，超長多頭");
+		    trendScore += 6;
+		    reasons.Add($"[趨勢+6] 站上 MA240({latest.MA240:F2}) 且 MA120 向上，超長多頭");
 		}
-		else if (currentPrice < latest.MA240 && latest.MA120 < latest.MA240)
+		else if (cp < latest.MA240 && latest.MA120 < latest.MA240)
 		{
-		    trendScore -= 8;
-		    reasons.Add($"[趨勢-8] 跌破 MA240({latest.MA240:F2})，超長空頭");
+		    trendScore -= 6;
+		    reasons.Add($"[趨勢-6] 跌破 MA240({latest.MA240:F2}) 且 MA120 向下，超長空頭");
 		}
 		else
 		{
@@ -93,271 +119,400 @@ namespace StockManager.Library
 		}
 	    }
 
-	    // 布林通道位置
-	    if (latest.BollingerUpper > 0 && latest.BollingerLower > 0)
+	    // 長期均線支撐 / 壓力 (MA120 & MA240)
+	    double[] longTermMAs = { latest.MA120, latest.MA240 };
+	    string[] maNames = { "MA120", "MA240" };
+	    for (int i = 0; i < longTermMAs.Length; i++)
 	    {
-		var bbWidth = latest.BollingerUpper - latest.BollingerLower;
-		if (bbWidth > 0)
+		double maValue = longTermMAs[i];
+		if (maValue <= 0) continue;
+		double dist = (cp - maValue) / maValue;
+		if (Math.Abs(dist) <= 0.015)
 		{
-		    if (currentPrice >= latest.BollingerUpper)
+		    double prevMa = (i == 0) ? prev.MA120 : prev.MA240;
+		    bool isMaUp = maValue > prevMa;
+		    decimal range = latest.High - latest.Low;
+		    bool isRebound = latest.Close > latest.Open ||
+				     (range > 0 && (latest.Close - latest.Low) / range > 0.6m);
+		    if (isMaUp && isRebound)
 		    {
-			trendScore -= 8;
-			reasons.Add($"[趨勢-8] 觸及布林上軌({latest.BollingerUpper:F2})，短線過熱風險");
+			trendScore += 10;
+			reasons.Add($"[趨勢+10] {maNames[i]}({maValue:F2}) 支撐有效：均線向上且股價止跌反彈");
 		    }
-		    else if (currentPrice <= latest.BollingerLower)
+		    else if (cp < maValue)
 		    {
-			trendScore += 8;
-			reasons.Add($"[趨勢+8] 觸及布林下軌({latest.BollingerLower:F2})，超賣反彈機會");
+			trendScore -= 6;
+			reasons.Add($"[趨勢-6] {maNames[i]}({maValue:F2}) 支撐失守：股價在均線下方 ({dist * 100:F1}%)");
 		    }
 		    else
 		    {
-			var bbPosition = (currentPrice - latest.BollingerLower) / bbWidth;
-			if (bbPosition > 0.8)
-			    reasons.Add($"[趨勢±0] 接近布林上軌 ({bbPosition * 100:F0}%)，留意壓力");
-			else if (bbPosition < 0.2)
-			    reasons.Add($"[趨勢±0] 接近布林下軌 ({bbPosition * 100:F0}%)，留意支撐");
-			else
-			    reasons.Add($"[趨勢±0] 布林通道中段 ({bbPosition * 100:F0}%)");
+			reasons.Add($"[趨勢±0] 股價正測試 {maNames[i]}({maValue:F2}) 壓力/支撐");
 		    }
 		}
 	    }
 
-	    // MA20 斜率
-	    double ma20Slope = (latest.MA20 - prev.MA20) / prev.MA20;
-	    if (ma20Slope > 0.002)
+	    // 布林通道位置
+	    if (latest.BollingerUpper > 0 && latest.BollingerLower > 0)
 	    {
-		trendScore += 10;
-		reasons.Add($"[趨勢+10] MA20 斜率明顯向上 ({ma20Slope * 100:F2}%)");
-	    }
-	    else if (ma20Slope < -0.002)
-	    {
-		trendScore -= 10;
-		reasons.Add($"[趨勢-10] MA20 斜率明顯向下 ({ma20Slope * 100:F2}%)");
+		double bbWidth = latest.BollingerUpper - latest.BollingerLower;
+		if (bbWidth > 0)
+		{
+		    double bbPos = (cp - latest.BollingerLower) / bbWidth;
+		    if (cp >= latest.BollingerUpper)
+		    {
+			trendScore -= 6;
+			reasons.Add($"[趨勢-6] 觸及布林上軌({latest.BollingerUpper:F2})，短線過熱，回檔風險高");
+		    }
+		    else if (cp <= latest.BollingerLower)
+		    {
+			trendScore += 6;
+			reasons.Add($"[趨勢+6] 觸及布林下軌({latest.BollingerLower:F2})，超賣區間，反彈機會");
+		    }
+		    else if (bbPos >= 0.8)
+		    {
+			trendScore -= 2;
+			reasons.Add($"[趨勢-2] 接近布林上軌({latest.BollingerUpper:F2})，位置偏高({bbPos * 100:F0}%)，留意壓力");
+		    }
+		    else if (bbPos <= 0.2)
+		    {
+			trendScore += 2;
+			reasons.Add($"[趨勢+2] 接近布林下軌({latest.BollingerLower:F2})，位置偏低({bbPos * 100:F0}%)，具支撐");
+		    }
+		    else
+		    {
+			reasons.Add($"[趨勢±0] 布林通道中段({bbPos * 100:F0}%)，中軌({latest.BollingerMiddle:F2})");
+		    }
+		    // 布林帶寬縮窄（波動率低）
+		    double bbWidthRatio = bbWidth / latest.BollingerMiddle;
+		    if (bbWidthRatio < 0.04)
+		    {
+			reasons.Add($"[趨勢★] 布林帶收窄 (帶寬{bbWidthRatio * 100:F1}%)，可能即將出現大波動");
+		    }
+		}
 	    }
 
-	    // 價格距離 MA5 的乖離
-	    double ma5Bias = (currentPrice - latest.MA5) / latest.MA5;
-	    if (ma5Bias > 0.03)
-	    {
-		trendScore -= 8;
-		reasons.Add($"[趨勢-8] 價格超越 MA5 過多 ({ma5Bias * 100:F1}%)，短線過熱");
-	    }
-	    else if (ma5Bias < -0.03)
-	    {
-		trendScore += 5;
-		reasons.Add($"[趨勢+5] 價格低於 MA5 ({Math.Abs(ma5Bias) * 100:F1}%)，具反彈空間");
-	    }
+	    trendScore = Clamp(trendScore, -40, 40);
 
-	    // --- 2. 動能類 (權重 20%) ---
-	    var hist = latest.MACD - latest.MacdSignal;
-	    var prevHist = prev.MACD - prev.MacdSignal;
-	    // MACD 交叉
-	    if (latest.MACD > latest.MacdSignal)
+	    // =====================================================================
+	    // --- 2. 動能類 ---
+	    // =====================================================================
+
+	    double macd = latest.MACD;
+	    double macdSignal = latest.MacdSignal;
+	    double macdHist = macd - macdSignal;
+	    double prevMacdHist = prev.MACD - prev.MacdSignal;
+	    double rsi = latest.RSI;
+
+	    // MACD 多空
+	    if (macd > macdSignal)
 	    {
 		momentumScore += 10;
-		reasons.Add($"[動能+10] MACD({latest.MACD:F3}) > Signal({latest.MacdSignal:F3}) 多方控盤");
+		reasons.Add($"[動能+10] MACD({macd:F4}) > DEA({macdSignal:F4})，多方控盤");
 	    }
 	    else
 	    {
 		momentumScore -= 10;
-		reasons.Add($"[動能-10] MACD({latest.MACD:F3}) < Signal({latest.MacdSignal:F3}) 空方控盤");
+		reasons.Add($"[動能-10] MACD({macd:F4}) < DEA({macdSignal:F4})，空方控盤");
 	    }
 
-	    // MACD 柱狀體增減
-	    if (hist > prevHist && hist > 0)
+	    // MACD 柱狀體動能
+	    if (macdHist > prevMacdHist && macdHist > 0)
 	    {
-		momentumScore += 6;
-		reasons.Add($"[動能+6] MACD 柱狀體擴大 ({hist:F3} > {prevHist:F3})，動能轉強");
+		momentumScore += 5;
+		reasons.Add($"[動能+5] MACD 柱狀體擴大且為正({macdHist:F4})，多頭動能加速");
 	    }
-	    else if (hist < prevHist && hist < 0)
-	    {
-		momentumScore -= 6;
-		reasons.Add($"[動能-6] MACD 柱狀體擴大 ({hist:F3} < {prevHist:F3})，動能轉弱");
-	    }
-
-	    // RSI
-	    if (latest.RSI > 80)
-	    {
-		momentumScore -= 8;
-		reasons.Add($"[動能-8] RSI 超買 ({latest.RSI:F1})，回檔風險高");
-	    }
-	    else if (latest.RSI < 20)
-	    {
-		momentumScore += 8;
-		reasons.Add($"[動能+8] RSI 超賣 ({latest.RSI:F1})，反彈機會大");
-	    }
-	    else if (latest.RSI > 70)
+	    else if (macdHist < prevMacdHist && macdHist > 0)
 	    {
 		momentumScore -= 3;
-		reasons.Add($"[動能-3] RSI 偏高 ({latest.RSI:F1})");
+		reasons.Add($"[動能-3] MACD 柱狀體縮小({macdHist:F4})，多頭動能減弱");
 	    }
-	    else if (latest.RSI < 30)
+	    else if (macdHist < prevMacdHist && macdHist < 0)
+	    {
+		momentumScore -= 5;
+		reasons.Add($"[動能-5] MACD 柱狀體負向擴大({macdHist:F4})，空頭動能加速");
+	    }
+	    else if (macdHist > prevMacdHist && macdHist < 0)
 	    {
 		momentumScore += 3;
-		reasons.Add($"[動能+3] RSI 偏低 ({latest.RSI:F1})");
+		reasons.Add($"[動能+3] MACD 柱狀體負向縮小({macdHist:F4})，空頭動能減弱");
+	    }
+
+	    // RSI 區間判斷
+	    if (rsi > 80)
+	    {
+		momentumScore -= 8;
+		reasons.Add($"[動能-8] RSI({rsi:F1}) 嚴重超買(>80)，高位回檔風險大");
+	    }
+	    else if (rsi > 70)
+	    {
+		momentumScore -= 4;
+		reasons.Add($"[動能-4] RSI({rsi:F1}) 偏高(>70)，短線過熱，注意追高風險");
+	    }
+	    else if (rsi < 20)
+	    {
+		momentumScore += 8;
+		reasons.Add($"[動能+8] RSI({rsi:F1}) 嚴重超賣(<20)，強烈反彈機會");
+	    }
+	    else if (rsi < 30)
+	    {
+		momentumScore += 4;
+		reasons.Add($"[動能+4] RSI({rsi:F1}) 偏低(<30)，具反彈空間");
+	    }
+	    else if (rsi >= 50 && rsi <= 70)
+	    {
+		momentumScore += 2;
+		reasons.Add($"[動能+2] RSI({rsi:F1}) 健康多頭區間(50~70)");
 	    }
 	    else
 	    {
-		reasons.Add($"[動能±0] RSI 常態 ({latest.RSI:F1})");
+		reasons.Add($"[動能±0] RSI({rsi:F1}) 中性區間");
 	    }
 
-	    // --- 3. K 線型態 (權重 10%) ---
-	    double high = (double)latest.High;
-	    double low = (double)latest.Low;
-	    double open = (double)latest.Open;
-	    double close = (double)latest.Close;
-	    double range = high - low;
-	    if (range > 0)
-	    {
-		double bodyTop = Math.Max(open, close);
-		double bodyBottom = Math.Min(open, close);
-		double upperShadow = high - bodyTop;
-		double lowerShadow = bodyBottom - low;
-		double bodySize = bodyTop - bodyBottom;
+	    momentumScore = Clamp(momentumScore, -25, 25);
 
-		if (upperShadow > bodySize * 2 && upperShadow > range * 0.4)
-		{
-		    candlestickScore -= 8;
-		    reasons.Add("[型態-8] 長上引線，上攻受阻");
-		}
-		else if (lowerShadow > bodySize * 2 && lowerShadow > range * 0.4)
-		{
-		    candlestickScore += 8;
-		    reasons.Add("[型態+8] 長下引線，下檔承接強");
-		}
-		else if (bodySize > range * 0.8 && close > open)
-		{
-		    candlestickScore += 6;
-		    reasons.Add("[型態+6] 飽滿長紅，買氣強勁");
-		}
-		else if (bodySize > range * 0.8 && close < open)
-		{
-		    candlestickScore -= 6;
-		    reasons.Add("[型態-6] 飽滿長黑，賣壓沉重");
-		}
-		else
-		{
-		    reasons.Add("[型態±0] K 線平衡");
-		}
-	    }
+	    // =====================================================================
+	    // --- 3. 籌碼類 ---
+	    // =====================================================================
 
-	    // --- 4. 籌碼類 (權重 30%) ---
 	    if (twseHistory?.RecordsByDate != null)
 	    {
 		var targetDate = (analysisDate ?? latest.Time).Date;
-		var orderedInstitutional = twseHistory.RecordsByDate
-		    .Where(x => x.Key.Date <= targetDate)
-		    .OrderBy(x => x.Key).Select(x => x.Value).ToList();
+		var records = twseHistory.RecordsByDate.Values
+		    .Where(x => x.TradeDate <= targetDate)
+		    .OrderByDescending(x => x.TradeDate).Take(5).ToList();
 
-		var latestChip = orderedInstitutional.LastOrDefault();
-		var prevChip = orderedInstitutional.Count > 1 ? orderedInstitutional[orderedInstitutional.Count - 2] : null;
-
-		if (latestChip != null && latest.Volume > 0)
+		if (records.Count > 0 && latest.Volume > 0)
 		{
-		    double fRatio = (double)latestChip.ForeignNet / latest.Volume;
-		    // 絕對佔比
-		    if (fRatio > 0.03)
+		    var todayChip = records.First();
+		    double vol = (double)latest.Volume;
+
+		    // 外資買賣超
+		    double fNet = (double)todayChip.ForeignNet;
+		    double fRatio = fNet / vol;
+		    if (fRatio > 0.05)
 		    {
-			chipScore += 10;
-			reasons.Add($"[籌碼+10] 外資強力買超 (佔量 {fRatio * 100:F1}%)");
+			chipScore += 15;
+			reasons.Add($"[籌碼+15] 外資大力買超 (佔量 {fRatio * 100:F1}%，{fNet:+0;-0} 張)");
 		    }
-		    else if (fRatio < -0.03)
+		    else if (fRatio > 0.02)
 		    {
-			chipScore -= 10;
-			reasons.Add($"[籌碼-10] 外資強力賣超 (佔量 {Math.Abs(fRatio) * 100:F1}%)");
+			chipScore += 8;
+			reasons.Add($"[籌碼+8] 外資買超 (佔量 {fRatio * 100:F1}%，{fNet:+0;-0} 張)");
 		    }
-		    else if (fRatio > 0.01)
+		    else if (fRatio < -0.05)
 		    {
-			chipScore += 4;
-			reasons.Add($"[籌碼+4] 外資買超 ({fRatio * 100:F1}%)");
+			chipScore -= 15;
+			reasons.Add($"[籌碼-15] 外資大力賣超 (佔量 {fRatio * 100:F1}%，{fNet:+0;-0} 張)");
 		    }
-		    else if (fRatio < -0.01)
+		    else if (fRatio < -0.02)
 		    {
-			chipScore -= 4;
-			reasons.Add($"[籌碼-4] 外資賣超 ({Math.Abs(fRatio) * 100:F1}%)");
+			chipScore -= 8;
+			reasons.Add($"[籌碼-8] 外資賣超 (佔量 {fRatio * 100:F1}%，{fNet:+0;-0} 張)");
+		    }
+		    else
+		    {
+			reasons.Add($"[籌碼±0] 外資動向中性 (佔量 {fRatio * 100:F1}%，{fNet:+0;-0} 張)");
 		    }
 
-		    // 積極度 (與昨日比較)
-		    if (prevChip != null && prev.Volume > 0)
-		    {
-			double fRatioPrev = (double)prevChip.ForeignNet / prev.Volume;
-			double fIntensity = fRatio - fRatioPrev;
-			if (fIntensity > 0.03)
-			{
-			    chipScore += 8;
-			    reasons.Add($"[籌碼+8] 外資轉積極買入 (+{fIntensity * 100:F1}%)");
-			}
-			else if (fIntensity < -0.03)
-			{
-			    chipScore -= 8;
-			    reasons.Add($"[籌碼-8] 外資轉賣出 ({fIntensity * 100:F1}%)");
-			}
-		    }
-
-		    // 投信
-		    double tRatio = (double)latestChip.InvestmentTrustNet / latest.Volume;
+		    // 投信買賣超
+		    double tNet = (double)todayChip.InvestmentTrustNet;
+		    double tRatio = tNet / vol;
 		    if (tRatio > 0.02)
 		    {
-			chipScore += 6;
-			reasons.Add($"[籌碼+6] 投信力挺買超 ({tRatio * 100:F1}%)");
+			chipScore += 8;
+			reasons.Add($"[籌碼+8] 投信積極買超 (佔量 {tRatio * 100:F1}%，{tNet:+0;-0} 張)");
+		    }
+		    else if (tRatio > 0.005)
+		    {
+			chipScore += 4;
+			reasons.Add($"[籌碼+4] 投信小幅買超 (佔量 {tRatio * 100:F1}%，{tNet:+0;-0} 張)");
 		    }
 		    else if (tRatio < -0.02)
 		    {
-			chipScore -= 4;
-			reasons.Add($"[籌碼-4] 投信賣超 ({Math.Abs(tRatio) * 100:F1}%)");
+			chipScore -= 6;
+			reasons.Add($"[籌碼-6] 投信賣超 (佔量 {tRatio * 100:F1}%，{tNet:+0;-0} 張)");
+		    }
+		    else
+		    {
+			reasons.Add($"[籌碼±0] 投信動向中性 ({tNet:+0;-0} 張)");
 		    }
 
-		    // 五日累計
-		    var sum5 = orderedInstitutional.Skip(Math.Max(0, orderedInstitutional.Count - 5)).Sum(x => x.ThreeMajorNet);
-		    if (sum5 > 100000)
+		    // 投信連買/連賣天數
+		    int itBuyDays = records.TakeWhile(r => r.InvestmentTrustNet > 0).Count();
+		    int itSellDays = records.TakeWhile(r => r.InvestmentTrustNet < 0).Count();
+		    if (itBuyDays >= 3)
 		    {
-			chipScore += 12;
-			reasons.Add($"[籌碼+12] 近5日法人持續買超 {sum5:N0} 張");
+			chipScore += 8;
+			reasons.Add($"[籌碼+8] 投信連買 {itBuyDays} 日，持續佈局訊號");
 		    }
-		    else if (sum5 < -100000)
+		    else if (itBuyDays >= 2)
 		    {
-			chipScore -= 12;
-			reasons.Add($"[籌碼-12] 近5日法人持續賣超 {Math.Abs(sum5):N0} 張");
+			chipScore += 3;
+			reasons.Add($"[籌碼+3] 投信連買 {itBuyDays} 日");
+		    }
+		    else if (itSellDays >= 3)
+		    {
+			chipScore -= 6;
+			reasons.Add($"[籌碼-6] 投信連賣 {itSellDays} 日，持續出脫訊號");
+		    }
+
+		    // 近5日三大法人合計買賣超
+		    double sum5 = records.Sum(r => (double)r.ThreeMajorNet);
+		    double avgVol = records.Count > 0 ? records.Average(r => (double)(r.ForeignNet + r.InvestmentTrustNet + r.DealerNet)) : 0;
+		    if (sum5 > 0 && vol > 0)
+		    {
+			double sum5Ratio = sum5 / (vol * records.Count);
+			if (sum5Ratio > 0.03)
+			{
+			    chipScore += 8;
+			    reasons.Add($"[籌碼+8] 近{records.Count}日法人合計買超 {sum5:+0;-0} 張 (日均佔量 {sum5Ratio * 100:F1}%)");
+			}
+			else if (sum5Ratio > 0.01)
+			{
+			    chipScore += 3;
+			    reasons.Add($"[籌碼+3] 近{records.Count}日法人合計買超 {sum5:+0;-0} 張");
+			}
+		    }
+		    else if (sum5 < 0 && vol > 0)
+		    {
+			double sum5Ratio = sum5 / (vol * records.Count);
+			if (sum5Ratio < -0.03)
+			{
+			    chipScore -= 8;
+			    reasons.Add($"[籌碼-8] 近{records.Count}日法人合計賣超 {sum5:+0;-0} 張 (日均佔量 {sum5Ratio * 100:F1}%)");
+			}
+			else if (sum5Ratio < -0.01)
+			{
+			    chipScore -= 3;
+			    reasons.Add($"[籌碼-3] 近{records.Count}日法人合計賣超 {sum5:+0;-0} 張");
+			}
 		    }
 		}
 	    }
+	    chipScore = Clamp(chipScore, -30, 30);
 
-	    // --- 5. 量價與乖離 (補分項) ---
-	    var avgVol20 = data.Skip(Math.Max(0, data.Count - 20)).Average(x => (double)x.Volume);
-	    var volRatio = avgVol20 > 0 ? latest.Volume / avgVol20 : 1.0;
-	    if (volRatio >= 2.0 && close > open && close > (previousClose ?? 0))
+	    // =====================================================================
+	    // --- 4. K 線型態 ---
+	    // =====================================================================
+
+	    double close = (double)latest.Close;
+	    double open = (double)latest.Open;
+	    double high = (double)latest.High;
+	    double low = (double)latest.Low;
+	    double body = Math.Abs(close - open);
+	    double kRange = high - low;
+
+	    if (kRange > 0)
+	    {
+		double upperShadow = high - Math.Max(open, close);
+		double lowerShadow = Math.Min(open, close) - low;
+		double bodyRatio = body / kRange;
+
+		if (bodyRatio > 0.8 && close > open)
+		{
+		    candleScore += 8;
+		    reasons.Add($"[型態+8] 飽滿長紅 K 線 (實體佔{bodyRatio * 100:F0}%)，買氣強勁");
+		}
+		else if (bodyRatio > 0.8 && close < open)
+		{
+		    candleScore -= 8;
+		    reasons.Add($"[型態-8] 飽滿長黑 K 線 (實體佔{bodyRatio * 100:F0}%)，賣壓沉重");
+		}
+		else if (upperShadow > body * 2 && upperShadow > kRange * 0.4)
+		{
+		    candleScore -= 6;
+		    reasons.Add($"[型態-6] 長上引線 (上影{upperShadow:F2})，上攻受阻，賣壓出現");
+		}
+		else if (lowerShadow > body * 2 && lowerShadow > kRange * 0.4)
+		{
+		    candleScore += 6;
+		    reasons.Add($"[型態+6] 長下引線 (下影{lowerShadow:F2})，下檔承接強，買盤進場");
+		}
+		else if (bodyRatio < 0.1)
+		{
+		    reasons.Add($"[型態±0] 十字星 K 線，買賣力道相當，方向待確認");
+		}
+		else
+		{
+		    reasons.Add($"[型態±0] 普通 K 線，無特殊型態訊號");
+		}
+	    }
+
+	    // =====================================================================
+	    // --- 5. 量價 ---
+	    // =====================================================================
+
+	    double avgVol20 = data.Skip(Math.Max(0, data.Count - 20)).Average(x => (double)x.Volume);
+	    double curVol = (double)latest.Volume;
+	    double volRatio = avgVol20 > 0 ? curVol / avgVol20 : 1.0;
+	    double prevClose = previousClose ?? (double)prev.Close;
+
+	    if (volRatio >= 2.0 && close > prevClose)
 	    {
 		volScore += 8;
-		reasons.Add($"[量價+8] 爆量長紅 (量能 {volRatio:F1} 倍)");
+		reasons.Add($"[量價+8] 爆量長紅 (量能 {volRatio:F1} 倍均量)，強勢突破");
 	    }
-	    else if (volRatio >= 1.3 && close > open)
+	    else if (volRatio >= 1.3 && close > prevClose)
 	    {
 		volScore += 4;
-		reasons.Add($"[量價+4] 量增價揚 ({volRatio:F1} 倍)");
+		reasons.Add($"[量價+4] 量增價揚 (量能 {volRatio:F1} 倍均量)，買氣擴增");
+	    }
+	    else if (volRatio >= 2.0 && close < prevClose)
+	    {
+		volScore -= 8;
+		reasons.Add($"[量價-8] 爆量長黑 (量能 {volRatio:F1} 倍均量)，強勢賣壓");
 	    }
 	    else if (volRatio < 0.5)
 	    {
 		volScore -= 3;
-		reasons.Add($"[量價-3] 量能萎縮 ({volRatio:F1} 倍)");
+		reasons.Add($"[量價-3] 量能萎縮 ({volRatio:F1} 倍均量)，市場觀望");
 	    }
-
-	    double bias20 = (currentPrice - latest.MA20) / latest.MA20;
-	    if (bias20 > 0.15)
+	    else
 	    {
-		volScore -= 8;
-		reasons.Add($"[量價-8] 乖離率過高 ({bias20 * 100:F1}%)，追高風險大");
+		reasons.Add($"[量價±0] 量能正常 ({volRatio:F1} 倍均量)");
 	    }
-	    else if (bias20 < -0.15)
+
+	    // MA20 乖離率
+	    double ma20val = latest.MA20;
+	    if (ma20val > 0)
 	    {
-		volScore += 5;
-		reasons.Add($"[量價+5] 乖離率過低 ({bias20 * 100:F1}%)，反彈機會");
+		double bias20 = (cp - ma20val) / ma20val;
+		if (bias20 > 0.15)
+		{
+		    volScore -= 8;
+		    reasons.Add($"[量價-8] MA20 乖離率過高 ({bias20 * 100:F1}%)，追高風險大");
+		}
+		else if (bias20 > 0.08)
+		{
+		    volScore -= 4;
+		    reasons.Add($"[量價-4] MA20 乖離率偏高 ({bias20 * 100:F1}%)，短線注意");
+		}
+		else if (bias20 < -0.15)
+		{
+		    volScore += 6;
+		    reasons.Add($"[量價+6] MA20 乖離率過低 ({bias20 * 100:F1}%)，超跌反彈空間大");
+		}
+		else if (bias20 < -0.08)
+		{
+		    volScore += 3;
+		    reasons.Add($"[量價+3] MA20 乖離率偏低 ({bias20 * 100:F1}%)，具回測支撐價值");
+		}
+		else
+		{
+		    reasons.Add($"[量價±0] MA20 乖離率正常 ({bias20 * 100:F1}%)");
+		}
 	    }
 
-	    // 總分計算
-	    double finalScore = 50 + trendScore + momentumScore + chipScore + candlestickScore + volScore;
-	    finalScore = Math.Max(0, Math.Min(100, finalScore));
+	    double extraScore = Clamp(candleScore + volScore, -20, 20);
 
-	    reasons.Insert(0, $"【總分 {(int)Math.Round(finalScore)}】趨勢{trendScore:+0;-0;0} 動能{momentumScore:+0;-0;0} 籌碼{chipScore:+0;-0;0} 型態{candlestickScore:+0;-0;0} 量價{volScore:+0;-0;0}");
+	    // =====================================================================
+	    // --- 6. 總結 ---
+	    // =====================================================================
+
+	    double finalScore = 50 + trendScore + momentumScore + chipScore + extraScore;
+	    finalScore = Clamp(finalScore, 0, 100);
+
+	    reasons.Insert(0, $"【總分 {(int)Math.Round(finalScore)}】 趨勢{trendScore:+0;-0;0}  動能{momentumScore:+0;-0;0}  籌碼{chipScore:+0;-0;0}  型態+量價{extraScore:+0;-0;0}");
 
 	    return new TrendRecommendationResult
 	    {
