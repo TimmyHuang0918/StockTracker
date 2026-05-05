@@ -263,12 +263,12 @@ namespace StockTracker.ViewModels
             detailVm.OnPropertyChanged(nameof(SelectedKLineInterval));
             detailVm.OnPropertyChanged(nameof(ChartWidth));
 
-            foreach (var candle in _candles)
+	    detailVm.SetTwseT86Records(_twseByDate.Values);
+	    foreach (var candle in _candles)
             {
                 detailVm.UpdateFromKLine(candle);
             }
 
-            detailVm.SetTwseT86Records(_twseByDate.Values);
 
             _detailViewModels.Add(detailVm);
             return detailVm;
