@@ -16,6 +16,8 @@ namespace StockTracker.ViewModels
         public int Rank { get; set; }
         public string Symbol { get; set; }
         public string Name { get; set; }
+        public decimal LatestPrice { get; set; }
+        public decimal ChangePercent { get; set; }
         public int Score { get; set; }
         public string Suggestion { get; set; }
     }
@@ -53,6 +55,8 @@ namespace StockTracker.ViewModels
                             Rank INTEGER PRIMARY KEY,
                             Symbol TEXT NOT NULL,
                             Name TEXT NOT NULL,
+                            LatestPrice REAL NOT NULL,
+                            ChangePercent REAL NOT NULL,
                             Score INTEGER NOT NULL,
                             Suggestion TEXT NOT NULL
                         );";
@@ -71,7 +75,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, Score, Suggestion FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -81,8 +85,10 @@ namespace StockTracker.ViewModels
                                     Rank = reader.GetInt32(0),
                                     Symbol = reader.GetString(1),
                                     Name = reader.GetString(2),
-                                    Score = reader.GetInt32(3),
-                                    Suggestion = reader.GetString(4)
+                                    LatestPrice = reader.GetDecimal(3),
+                                    ChangePercent = reader.GetDecimal(4),
+                                    Score = reader.GetInt32(5),
+                                    Suggestion = reader.GetString(6)
                                 });
                             }
                         }
@@ -118,14 +124,16 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, Score, Suggestion)
-                                VALUES (@rank, @sym, @name, @score, @sugg)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @sugg)";
                             foreach (var s in topResults)
                             {
                                 cmd.Parameters.Clear();
                                 cmd.Parameters.AddWithValue("@rank", s.Rank);
                                 cmd.Parameters.AddWithValue("@sym", s.Symbol);
                                 cmd.Parameters.AddWithValue("@name", s.Name);
+                                cmd.Parameters.AddWithValue("@price", s.LatestPrice);
+                                cmd.Parameters.AddWithValue("@change", s.ChangePercent);
                                 cmd.Parameters.AddWithValue("@score", s.Score);
                                 cmd.Parameters.AddWithValue("@sugg", s.Suggestion);
                                 cmd.ExecuteNonQuery();
@@ -270,6 +278,8 @@ namespace StockTracker.ViewModels
                             {
                                 Symbol = symbol,
                                 Name = stockInfo.bstrStockName,
+                                LatestPrice = dummyVm.LatestPrice,
+                                ChangePercent = dummyVm.ChangePercent,
                                 Score = recommendation.Score
                             });
 

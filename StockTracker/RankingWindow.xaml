@@ -22,6 +22,8 @@
                 <DataGridTextColumn Header="排名" Binding="{Binding Rank}" Width="60" />
                 <DataGridTextColumn Header="代號" Binding="{Binding Symbol}" Width="80" />
                 <DataGridTextColumn Header="名稱" Binding="{Binding Name}" Width="150" />
+                <DataGridTextColumn Header="最新價" Binding="{Binding LatestPrice, StringFormat=F2}" Width="80" />
+                <DataGridTextColumn Header="漲跌幅(%)" Binding="{Binding ChangePercent, StringFormat=F2}" Width="80" />
                 <DataGridTextColumn Header="分數" Binding="{Binding Score}" Width="80" />
                 <DataGridTextColumn Header="建議" Binding="{Binding Suggestion}" Width="150" />
             </DataGrid.Columns>
