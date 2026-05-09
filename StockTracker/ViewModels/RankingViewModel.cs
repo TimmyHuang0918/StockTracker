@@ -20,6 +20,14 @@ namespace StockTracker.ViewModels
         public decimal ChangePercent { get; set; }
         public int Score { get; set; }
         public string Suggestion { get; set; }
+        public long ThreeMajorNet { get; set; }
+        public string NetDisplay => ThreeMajorNet > 0 ? $"+{ThreeMajorNet:N0}" : ThreeMajorNet.ToString("N0");
+        public System.Windows.Media.Brush ChangePercentBrush => ChangePercent > 0 ? System.Windows.Media.Brushes.IndianRed :
+                                                                  ChangePercent < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
+                                                                  System.Windows.Media.Brushes.Gray;
+        public System.Windows.Media.Brush NetDisplayBrush => ThreeMajorNet > 0 ? System.Windows.Media.Brushes.IndianRed :
+                                                               ThreeMajorNet < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
+                                                               System.Windows.Media.Brushes.Gray;
     }
 
     public class RankingViewModel : ViewModelBase
@@ -30,7 +38,12 @@ namespace StockTracker.ViewModels
         private double _progressValue;
         private string _progressText = "準備就緒";
         private ObservableCollection<RankedStock> _rankedStocks = new ObservableCollection<RankedStock>();
+        private System.ComponentModel.ICollectionView _rankedStocksView;
         private bool _isScanning;
+        private string _searchText;
+        private decimal? _minPrice;
+        private decimal? _maxPrice;
+        private int _topCount = 100;
 
         public RankingViewModel(CapitalApiService apiService, MainWindowViewModel mainViewModel)
         {
@@ -39,7 +52,54 @@ namespace StockTracker.ViewModels
             _dbPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "Ranking.db");
             EnsureDatabase();
             StartScanningCommand = new RelayCommand(async _ => await ScanAllStocksAsync(), _ => !_isScanning);
+
+            _rankedStocksView = System.Windows.Data.CollectionViewSource.GetDefaultView(RankedStocks);
+            _rankedStocksView.Filter = FilterRankedStocks;
+
             LoadSavedRanking();
+        }
+
+        public string SearchText
+        {
+            get => _searchText;
+            set { _searchText = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MinPrice
+        {
+            get => _minPrice;
+            set { _minPrice = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MaxPrice
+        {
+            get => _maxPrice;
+            set { _maxPrice = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public int TopCount
+        {
+            get => _topCount;
+            set { _topCount = value; OnPropertyChanged(); }
+        }
+
+        private bool FilterRankedStocks(object item)
+        {
+            if (item is RankedStock stock)
+            {
+                if (!string.IsNullOrWhiteSpace(SearchText) &&
+                    !stock.Symbol.Contains(SearchText) &&
+                    !stock.Name.Contains(SearchText))
+                {
+                    return false;
+                }
+
+                if (MinPrice.HasValue && stock.LatestPrice < MinPrice.Value) return false;
+                if (MaxPrice.HasValue && stock.LatestPrice > MaxPrice.Value) return false;
+
+                return true;
+            }
+            return false;
         }
 
         private void EnsureDatabase()
@@ -58,7 +118,8 @@ namespace StockTracker.ViewModels
                             LatestPrice REAL NOT NULL,
                             ChangePercent REAL NOT NULL,
                             Score INTEGER NOT NULL,
-                            Suggestion TEXT NOT NULL
+                            Suggestion TEXT NOT NULL,
+                            ThreeMajorNet INTEGER NOT NULL DEFAULT 0
                         );";
                     cmd.ExecuteNonQuery();
                 }
@@ -75,7 +136,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion, ThreeMajorNet FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -88,7 +149,8 @@ namespace StockTracker.ViewModels
                                     LatestPrice = reader.GetDecimal(3),
                                     ChangePercent = reader.GetDecimal(4),
                                     Score = reader.GetInt32(5),
-                                    Suggestion = reader.GetString(6)
+                                    Suggestion = reader.GetString(6),
+                                    ThreeMajorNet = reader.IsDBNull(7) ? 0 : reader.GetInt64(7)
                                 });
                             }
                         }
@@ -124,8 +186,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @sugg)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion, ThreeMajorNet)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @sugg, @net)";
                             foreach (var s in topResults)
                             {
                                 cmd.Parameters.Clear();
@@ -136,6 +198,7 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@change", s.ChangePercent);
                                 cmd.Parameters.AddWithValue("@score", s.Score);
                                 cmd.Parameters.AddWithValue("@sugg", s.Suggestion);
+                                cmd.Parameters.AddWithValue("@net", s.ThreeMajorNet);
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -165,6 +228,11 @@ namespace StockTracker.ViewModels
         {
             get => _rankedStocks;
             set { _rankedStocks = value; OnPropertyChanged(); }
+        }
+
+        public System.ComponentModel.ICollectionView RankedStocksView
+        {
+            get => _rankedStocksView;
         }
 
         public ICommand StartScanningCommand { get; }
@@ -274,13 +342,21 @@ namespace StockTracker.ViewModels
                                 },
                                 candles.Last().Time);
 
+                            var t86History = _mainViewModel.TwseT86Histories.FirstOrDefault(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+                            long latestNet = 0;
+                            if (t86History != null && t86History.RecordsByDate.Any())
+                            {
+                                latestNet = t86History.RecordsByDate.OrderByDescending(r => r.Key).First().Value.ThreeMajorNet;
+                            }
+
                             results.Add(new RankedStock
                             {
                                 Symbol = symbol,
                                 Name = stockInfo.bstrStockName,
                                 LatestPrice = dummyVm.LatestPrice,
                                 ChangePercent = dummyVm.ChangePercent,
-                                Score = recommendation.Score
+                                Score = recommendation.Score,
+                                ThreeMajorNet = latestNet
                             });
 
                             candles.Clear();
@@ -304,8 +380,8 @@ namespace StockTracker.ViewModels
                 // 依 Score 由高至低排序
                 results = results.OrderByDescending(r => r.Score).ToList();
 
-                // 取前 100 名
-                var topResults = results.Take(100).ToList();
+                // 取前 TopCount 名
+                var topResults = results.Take(TopCount).ToList();
 
                 RankedStocks.Clear();
                 for (int i = 0; i < topResults.Count; i++)

@@ -13,18 +13,44 @@
             <TextBlock Text="全市場股票掃描與排名" FontSize="18" FontWeight="Bold" Margin="0,0,0,10" />
             <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Height="20" />
             <TextBlock Text="{Binding ProgressText}" Margin="0,5,0,0" />
-            <Button Content="開始掃描" Width="100" HorizontalAlignment="Left" Margin="0,10,0,0" Command="{Binding StartScanningCommand}" />
+
+            <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
+                <TextBlock Text="排名數量：" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBox Text="{Binding TopCount, UpdateSourceTrigger=PropertyChanged}" Width="50" Margin="0,0,15,0" VerticalContentAlignment="Center"/>
+                <Button Content="開始掃描" Width="80" Command="{Binding StartScanningCommand}" Margin="0,0,20,0"/>
+
+                <TextBlock Text="搜尋代號/名稱：" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="100" Margin="0,0,15,0" VerticalContentAlignment="Center"/>
+
+                <TextBlock Text="價格區間：" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBox Text="{Binding MinPrice, UpdateSourceTrigger=PropertyChanged}" Width="50" VerticalContentAlignment="Center"/>
+                <TextBlock Text=" ~ " VerticalAlignment="Center"/>
+                <TextBox Text="{Binding MaxPrice, UpdateSourceTrigger=PropertyChanged}" Width="50" Margin="0,0,15,0" VerticalContentAlignment="Center"/>
+            </WrapPanel>
         </StackPanel>
-        
-        <DataGrid Grid.Row="1" ItemsSource="{Binding RankedStocks}" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single"
+
+        <DataGrid Grid.Row="1" ItemsSource="{Binding RankedStocksView}" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single"
                   Background="{DynamicResource SurfaceBrush}" RowBackground="{DynamicResource SurfaceAltBrush}" AlternatingRowBackground="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AppForegroundBrush}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="排名" Binding="{Binding Rank}" Width="60" />
                 <DataGridTextColumn Header="代號" Binding="{Binding Symbol}" Width="80" />
                 <DataGridTextColumn Header="名稱" Binding="{Binding Name}" Width="150" />
                 <DataGridTextColumn Header="最新價" Binding="{Binding LatestPrice, StringFormat=F2}" Width="80" />
-                <DataGridTextColumn Header="漲跌幅(%)" Binding="{Binding ChangePercent, StringFormat=F2}" Width="80" />
+                <DataGridTextColumn Header="漲跌幅(%)" Binding="{Binding ChangePercent, StringFormat=F2}" Width="80">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding ChangePercentBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="分數" Binding="{Binding Score}" Width="80" />
+                <DataGridTextColumn Header="三大法人買賣超" Binding="{Binding NetDisplay}" Width="110">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding NetDisplayBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="建議" Binding="{Binding Suggestion}" Width="150" />
             </DataGrid.Columns>
             <DataGrid.Resources>
