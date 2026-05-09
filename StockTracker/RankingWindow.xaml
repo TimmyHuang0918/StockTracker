@@ -44,7 +44,7 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Header="分數" Binding="{Binding Score}" Width="80" />
-                <DataGridTextColumn Header="三大法人買賣超" Binding="{Binding NetDisplay}" Width="110">
+                <DataGridTextColumn Header="三大法人買賣超" Binding="{Binding NetDisplay}" SortMemberPath="ThreeMajorNet" Width="110">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{Binding NetDisplayBrush}"/>

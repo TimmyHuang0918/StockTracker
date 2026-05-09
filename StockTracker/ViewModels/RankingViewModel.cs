@@ -80,13 +80,15 @@ namespace StockTracker.ViewModels
         public int TopCount
         {
             get => _topCount;
-            set { _topCount = value; OnPropertyChanged(); }
+            set { _topCount = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
         }
 
         private bool FilterRankedStocks(object item)
         {
             if (item is RankedStock stock)
             {
+                if (stock.Rank > TopCount) return false;
+
                 if (!string.IsNullOrWhiteSpace(SearchText) &&
                     !stock.Symbol.Contains(SearchText) &&
                     !stock.Name.Contains(SearchText))
@@ -380,18 +382,15 @@ namespace StockTracker.ViewModels
                 // 依 Score 由高至低排序
                 results = results.OrderByDescending(r => r.Score).ToList();
 
-                // 取前 TopCount 名
-                var topResults = results.Take(TopCount).ToList();
-
                 RankedStocks.Clear();
-                for (int i = 0; i < topResults.Count; i++)
+                for (int i = 0; i < results.Count; i++)
                 {
-                    topResults[i].Rank = i + 1;
-                    topResults[i].Suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(topResults[i].Score);
-                    RankedStocks.Add(topResults[i]);
+                    results[i].Rank = i + 1;
+                    results[i].Suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(results[i].Score);
+                    RankedStocks.Add(results[i]);
                 }
-                
-                SaveRankingToDb(topResults);
+
+                SaveRankingToDb(results.Take(TopCount).ToList());
 
                 ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票";
             }
