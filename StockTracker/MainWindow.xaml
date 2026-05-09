@@ -124,209 +124,214 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- K線清單 -->
-                <DockPanel Grid.Column="0">
+                <DockPanel Grid.Column="0" ClipToBounds="True" >
                     <TextBlock Text="全部訂閱股票 K 線總覽（雙擊可開啟詳細圖表）" FontWeight="Bold" Margin="0,0,0,8" DockPanel.Dock="Top"/>
-                <ListBox ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" 
-                         SelectionChanged="ListBox_SelectionStockChanged"
-                         MouseDoubleClick="StockList_OnMouseDoubleClick"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         ScrollViewer.CanContentScroll="False">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Width" Value="430"/>
-                            <Setter Property="Margin" Value="0,0,10,10"/>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="8" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceAltBrush}">
-                                <StackPanel>
-                                    <DockPanel Margin="0,0,0,6">
-                                        <Border DockPanel.Dock="Right" Padding="6,3" Margin="8,0,0,0"
-                                                Background="#AA1E1E1E" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4">
-                                            <TextBlock FontSize="15" FontWeight="SemiBold" x:Name="PriceTextBlock">
-                                                <Run Text="現價 " Foreground="{DynamicResource MutedForegroundBrush}"/>
-                                                <Run Text="{Binding LatestPrice, StringFormat={}{0:F2}, Mode=OneWay, NotifyOnTargetUpdated=True}" Foreground="{Binding LatestChangeBrush}"/>
-                                                <Run Text="  (" Foreground="{Binding LatestChangeBrush}"/>
-                                                <Run Text="{Binding ChangePercentText, Mode=OneWay, NotifyOnTargetUpdated=True}" Foreground="{Binding LatestChangeBrush}"/>
-                                                <Run Text=" )" Foreground="{Binding LatestChangeBrush}" />
+                    <ListBox ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" 
+                             SelectionChanged="ListBox_SelectionStockChanged"
+                             MouseDoubleClick="StockList_OnMouseDoubleClick"
+                             ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                             ScrollViewer.VerticalScrollBarVisibility="Visible">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" IsItemsHost="True" Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource MathConverter}}"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="MaxWidth" Value="430"/>
+                                <Setter Property="Margin" Value="0,0,10,10"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource DarkSelected}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="4" Margin="2" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="Transparent">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,6">
+                                            <Border DockPanel.Dock="Right" Padding="6,3" Margin="8,0,0,0"
+                                                    Background="#AA1E1E1E" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4">
+                                                <TextBlock FontSize="15" FontWeight="SemiBold" x:Name="PriceTextBlock">
+                                                    <Run Text="現價 " Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                                    <Run Text="{Binding LatestPrice, StringFormat={}{0:F2}, Mode=OneWay, NotifyOnTargetUpdated=True}" Foreground="{Binding LatestChangeBrush}"/>
+                                                    <Run Text="  (" Foreground="{Binding LatestChangeBrush}"/>
+                                                    <Run Text="{Binding ChangePercentText, Mode=OneWay, NotifyOnTargetUpdated=True}" Foreground="{Binding LatestChangeBrush}"/>
+                                                    <Run Text=" )" Foreground="{Binding LatestChangeBrush}" />
 
-                                                <TextBlock.Triggers>
-                                                    <!-- 當 Binding 更新時觸發 -->
-                                                    <EventTrigger RoutedEvent="Binding.TargetUpdated">
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <!-- 透明度閃爍 -->
-                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1.0" To="0.3" Duration="0:0:0.2" AutoReverse="True"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </EventTrigger>
-                                                </TextBlock.Triggers>
+                                                    <TextBlock.Triggers>
+                                                        <!-- 當 Binding 更新時觸發 -->
+                                                        <EventTrigger RoutedEvent="Binding.TargetUpdated">
+                                                            <BeginStoryboard>
+                                                                <Storyboard>
+                                                                    <!-- 透明度閃爍 -->
+                                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1.0" To="0.3" Duration="0:0:0.2" AutoReverse="True"/>
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </EventTrigger>
+                                                    </TextBlock.Triggers>
+                                                </TextBlock>
+
+                                            </Border>
+                                            <TextBlock FontWeight="SemiBold" FontSize="14" DockPanel.Dock="Left">
+                                                <Run Text="{Binding Symbol, Mode=OneWay}"/>
+                                                <Run Text=" - "/>
+                                                <Run Text="{Binding Name, Mode=OneWay}"/>
                                             </TextBlock>
 
-                                        </Border>
-                                        <TextBlock FontWeight="SemiBold" FontSize="14" DockPanel.Dock="Left">
-                                            <Run Text="{Binding Symbol, Mode=OneWay}"/>
-                                            <Run Text=" - "/>
-                                            <Run Text="{Binding Name, Mode=OneWay}"/>
+                                        </DockPanel>
+
+                                        <TextBlock DockPanel.Dock="Top">
+                                            <Run Text="訊號: "/>
+                                            <Run Text="{Binding Signal, Mode=OneWay}"/>
                                         </TextBlock>
 
-                                    </DockPanel>
+                                        <TextBlock Margin="0,0,0,6">
+                                            <Run Text="最新價格: "/>
+                                            <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}"/>
+                                            <Run Text=" 漲跌幅: "/>
+                                            <Run Text="{Binding ChangePercent, StringFormat=F2, Mode=OneWay}"/>
+                                            <Run Text="%   MA5: "/>
+                                            <Run Text="{Binding MA5, StringFormat=F2, Mode=OneWay}"/>
+                                            <Run Text="   MA20: "/>
+                                            <Run Text="{Binding MA20, StringFormat=F2, Mode=OneWay}"/>
+                                        </TextBlock>
 
-                                    <TextBlock DockPanel.Dock="Top">
-                                        <Run Text="訊號: "/>
-                                        <Run Text="{Binding Signal, Mode=OneWay}"/>
-                                    </TextBlock>
+                                        <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
+                                                   Text="Y軸：價格(元)    X軸：時間(由左到右)"/>
 
-                                    <TextBlock Margin="0,0,0,6">
-                                        <Run Text="最新價格: "/>
-                                        <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}"/>
-                                        <Run Text=" 漲跌幅: "/>
-                                        <Run Text="{Binding ChangePercent, StringFormat=F2, Mode=OneWay}"/>
-                                        <Run Text="%   MA5: "/>
-                                        <Run Text="{Binding MA5, StringFormat=F2, Mode=OneWay}"/>
-                                        <Run Text="   MA20: "/>
-                                        <Run Text="{Binding MA20, StringFormat=F2, Mode=OneWay}"/>
-                                    </TextBlock>
-
-                                    <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
-                                               Text="Y軸：價格(元)    X軸：時間(由左到右)"/>
-
-                                    <Viewbox Stretch="Fill" Height="150" SizeChanged="ChartViewbox_OnSizeChanged"
-                                             Width="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=ActualWidth}">
-                                        <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}" ClipToBounds="False"
-                                                MouseMove="KLineCanvas_OnMouseMove" MouseLeave="KLineCanvas_OnMouseLeave"
-                                                ToolTip="{Binding HoverInfo}">
-                                            <ItemsControl ItemsSource="{Binding PriceLevels}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <Canvas/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemContainerStyle>
-                                                    <Style TargetType="ContentPresenter">
-                                                        <Setter Property="Canvas.Left" Value="0"/>
-                                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
-                                                    </Style>
-                                                </ItemsControl.ItemContainerStyle>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Canvas>
-                                                            <Line X1="40" X2="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Y1="0" Y2="0"
-                                                                  Stroke="Gray" StrokeDashArray="2,3" StrokeThickness="0.8"/>
-                                                            <TextBlock Text="{Binding Text}" FontSize="9" Foreground="{DynamicResource MutedForegroundBrush}" Margin="2,-10,0,0"/>
-                                                        </Canvas>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            <ItemsControl ItemsSource="{Binding Candles}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <Canvas/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemContainerStyle>
-                                                    <Style TargetType="ContentPresenter">
-                                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                                                        <Setter Property="Canvas.Top" Value="0"/>
-                                                    </Style>
-                                                </ItemsControl.ItemContainerStyle>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Canvas Width="8" Height="220">
-                                                            <Line X1="4" X2="4" Y1="{Binding WickTop}" Y2="{Binding WickBottom}" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="1"/>
-                                                            <Rectangle Width="8" Height="{Binding BodyHeight}" Fill="{Binding BodyBrush}" Canvas.Top="{Binding BodyTop}"/>
-                                                        </Canvas>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            <Polyline Points="{Binding Ma5Points}" Stroke="Orange" StrokeThickness="1.6"/>
-                                            <Polyline Points="{Binding Ma20Points}" Stroke="DodgerBlue" StrokeThickness="1.6"/>
-                                            <Polyline Points="{Binding Ma120Points}" Stroke="Violet" StrokeThickness="1.4"/>
-                                                <Polyline Points="{Binding Ma240Points}" Stroke="#5E005E" StrokeThickness="1.4"/>
-                                            <Polyline Points="{Binding BollingerUpperPoints}" Stroke="#00E3E3" StrokeThickness="1" StrokeDashArray="4,2"/>
-                                            <Polyline Points="{Binding BollingerMiddlePoints}" Stroke="#60FFAA00" StrokeThickness="1" StrokeDashArray="2,2"/>
-                                            <Polyline Points="{Binding BollingerLowerPoints}" Stroke="#00E3E3" StrokeThickness="1" StrokeDashArray="4,2"/>
-                                            <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding LatestPriceY}" Y2="{Binding LatestPriceY}"
-                                                  Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="4,2"/>
-                                            <Border Canvas.Left="6" Canvas.Top="{Binding LatestPriceY}" Padding="4,1"
-                                                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
-                                                <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14">
-                                                    <Run Text="Now: "/>
-                                                    <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}"/>
-                                                </TextBlock>
-                                            </Border>
-                                            <ItemsControl ItemsSource="{Binding SignalMarkers}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <Canvas/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemContainerStyle>
-                                                    <Style TargetType="ContentPresenter">
-                                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
-                                                    </Style>
-                                                </ItemsControl.ItemContainerStyle>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="12"/>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            <ItemsControl ItemsSource="{Binding TimeLabels}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <Canvas/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemContainerStyle>
-                                                    <Style TargetType="ContentPresenter">
-                                                        <Setter Property="Canvas.Left" Value="{Binding Left}"/>
-                                                        <Setter Property="Canvas.Top" Value="204"/>
-                                                    </Style>
-                                                </ItemsControl.ItemContainerStyle>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock Text="{Binding Text}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="9"/>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            <ItemsControl ItemsSource="{Binding TimeLabels}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <Canvas/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemContainerStyle>
-                                                    <Style TargetType="ContentPresenter">
-                                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                                                        <Setter Property="Canvas.Top" Value="0"/>
-                                                    </Style>
-                                                </ItemsControl.ItemContainerStyle>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Line X1="0" X2="0" Y1="0" Y2="220" Stroke="{DynamicResource AppBorderBrush}" StrokeDashArray="2,3" StrokeThickness="0.8"/>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            <Line X1="{Binding CrosshairX}" X2="{Binding CrosshairX}" Y1="0" Y2="220"
-                                                  Visibility="{Binding CrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
-                                            <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding CrosshairY}" Y2="{Binding CrosshairY}"
-                                                  Visibility="{Binding CrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
-                                        </Canvas>
-                                    </Viewbox>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                                        <Viewbox Stretch="Fill" Height="150" HorizontalAlignment="Left" SizeChanged="ChartViewbox_OnSizeChanged"
+                                                 Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
+                                            <Canvas Width="{Binding ChartWidth}" Height="220" Background="{DynamicResource SurfaceAltBrush}" ClipToBounds="False"
+                                                    MouseMove="KLineCanvas_OnMouseMove" MouseLeave="KLineCanvas_OnMouseLeave"
+                                                    ToolTip="{Binding HoverInfo}">
+                                                <ItemsControl ItemsSource="{Binding PriceLevels}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <Canvas/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemContainerStyle>
+                                                        <Style TargetType="ContentPresenter">
+                                                            <Setter Property="Canvas.Left" Value="0"/>
+                                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                                        </Style>
+                                                    </ItemsControl.ItemContainerStyle>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Canvas>
+                                                                <Line X1="40" X2="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Y1="0" Y2="0"
+                                                                      Stroke="Gray" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                                                <TextBlock Text="{Binding Text}" FontSize="9" Foreground="{DynamicResource MutedForegroundBrush}" Margin="2,-10,0,0"/>
+                                                            </Canvas>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <ItemsControl ItemsSource="{Binding Candles}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <Canvas/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemContainerStyle>
+                                                        <Style TargetType="ContentPresenter">
+                                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                            <Setter Property="Canvas.Top" Value="0"/>
+                                                        </Style>
+                                                    </ItemsControl.ItemContainerStyle>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Canvas Width="8" Height="220">
+                                                                <Line X1="4" X2="4" Y1="{Binding WickTop}" Y2="{Binding WickBottom}" Stroke="{DynamicResource AppForegroundBrush}" StrokeThickness="1"/>
+                                                                <Rectangle Width="8" Height="{Binding BodyHeight}" Fill="{Binding BodyBrush}" Canvas.Top="{Binding BodyTop}"/>
+                                                            </Canvas>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Polyline Points="{Binding Ma5Points}" Stroke="Orange" StrokeThickness="1.6"/>
+                                                <Polyline Points="{Binding Ma20Points}" Stroke="DodgerBlue" StrokeThickness="1.6"/>
+                                                <Polyline Points="{Binding Ma120Points}" Stroke="Violet" StrokeThickness="1.4"/>
+                                                    <Polyline Points="{Binding Ma240Points}" Stroke="#5E005E" StrokeThickness="1.4"/>
+                                                <Polyline Points="{Binding BollingerUpperPoints}" Stroke="#00E3E3" StrokeThickness="1" StrokeDashArray="4,2"/>
+                                                <Polyline Points="{Binding BollingerMiddlePoints}" Stroke="#60FFAA00" StrokeThickness="1" StrokeDashArray="2,2"/>
+                                                <Polyline Points="{Binding BollingerLowerPoints}" Stroke="#00E3E3" StrokeThickness="1" StrokeDashArray="4,2"/>
+                                                <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding LatestPriceY}" Y2="{Binding LatestPriceY}"
+                                                      Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="4,2"/>
+                                                <Border Canvas.Left="6" Canvas.Top="{Binding LatestPriceY}" Padding="4,1"
+                                                        Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                                                    <TextBlock Foreground="{DynamicResource AccentBrush}" FontSize="14">
+                                                        <Run Text="Now: "/>
+                                                        <Run Text="{Binding LatestPrice, StringFormat=F2, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </Border>
+                                                <ItemsControl ItemsSource="{Binding SignalMarkers}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <Canvas/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemContainerStyle>
+                                                        <Style TargetType="ContentPresenter">
+                                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                                        </Style>
+                                                    </ItemsControl.ItemContainerStyle>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="12"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <ItemsControl ItemsSource="{Binding TimeLabels}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <Canvas/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemContainerStyle>
+                                                        <Style TargetType="ContentPresenter">
+                                                            <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                                                            <Setter Property="Canvas.Top" Value="204"/>
+                                                        </Style>
+                                                    </ItemsControl.ItemContainerStyle>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Text}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="9"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <ItemsControl ItemsSource="{Binding TimeLabels}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <Canvas/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemContainerStyle>
+                                                        <Style TargetType="ContentPresenter">
+                                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                            <Setter Property="Canvas.Top" Value="0"/>
+                                                        </Style>
+                                                    </ItemsControl.ItemContainerStyle>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Line X1="0" X2="0" Y1="0" Y2="220" Stroke="{DynamicResource AppBorderBrush}" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Line X1="{Binding CrosshairX}" X2="{Binding CrosshairX}" Y1="0" Y2="220"
+                                                      Visibility="{Binding CrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
+                                                <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding CrosshairY}" Y2="{Binding CrosshairY}"
+                                                      Visibility="{Binding CrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
+                                            </Canvas>
+                                        </Viewbox>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </DockPanel>
 
                 <!-- 可拖曱分隔線 -->
