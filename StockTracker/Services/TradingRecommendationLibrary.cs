@@ -12,6 +12,12 @@ namespace StockManager.Library
         public List<string> Reasons { get; set; }
     }
 
+    public class IntradayRecommendationResult
+    {
+        public string Action { get; set; }
+        public List<string> Reasons { get; set; }
+    }
+
     public static class TradingRecommendationLibrary
     {
 	public static TrendRecommendationResult CalculateAdvancedRecommendation(
@@ -520,6 +526,83 @@ namespace StockManager.Library
 		Reasons = reasons
 	    };
 	}
+
+        public static IntradayRecommendationResult CalculateIntradayRecommendation(
+            List<CandleData> data,
+            double currentPriceDouble)
+        {
+            decimal currentPrice = (decimal)currentPriceDouble;
+
+            if (data == null || data.Count < 3)
+            {
+                return new IntradayRecommendationResult
+                {
+                    Action = "觀望",
+                    Reasons = new List<string> { "數據不足：當沖需要至少 3 根 K 線資料。" }
+                };
+            }
+
+            var latest = data.Last();
+            var prev1 = data[data.Count - 2];
+            var prev2 = data[data.Count - 3];
+            var reasons = new List<string>();
+
+            double cp = (double)currentPrice;
+            double vwap = (double)data.Sum(x => x.Close * x.Volume) / (double)Math.Max(1, data.Sum(x => x.Volume));
+
+            int trendScore = 0;
+
+            // 均價線判斷
+            if (cp > vwap)
+            {
+                trendScore += 1;
+                reasons.Add($"現價站上均價線 ({vwap:F2})，偏多。");
+            }
+            else if (cp < vwap)
+            {
+                trendScore -= 1;
+                reasons.Add($"現價落於均價線 ({vwap:F2}) 之下，偏空。");
+            }
+
+            // K線形態與突破
+            if (latest.Close > prev1.High && prev1.Close > prev2.High)
+            {
+                trendScore += 2;
+                reasons.Add("連兩根K穿頭，短多動能強。");
+            }
+            else if (latest.Close < prev1.Low && prev1.Close < prev2.Low)
+            {
+                trendScore -= 2;
+                reasons.Add("連兩根K破底，短空壓力大。");
+            }
+
+            // 爆量判斷 (當前K線量大於前兩根)
+            if (latest.Volume > prev1.Volume * 1.5 && latest.Volume > prev2.Volume * 1.5)
+            {
+                if (latest.Close > latest.Open)
+                {
+                    trendScore += 1;
+                    reasons.Add("爆量收紅，買盤積極。");
+                }
+                else if (latest.Close < latest.Open)
+                {
+                    trendScore -= 1;
+                    reasons.Add("爆量收黑，賣壓沉重。");
+                }
+            }
+
+            string action = "觀望";
+            if (trendScore >= 3) action = "強烈做多";
+            else if (trendScore > 0) action = "偏多操作";
+            else if (trendScore <= -3) action = "強烈做空";
+            else if (trendScore < 0) action = "偏空操作";
+
+            return new IntradayRecommendationResult
+            {
+                Action = action,
+                Reasons = reasons
+            };
+        }
 
 	public static string GetAdvancedSuggestion(int score)
 	{

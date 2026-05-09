@@ -225,6 +225,9 @@
     <Compile Include="Nullable\NotNullAttribute.cs" />
     <Compile Include="Nullable\NotNullIfNotNullAttribute.cs" />
     <Compile Include="Nullable\NotNullWhenAttribute.cs" />
+    <Compile Include="RankingWindow.xaml.cs">
+      <DependentUpon>RankingWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Services\CapitalApiService.cs" />
     <Compile Include="Services\SKAPI.cs" />
     <Compile Include="Services\TradingRecommendationLibrary.cs" />
@@ -235,6 +238,7 @@
     </Compile>
     <Compile Include="ViewModels\LoginViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
+    <Compile Include="ViewModels\RankingViewModel.cs" />
     <Compile Include="ViewModels\RelayCommand.cs" />
     <Compile Include="ViewModels\StockViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
@@ -253,6 +257,9 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="RankingWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="StockDetailWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

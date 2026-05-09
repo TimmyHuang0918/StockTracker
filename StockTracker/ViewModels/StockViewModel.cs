@@ -491,7 +491,7 @@ namespace StockTracker.ViewModels
 		incoming.Open = existing.Open;
 		incoming.High = Math.Max(existing.High, incoming.High);
 		incoming.Low = Math.Min(existing.Low, incoming.Low);
-		incoming.Volume = Math.Max(existing.Volume, incoming.Volume);
+		incoming.Volume = existing.Volume + incoming.Volume;
 	    }
 
 	    UpdateFromKLine(incoming);
@@ -744,40 +744,75 @@ namespace StockTracker.ViewModels
 		return;
 	    }
 
-	    var latestCandle = _candles[_candles.Count - 1];
+	    var latestCandle = _candles.Last();
 
-	    var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
-		_candles,
-		(double)LatestPrice,
-		(double?)ChangePercent,
-		(double)_candles[_candles.Count - 2].Close,
-		BuildTwseHistorySnapshot(),
-		latestCandle.Time);
-
-            _latestRecommendationReasons = recommendation.Reasons ?? new List<string>();
-            Signal = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
-            _recommendationScoreCache[latestCandle.Time] = recommendation.Score;
-            _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
-
-            var actionSignal = ResolveActionSignal(Signal);
-            var shouldRecord = recommendation.Score >= 70 || recommendation.Score <= 30;
-            var signalKey = $"{actionSignal}_{recommendation.Score / 15}";
-
-            if (shouldRecord && signalKey != _lastNotifiedSignal)
+            if (_selectedKLineInterval == "日K")
             {
-                _lastNotifiedSignal = signalKey;
-                _signalHistory.Add(new SignalMarkerData
+                var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                    _candles,
+                    (double)LatestPrice,
+                    (double?)ChangePercent,
+                    (double)_candles[_candles.Count - 2].Close,
+                    BuildTwseHistorySnapshot(),
+                    latestCandle.Time);
+
+                _latestRecommendationReasons = recommendation.Reasons ?? new List<string>();
+                Signal = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
+                _recommendationScoreCache[latestCandle.Time] = recommendation.Score;
+                _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
+
+                var actionSignal = ResolveActionSignal(Signal);
+                var shouldRecord = recommendation.Score >= 70 || recommendation.Score <= 30;
+                var signalKey = $"{actionSignal}_{recommendation.Score / 15}";
+
+                if (shouldRecord && signalKey != _lastNotifiedSignal)
                 {
-                    Index = _candles.Count - 1,
-                    Time = latestCandle.Time,
-                    Price = latestCandle.Close,
-                    Signal = actionSignal,
-                    Score = recommendation.Score
-                });
-                if (actionSignal == "買進訊號" || actionSignal == "賣出訊號")
-                {
-                    SignalTriggered?.Invoke(this, actionSignal);
+                    _lastNotifiedSignal = signalKey;
+                    _signalHistory.Add(new SignalMarkerData
+                    {
+                        Index = _candles.Count - 1,
+                        Time = latestCandle.Time,
+                        Price = latestCandle.Close,
+                        Signal = actionSignal,
+                        Score = recommendation.Score
+                    });
+                    if (actionSignal == "買進訊號" || actionSignal == "賣出訊號")
+                    {
+                        SignalTriggered?.Invoke(this, actionSignal);
+                    }
                 }
+            }
+            else
+            {
+                var intradayRecommendation = TradingRecommendationLibrary.CalculateIntradayRecommendation(
+                    _candles,
+                    (double)LatestPrice);
+                
+                _latestRecommendationReasons = intradayRecommendation.Reasons ?? new List<string>();
+                Signal = intradayRecommendation.Action;
+		_recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
+
+		var actionSignal = ResolveActionSignal(Signal);
+                int score = Signal.Contains("強烈") ? 100 : Signal.Contains("偏多") || Signal.Contains("偏空") ? 70 : 50; 
+                var shouldRecord = score >= 70;
+                var signalKey = $"{actionSignal}_{score / 15}";
+
+                if (shouldRecord && signalKey != _lastNotifiedSignal)
+                {
+                    _lastNotifiedSignal = signalKey;
+                    _signalHistory.Add(new SignalMarkerData
+                    {
+                        Index = _candles.Count - 1,
+                        Time = latestCandle.Time,
+                        Price = latestCandle.Close,
+                        Signal = actionSignal,
+                        Score = score
+                    });
+                    if (actionSignal == "買進訊號" || actionSignal == "賣出訊號")
+                    {
+                        SignalTriggered?.Invoke(this, actionSignal);
+                    }
+                }               
             }
         }
 
@@ -788,12 +823,12 @@ namespace StockTracker.ViewModels
 		return "中立";
 	    }
 
-	    if (suggestion.Contains("買入") || suggestion.Contains("偏多"))
+	    if (suggestion.Contains("買入") || suggestion.Contains("偏多") || suggestion.Contains("做多"))
 	    {
 		return "買進訊號";
 	    }
 
-	    if (suggestion.Contains("賣出") || suggestion.Contains("偏空"))
+	    if (suggestion.Contains("賣出") || suggestion.Contains("偏空") || suggestion.Contains("做空"))
 	    {
 		return "賣出訊號";
 	    }
@@ -1343,6 +1378,11 @@ namespace StockTracker.ViewModels
             }
 
             return _candles.Skip(Math.Max(0, _candles.Count - _maxDisplayPoints)).ToList();
+        }
+
+        public List<CandleData> GetPublicCandles()
+        {
+            return _candles.ToList();
         }
 
         private static double CalculateRsiAt(int index, int period, IReadOnlyList<double> closes)

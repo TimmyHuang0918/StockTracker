@@ -234,7 +234,7 @@ namespace StockTracker.Services
 
 	    if (close <= 0)
 	    {
-		close = open > 0 ? open : (high > 0 ? high : low);
+                close = open > 0 ? open : (high > 0 ? high : low);
 	    }
 
 	    if (open <= 0)

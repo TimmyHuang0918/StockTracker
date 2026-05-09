@@ -157,6 +157,7 @@ namespace StockTracker.ViewModels
 	    }
 	}
 
+        public IReadOnlyList<TwseT86History> TwseT86Histories => _twseT86Histories;
 
 	public string SelectedGlobalKLineCount
 	{

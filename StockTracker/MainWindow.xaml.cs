@@ -77,7 +77,7 @@ namespace StockTracker
 		}
 	    }
 
-	    BuildDateRangeForBars(symbol, (DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, 120, out var startDate, out var endDate);
+	    BuildDateRangeForBars((DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, 120, out var startDate, out var endDate);
 	    ResolveKLineRequest((DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, out var kLineType, out var minuteNumber);
 	    _apiService?.RequestKLineByDate(symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
 	}
@@ -102,7 +102,7 @@ namespace StockTracker
 	    foreach (var stock in vm.Stocks)
 	    {
 		int.TryParse(vm.SelectedGlobalKLineCount, out var kLineCount);
-		BuildDateRangeForBars(stock.Symbol, vm.SelectedGlobalKLineInterval, kLineCount, out var startDate, out var endDate);
+		BuildDateRangeForBars(vm.SelectedGlobalKLineInterval, kLineCount, out var startDate, out var endDate);
 		stock.ClearData();
 		_apiService?.RequestKLineByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
 	    }
@@ -172,7 +172,7 @@ namespace StockTracker
 	    }
 	}
 
-	public static void BuildDateRangeForBars(string symbol, string interval, int requiredBars, out string startDate, out string endDate)
+	public static void BuildDateRangeForBars( string interval, int requiredBars, out string startDate, out string endDate)
 	{
 	    // 每日交易分鐘數 (例如台股 9:00~13:30 = 270 分鐘)
 	    var minutesPerDay = 270;
@@ -261,5 +261,18 @@ namespace StockTracker
 		textBoxSubscribe.Text = stock.Symbol;
 	    }
 	}
+
+        private void btnScanAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is ViewModels.MainWindowViewModel vm && vm.ApiService != null)
+            {
+                var rankingWindow = new RankingWindow
+                {
+                    DataContext = new ViewModels.RankingViewModel(vm.ApiService, vm),
+                    Owner = this
+                };
+                rankingWindow.Show();
+            }
+        }
     }
 }

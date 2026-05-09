@@ -152,7 +152,7 @@ namespace StockTracker
             ResolveKLineRequest(interval, out var kLineType, out var minuteNumber);
             foreach (var stock in _mainWindowViewModel.Stocks)
             {
-		MainWindow.BuildDateRangeForBars(stock.Symbol, interval, 300, out var startDate, out var endDate);
+		MainWindow.BuildDateRangeForBars(interval, 300, out var startDate, out var endDate);
 		_capitalApiService?.RequestKLineByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
             }
 	}
