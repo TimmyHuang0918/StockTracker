@@ -110,6 +110,26 @@ namespace StockTracker.ViewModels
             using (var conn = new System.Data.SQLite.SQLiteConnection($"Data Source={_dbPath};Version=3;"))
             {
                 conn.Open();
+
+                // 檢查是否包含 ThreeMajorNet 欄位，因為這支 DB 可能是舊版建立的
+                bool hasThreeMajorNetColumn = false;
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info(LatestRanking);";
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var colName = reader["name"].ToString();
+                            if (colName == "ThreeMajorNet")
+                            {
+                                hasThreeMajorNetColumn = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
@@ -124,6 +144,23 @@ namespace StockTracker.ViewModels
                             ThreeMajorNet INTEGER NOT NULL DEFAULT 0
                         );";
                     cmd.ExecuteNonQuery();
+                }
+
+                if (!hasThreeMajorNetColumn)
+                {
+                    // 若存在舊表又沒有這個欄位，手動補上
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN ThreeMajorNet INTEGER NOT NULL DEFAULT 0;";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // table 尚未建立時的 Alter Table 可能報錯，可忽略
+                    }
                 }
             }
         }
