@@ -74,4 +74,100 @@ namespace StockTracker.Models
         public double LabelTop { get; set; }
         public string Text { get; set; }
     }
+
+    public class TwseT86Record
+    {
+	public string Market { get; set; } // 新增市場欄位
+	/// <summary>
+	/// 交易日期
+	/// </summary>
+	public DateTime TradeDate { get; set; }
+
+	/// <summary>
+	/// 證券代號
+	/// </summary>
+	public string Symbol { get; set; }
+
+	/// <summary>
+	/// 證券名稱
+	/// </summary>
+	public string Name { get; set; }
+
+	/// <summary>
+	/// 外陸資買進股數 (不含外資自營商)
+	/// </summary>
+	public long ForeignBuy { get; set; }
+
+	/// <summary>
+	/// 外陸資賣出股數 (不含外資自營商)
+	/// </summary>
+	public long ForeignSell { get; set; }
+
+	/// <summary>
+	/// 外陸資買賣超股數 (不含外資自營商)
+	/// </summary>
+	public long ForeignNet { get; set; }
+
+	/// <summary>
+	/// 投信買進股數
+	/// </summary>
+	public long InvestmentTrustBuy { get; set; }
+
+	/// <summary>
+	/// 投信賣出股數
+	/// </summary>
+	public long InvestmentTrustSell { get; set; }
+
+	/// <summary>
+	/// 投信買賣超股數
+	/// </summary>
+	public long InvestmentTrustNet { get; set; }
+
+	/// <summary>
+	/// 自營商買賣超股數 (合計：自行買賣 + 避險)
+	/// </summary>
+	public long DealerNet { get; set; }
+
+	/// <summary>
+	/// 自營商買進股數 (自行買賣)
+	/// </summary>
+	public long DealerSelfBuy { get; set; }
+
+	/// <summary>
+	/// 自營商賣出股數 (自行買賣)
+	/// </summary>
+	public long DealerSelfSell { get; set; }
+
+	/// <summary>
+	/// 自營商買賣超股數 (自行買賣)
+	/// </summary>
+	public long DealerSelfNet { get; set; }
+
+	/// <summary>
+	/// 自營商買進股數 (避險)
+	/// </summary>
+	public long DealerHedgeBuy { get; set; }
+
+	/// <summary>
+	/// 自營商賣出股數 (避險)
+	/// </summary>
+	public long DealerHedgeSell { get; set; }
+
+	/// <summary>
+	/// 自營商買賣超股數 (避險)
+	/// </summary>
+	public long DealerHedgeNet { get; set; }
+
+	/// <summary>
+	/// 三大法人買賣超股數 (外資 + 投信 + 自營商合計)
+	/// </summary>
+	public long ThreeMajorNet { get; set; }
+    }
+
+    public class TwseT86History
+    {
+	public string Symbol { get; set; }
+	public string Name { get; set; }
+	public System.Collections.Generic.Dictionary<DateTime, TwseT86Record> RecordsByDate { get; set; } = new System.Collections.Generic.Dictionary<DateTime, TwseT86Record>();
+    }
 }

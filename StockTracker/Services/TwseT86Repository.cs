@@ -4,6 +4,7 @@ using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using StockTracker.Models;
 
 namespace StockTracker.Services
 {
@@ -267,33 +268,6 @@ WHERE TradeDate = @td";
                 }
                 return records;
             });
-        }
-
-        // ── 從 CSV 資料夾匯入尚未存在的日期 ─────────────────────────────────
-        public async Task ImportMissingCsvAsync(string csvFolder,
-            IProgress<string> textProgress = null)
-        {
-            if (!Directory.Exists(csvFolder)) return;
-            var existing = GetExistingDates();
-            var files = Directory.GetFiles(csvFolder, "T86_ALL_*.csv")
-                                 .OrderBy(x => x)
-                                 .ToList();
-            foreach (var file in files)
-            {
-                var name = Path.GetFileNameWithoutExtension(file);
-                var dateStr = name.StartsWith("T86_ALL_") ? name.Substring(8) : string.Empty;
-                DateTime dt;
-                if (!DateTime.TryParseExact(dateStr, "yyyyMMdd",
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        System.Globalization.DateTimeStyles.None, out dt))
-                    continue;
-                if (existing.Contains(dt.Date)) continue;
-
-                textProgress?.Report($"匯入 {dateStr}…");
-                var records = TwseT86CsvClient.ParseCsvFile(file, dt);
-                if (records.Count > 0)
-                    await UpsertAsync(records);
-            }
         }
     }
 }
