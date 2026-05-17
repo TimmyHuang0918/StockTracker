@@ -24,6 +24,7 @@ namespace StockTracker.ViewModels
         private readonly List<double> _signalSeries = new List<double>();
         private readonly List<SignalMarkerData> _signalHistory = new List<SignalMarkerData>();
         private readonly Dictionary<DateTime, TwseT86Record> _twseByDate = new Dictionary<DateTime, TwseT86Record>();
+        private readonly Dictionary<DateTime, TwseMarginRecord> _marginByDate = new Dictionary<DateTime, TwseMarginRecord>();
 
         private decimal _latestPrice;
         private decimal _changePercent;
@@ -47,6 +48,7 @@ namespace StockTracker.ViewModels
         private readonly List<double> _lastDisplayMacdSeries = new List<double>();
         private readonly List<double> _lastDisplaySignalSeries = new List<double>();
         private readonly List<double> _lastDisplayRsiSeries = new List<double>();
+        private readonly List<MarginBalancePointVisual> _lastDisplayMarginBalanceSeries = new List<MarginBalancePointVisual>();
         private readonly List<ThreeMajorPointData> _lastDisplayThreeMajorSeries = new List<ThreeMajorPointData>();
         private readonly Dictionary<DateTime, int> _recommendationScoreCache = new Dictionary<DateTime, int>();
         private readonly Dictionary<DateTime, List<string>> _recommendationReasonsCache = new Dictionary<DateTime, List<string>>();
@@ -56,6 +58,9 @@ namespace StockTracker.ViewModels
         private double _crosshairY;
         private Visibility _crosshairVisibility = Visibility.Collapsed;
         private string _hoverInfo;
+        private double _marginCrosshairX;
+        private Visibility _marginCrosshairVisibility = Visibility.Collapsed;
+        private string _marginHoverInfo;
         private double _threeMajorCrosshairX;
         private Visibility _threeMajorCrosshairVisibility = Visibility.Collapsed;
         private string _threeMajorHoverInfo;
@@ -69,12 +74,14 @@ namespace StockTracker.ViewModels
             Candles = new ObservableCollection<CandlestickVisual>();
             MacdHistogram = new ObservableCollection<HistogramBarVisual>();
             VolumeBars = new ObservableCollection<HistogramBarVisual>();
+            MarginBalanceBars = new ObservableCollection<HistogramBarVisual>();
             SignalMarkers = new ObservableCollection<SignalMarkerVisual>();
             TimeLabels = new ObservableCollection<TimeLabelVisual>();
             PriceLevels = new ObservableCollection<PriceLevelVisual>();
             MacdLevels = new ObservableCollection<PriceLevelVisual>();
             RsiLevels = new ObservableCollection<PriceLevelVisual>();
             VolumeLevels = new ObservableCollection<PriceLevelVisual>();
+            MarginBalanceLevels = new ObservableCollection<PriceLevelVisual>();
 
             Ma5Points = new PointCollection();
             Ma20Points = new PointCollection();
@@ -228,6 +235,7 @@ namespace StockTracker.ViewModels
 
                 _selectedKLineInterval = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(MarginBalanceChartVisibility));
                 OnPropertyChanged(nameof(ThreeMajorChartVisibility));
                 OnPropertyChanged(nameof(_chartPaddingWidth));
                 RebuildVisuals();
@@ -263,6 +271,7 @@ namespace StockTracker.ViewModels
             detailVm.OnPropertyChanged(nameof(ChartWidth));
 
             detailVm.SetTwseT86Records(_twseByDate.Values);
+            detailVm.SetTwseMarginRecords(_marginByDate.Values);
             foreach (var candle in _candles)
             {
                 detailVm.UpdateFromKLine(candle);
@@ -305,6 +314,7 @@ namespace StockTracker.ViewModels
         }
 
         public decimal LatestVolume => _candles.Count == 0 ? 0 : _candles.Last().Volume;
+        public long LatestMarginBalance => _marginByDate.Count == 0 ? 0 : _marginByDate.OrderBy(x => x.Key).Last().Value.MarginBalance;
         public double MacdSignal => _signalSeries.LastOrDefault();
         public double MacdHistogramValue => (_macdSeries.Any() && _signalSeries.Any()) ? _macdSeries.Last() - _signalSeries.Last() : 0;
 
@@ -327,14 +337,47 @@ namespace StockTracker.ViewModels
         public PointCollection InvestmentTrustNetPoints { get; private set; }
         public PointCollection DealerNetPoints { get; private set; }
         public ObservableCollection<HistogramBarVisual> VolumeBars { get; }
+        public ObservableCollection<HistogramBarVisual> MarginBalanceBars { get; }
         public ObservableCollection<SignalMarkerVisual> SignalMarkers { get; }
         public ObservableCollection<TimeLabelVisual> TimeLabels { get; }
         public ObservableCollection<PriceLevelVisual> PriceLevels { get; }
         public ObservableCollection<PriceLevelVisual> MacdLevels { get; }
         public ObservableCollection<PriceLevelVisual> RsiLevels { get; }
         public ObservableCollection<PriceLevelVisual> VolumeLevels { get; }
+        public ObservableCollection<PriceLevelVisual> MarginBalanceLevels { get; }
         public ObservableCollection<PriceLevelVisual> ThreeMajorLevels { get; }
+        public Visibility MarginBalanceChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ThreeMajorChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
+
+        public double MarginCrosshairX
+        {
+            get => _marginCrosshairX;
+            private set
+            {
+                _marginCrosshairX = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public Visibility MarginCrosshairVisibility
+        {
+            get => _marginCrosshairVisibility;
+            private set
+            {
+                _marginCrosshairVisibility = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string MarginHoverInfo
+        {
+            get => _marginHoverInfo;
+            private set
+            {
+                _marginHoverInfo = value;
+                OnPropertyChanged();
+            }
+        }
 
         public double ThreeMajorCrosshairX
         {
@@ -575,6 +618,8 @@ namespace StockTracker.ViewModels
             MacdLevels.Clear();
             RsiLevels.Clear();
             VolumeLevels.Clear();
+            MarginBalanceBars.Clear();
+            MarginBalanceLevels.Clear();
             ThreeMajorLevels.Clear();
             ThreeMajorNetPoints.Clear();
             ForeignNetPoints.Clear();
@@ -582,6 +627,9 @@ namespace StockTracker.ViewModels
             DealerNetPoints.Clear();
             _recommendationScoreCache.Clear();
             _recommendationReasonsCache.Clear();
+            _lastDisplayMarginBalanceSeries.Clear();
+            MarginCrosshairVisibility = Visibility.Collapsed;
+            MarginHoverInfo = null;
             _lastDisplayThreeMajorSeries.Clear();
             ThreeMajorZeroY = 0;
             ThreeMajorCrosshairVisibility = Visibility.Collapsed;
@@ -619,6 +667,31 @@ namespace StockTracker.ViewModels
             foreach (var detailVm in _detailViewModels.ToList())
             {
                 detailVm.SetTwseT86Records(_twseByDate.Values);
+            }
+        }
+
+        public void SetTwseMarginRecords(IEnumerable<TwseMarginRecord> records)
+        {
+            _marginByDate.Clear();
+            if (records != null)
+            {
+                foreach (var record in records)
+                {
+                    if (record == null)
+                    {
+                        continue;
+                    }
+
+                    _marginByDate[record.TradeDate.Date] = record;
+                }
+            }
+
+            OnPropertyChanged(nameof(LatestMarginBalance));
+            RebuildVisuals();
+
+            foreach (var detailVm in _detailViewModels.ToList())
+            {
+                detailVm.SetTwseMarginRecords(_marginByDate.Values);
             }
         }
 
@@ -1080,7 +1153,86 @@ namespace StockTracker.ViewModels
             RebuildMacdVisuals(candles);
             RebuildRsiVisuals(candles);
             RebuildVolumeVisuals(candles);
+            RebuildMarginBalanceVisuals(candles);
             RebuildThreeMajorVisuals(candles);
+        }
+
+        private void RebuildMarginBalanceVisuals(IReadOnlyList<CandleData> sourceCandles)
+        {
+            if (SelectedKLineInterval != "日K" || sourceCandles == null || sourceCandles.Count == 0)
+            {
+                MarginBalanceBars.Clear();
+                MarginBalanceLevels.Clear();
+                _lastDisplayMarginBalanceSeries.Clear();
+                MarginCrosshairVisibility = Visibility.Collapsed;
+                MarginHoverInfo = null;
+                return;
+            }
+
+            var values = sourceCandles.Select(candle =>
+            {
+                TwseMarginRecord record;
+                if (_marginByDate.TryGetValue(candle.Time.Date, out record))
+                {
+                    return new MarginBalancePointVisual
+                    {
+                        Time = candle.Time,
+                        MarginPurchaseSales = record.MarginPurchaseSales,
+                        MarginSales = record.MarginSales,
+                        MarginRedemption = record.MarginRedemption,
+                        MarginBalance = record.MarginBalance,
+                        ShortCovering = record.ShortCovering,
+                        ShortSales = record.ShortSales,
+                        ShortRedemption = record.ShortRedemption,
+                        ShortBalance = record.ShortBalance,
+                        HasData = true
+                    };
+                }
+
+                return new MarginBalancePointVisual
+                {
+                    Time = candle.Time,
+                    HasData = false
+                };
+            }).ToList();
+
+            var maxBalance = Math.Max(1d, values.Max(x => (double)x.MarginBalance));
+
+            MarginBalanceBars.Clear();
+            MarginBalanceLevels.Clear();
+
+            const int marginLevelCount = 4;
+            for (var i = 0; i < marginLevelCount; i++)
+            {
+                var ratio = i / (double)(marginLevelCount - 1);
+                var value = maxBalance * (1 - ratio);
+                var y = VolumeChartHeight - (value / maxBalance * VolumeChartHeight);
+                MarginBalanceLevels.Add(new PriceLevelVisual
+                {
+                    Y = y,
+                    LabelTop = Math.Max(2, Math.Min(VolumeChartHeight - 14, y - 7)),
+                    Text = value.ToString("N0")
+                });
+            }
+
+            _lastDisplayMarginBalanceSeries.Clear();
+            for (var i = 0; i < values.Count; i++)
+            {
+                var balance = values[i].MarginBalance;
+                var height = balance / maxBalance * VolumeChartHeight;
+                MarginBalanceBars.Add(new HistogramBarVisual
+                {
+                    X = CalculateCenterX(i, values.Count, _chartPaddingWidth) - 4,
+                    Top = VolumeChartHeight - height,
+                    Height = Math.Max(1, height),
+                    Brush = values[i].HasData
+                        ? (values[i].MarginPurchaseSales >= 0 ? Brushes.DodgerBlue : Brushes.MediumPurple)
+                        : Brushes.DimGray
+                });
+                _lastDisplayMarginBalanceSeries.Add(values[i]);
+            }
+
+            OnPropertyChanged(nameof(LatestMarginBalance));
         }
 
         private void RebuildThreeMajorVisuals(IReadOnlyList<CandleData> sourceCandles)
@@ -1201,6 +1353,45 @@ namespace StockTracker.ViewModels
                 $"\n投信: {item.InvestmentTrustNet:N0}" +
                 $"\n自營商: {item.DealerNet:N0}" +
                 $"\n合計: {item.ThreeMajorNet:N0}";
+        }
+
+        public void UpdateMarginCrosshair(double x)
+        {
+            if (_lastDisplayMarginBalanceSeries.Count == 0)
+            {
+                MarginCrosshairVisibility = Visibility.Collapsed;
+                MarginHoverInfo = null;
+                return;
+            }
+
+            var clampedX = Math.Max(0, Math.Min(_chartPaddingWidth, x));
+            var nearestIndex = GetNearestCandleIndex(clampedX, _lastDisplayMarginBalanceSeries.Count, _chartPaddingWidth);
+            var item = _lastDisplayMarginBalanceSeries[nearestIndex];
+            MarginCrosshairX = CalculateCenterX(nearestIndex, _lastDisplayMarginBalanceSeries.Count, _chartPaddingWidth);
+            MarginCrosshairVisibility = Visibility.Visible;
+
+            if (!item.HasData)
+            {
+                MarginHoverInfo = $"日期: {item.Time:yyyy/MM/dd}\n融資資料: 無";
+                return;
+            }
+
+            MarginHoverInfo =
+                $"日期: {item.Time:yyyy/MM/dd}" +
+                $"\n融資餘額: {item.MarginBalance:N0}" +
+                $"\n融資增減: {item.MarginPurchaseSales:N0}" +
+                $"\n融資賣出: {item.MarginSales:N0}" +
+                $"\n融資現金償還: {item.MarginRedemption:N0}" +
+                $"\n融券買進: {item.ShortCovering:N0}" +
+                $"\n融券賣出: {item.ShortSales:N0}" +
+                $"\n融券現券償還: {item.ShortRedemption:N0}" +
+                $"\n融券餘額: {item.ShortBalance:N0}";
+        }
+
+        public void ClearMarginCrosshair()
+        {
+            MarginCrosshairVisibility = Visibility.Collapsed;
+            MarginHoverInfo = null;
         }
 
         public void ClearThreeMajorCrosshair()

@@ -543,6 +543,9 @@ namespace StockTracker.ViewModels
 
             var history = _twseT86Histories.FirstOrDefault(x => string.Equals(x.Symbol, stockVm.Symbol, StringComparison.OrdinalIgnoreCase));
             stockVm.SetTwseT86Records(history == null ? null : history.RecordsByDate.Values);
+
+            var marginHistory = _twseMarginHistories.FirstOrDefault(x => string.Equals(x.Symbol, stockVm.Symbol, StringComparison.OrdinalIgnoreCase));
+            stockVm.SetTwseMarginRecords(marginHistory == null ? null : marginHistory.RecordsByDate.Values);
         }
 
 

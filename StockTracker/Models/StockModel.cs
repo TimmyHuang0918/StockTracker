@@ -75,6 +75,20 @@ namespace StockTracker.Models
         public string Text { get; set; }
     }
 
+    public class MarginBalancePointVisual
+    {
+        public DateTime Time { get; set; }
+        public long MarginPurchaseSales { get; set; }
+        public long MarginSales { get; set; }
+        public long MarginRedemption { get; set; }
+        public long MarginBalance { get; set; }
+        public long ShortCovering { get; set; }
+        public long ShortSales { get; set; }
+        public long ShortRedemption { get; set; }
+        public long ShortBalance { get; set; }
+        public bool HasData { get; set; }
+    }
+
     public class TwseT86Record
     {
         public string Market { get; set; } // 新增市場欄位
