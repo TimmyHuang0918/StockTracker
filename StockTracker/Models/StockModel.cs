@@ -75,6 +75,15 @@ namespace StockTracker.Models
         public string Text { get; set; }
     }
 
+    public class LineSegmentVisual
+    {
+        public double X1 { get; set; }
+        public double Y1 { get; set; }
+        public double X2 { get; set; }
+        public double Y2 { get; set; }
+        public Brush Brush { get; set; }
+    }
+
     public class MarginBalancePointVisual
     {
         public DateTime Time { get; set; }

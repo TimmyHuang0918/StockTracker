@@ -17,6 +17,8 @@ namespace StockTracker.ViewModels
         private const double VolumeChartHeight = 100;
         private const double ThreeMajorChartHeight = 100;
         private const int MinDisplayPoints = 20;
+        private const double MaintenanceWarningRatio = 130d;
+        private const double MaintenanceSafeRatio = 166.7d;
 
         private readonly List<CandleData> _candles = new List<CandleData>();
         private readonly List<StockViewModel> _detailViewModels = new List<StockViewModel>();
@@ -81,6 +83,7 @@ namespace StockTracker.ViewModels
             VolumeBars = new ObservableCollection<HistogramBarVisual>();
             MarginBalanceBars = new ObservableCollection<HistogramBarVisual>();
             MarginMaintenancePoints = new PointCollection();
+            MarginMaintenanceSegments = new ObservableCollection<LineSegmentVisual>();
             SignalMarkers = new ObservableCollection<SignalMarkerVisual>();
             TimeLabels = new ObservableCollection<TimeLabelVisual>();
             PriceLevels = new ObservableCollection<PriceLevelVisual>();
@@ -348,6 +351,7 @@ namespace StockTracker.ViewModels
         public PointCollection DealerNetPoints { get; private set; }
         public ObservableCollection<HistogramBarVisual> VolumeBars { get; }
         public ObservableCollection<HistogramBarVisual> MarginBalanceBars { get; }
+        public ObservableCollection<LineSegmentVisual> MarginMaintenanceSegments { get; }
         public ObservableCollection<SignalMarkerVisual> SignalMarkers { get; }
         public ObservableCollection<TimeLabelVisual> TimeLabels { get; }
         public ObservableCollection<PriceLevelVisual> PriceLevels { get; }
@@ -357,6 +361,8 @@ namespace StockTracker.ViewModels
         public ObservableCollection<PriceLevelVisual> MarginBalanceLevels { get; }
         public ObservableCollection<PriceLevelVisual> MarginMaintenanceLevels { get; }
         public ObservableCollection<PriceLevelVisual> ThreeMajorLevels { get; }
+        public double MarginMaintenanceWarningLineY => GetMarginMaintenanceLineY(MaintenanceWarningRatio);
+        public double MarginMaintenanceSafeLineY => GetMarginMaintenanceLineY(MaintenanceSafeRatio);
         public Visibility MarginBalanceChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
         public Visibility MarginMaintenanceChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ThreeMajorChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
@@ -654,6 +660,7 @@ namespace StockTracker.ViewModels
             SignalLinePoints.Clear();
             RsiLinePoints.Clear();
             MarginMaintenancePoints.Clear();
+            MarginMaintenanceSegments.Clear();
             VolumeBars.Clear();
             SignalMarkers.Clear();
             TimeLabels.Clear();
@@ -1317,10 +1324,13 @@ namespace StockTracker.ViewModels
             {
                 MarginMaintenanceLevels.Clear();
                 MarginMaintenancePoints = new PointCollection();
+                MarginMaintenanceSegments.Clear();
                 _lastDisplayMarginMaintenanceSeries.Clear();
                 MarginMaintenanceCrosshairVisibility = Visibility.Collapsed;
                 MarginMaintenanceHoverInfo = null;
                 OnPropertyChanged(nameof(MarginMaintenancePoints));
+                OnPropertyChanged(nameof(MarginMaintenanceWarningLineY));
+                OnPropertyChanged(nameof(MarginMaintenanceSafeLineY));
                 return;
             }
 
@@ -1370,6 +1380,7 @@ namespace StockTracker.ViewModels
             }
 
             var points = new PointCollection();
+            MarginMaintenanceSegments.Clear();
             _lastDisplayMarginMaintenanceSeries.Clear();
             for (var i = 0; i < values.Count; i++)
             {
@@ -1381,9 +1392,32 @@ namespace StockTracker.ViewModels
                 _lastDisplayMarginMaintenanceSeries.Add(values[i]);
             }
 
+            for (var i = 1; i < values.Count; i++)
+            {
+                if (!values[i - 1].HasData || !values[i].HasData)
+                {
+                    continue;
+                }
+
+                var x1 = CalculateCenterX(i - 1, values.Count, _chartPaddingWidth);
+                var y1 = Scale(values[i - 1].MarginMaintenanceRatio, min, range, VolumeChartHeight);
+                var x2 = CalculateCenterX(i, values.Count, _chartPaddingWidth);
+                var y2 = Scale(values[i].MarginMaintenanceRatio, min, range, VolumeChartHeight);
+                MarginMaintenanceSegments.Add(new LineSegmentVisual
+                {
+                    X1 = x1,
+                    Y1 = y1,
+                    X2 = x2,
+                    Y2 = y2,
+                    Brush = ResolveMaintenanceBrush(values[i].MarginMaintenanceRatio)
+                });
+            }
+
             MarginMaintenancePoints = points;
             OnPropertyChanged(nameof(MarginMaintenancePoints));
             OnPropertyChanged(nameof(LatestMarginMaintenanceRatio));
+            OnPropertyChanged(nameof(MarginMaintenanceWarningLineY));
+            OnPropertyChanged(nameof(MarginMaintenanceSafeLineY));
         }
 
         private void RebuildThreeMajorVisuals(IReadOnlyList<CandleData> sourceCandles)
@@ -1586,6 +1620,30 @@ namespace StockTracker.ViewModels
         {
             ThreeMajorCrosshairVisibility = Visibility.Collapsed;
             ThreeMajorHoverInfo = null;
+        }
+
+        private double GetMarginMaintenanceLineY(double ratio)
+        {
+            var validRatios = _lastDisplayMarginMaintenanceSeries.Where(x => x.HasData).Select(x => x.MarginMaintenanceRatio).ToList();
+            var min = validRatios.Count == 0 ? 100d : Math.Min(100d, validRatios.Min());
+            var max = validRatios.Count == 0 ? 200d : Math.Max(200d, validRatios.Max());
+            var range = Math.Max(1d, max - min);
+            return Scale(ratio, min, range, VolumeChartHeight);
+        }
+
+        private static Brush ResolveMaintenanceBrush(double ratio)
+        {
+            if (ratio < MaintenanceWarningRatio)
+            {
+                return Brushes.IndianRed;
+            }
+
+            if (ratio < MaintenanceSafeRatio)
+            {
+                return Brushes.Goldenrod;
+            }
+
+            return Brushes.DeepSkyBlue;
         }
 
         private TwseT86History BuildTwseHistorySnapshot()

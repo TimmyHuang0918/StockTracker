@@ -448,7 +448,27 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <Polyline Points="{Binding MarginMaintenancePoints}" Stroke="#FF5AD1FF" StrokeThickness="1.8"/>
+                                <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding MarginMaintenanceWarningLineY}" Y2="{Binding MarginMaintenanceWarningLineY}"
+                                      Stroke="#FFFF6B6B" StrokeThickness="1" StrokeDashArray="4,2"/>
+                                <Line X1="0" X2="{Binding ChartWidth}" Y1="{Binding MarginMaintenanceSafeLineY}" Y2="{Binding MarginMaintenanceSafeLineY}"
+                                      Stroke="#FFFFD166" StrokeThickness="1" StrokeDashArray="4,2"/>
+                                <ItemsControl ItemsSource="{Binding MarginMaintenanceSegments}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                                  Stroke="{Binding Brush}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Canvas.Left="4" Canvas.Top="{Binding MarginMaintenanceWarningLineY}" Margin="0,-14,0,0"
+                                           Foreground="#FFFF6B6B" FontSize="10" Text="130%"/>
+                                <TextBlock Canvas.Left="4" Canvas.Top="{Binding MarginMaintenanceSafeLineY}" Margin="0,-14,0,0"
+                                           Foreground="#FFFFD166" FontSize="10" Text="166.7%"/>
                                 <Line X1="{Binding MarginMaintenanceCrosshairX}" X2="{Binding MarginMaintenanceCrosshairX}" Y1="0" Y2="100"
                                       Visibility="{Binding MarginMaintenanceCrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
                             </Canvas>

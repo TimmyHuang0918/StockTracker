@@ -20,6 +20,7 @@ namespace StockTracker.ViewModels
         private readonly CapitalApiService _apiService;
         private readonly TwseT86Repository _twseT86Repository;
         private readonly TwseMarginRepository _twseMarginRepository;
+        private readonly TwseMarginMetricRepository _twseMarginMetricRepository;
         private readonly DailyPriceRepository _dailyPriceRepository;
         private readonly MarginMetricCalculator _marginMetricCalculator;
         private readonly List<TwseT86History> _twseT86Histories = new List<TwseT86History>();
@@ -46,6 +47,9 @@ namespace StockTracker.ViewModels
 
             var marginDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_margin.db");
             _twseMarginRepository = new TwseMarginRepository(marginDbPath);
+
+            var marginMetricDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_margin_metric.db");
+            _twseMarginMetricRepository = new TwseMarginMetricRepository(marginMetricDbPath);
 
             var dailyPriceDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "daily_price.db");
             _dailyPriceRepository = new DailyPriceRepository(dailyPriceDbPath);
@@ -389,7 +393,7 @@ namespace StockTracker.ViewModels
                 }
 
                 // 從 SQLite 全量讀取並重建排行（帶進度條）
-                await LoadTwseT86HistoryAsync();
+                await LoadTwseT86HistoryAsync(true);
                 foreach (var stock in Stocks)
                     ApplyTwseRecordsToStock(stock);
 
@@ -406,7 +410,7 @@ namespace StockTracker.ViewModels
             }
         }
 
-        private async Task LoadTwseT86HistoryAsync()
+        private async Task LoadTwseT86HistoryAsync(bool rebuildMarginMetrics = false)
         {
             IsUpdatingTwseHistory = true;
             UpdatingTwseText = "讀取資料庫…";
@@ -433,8 +437,19 @@ namespace StockTracker.ViewModels
                 _dailyCloseHistories.Clear();
                 _dailyCloseHistories.AddRange(dailyPriceHistories.Where(x => x != null));
 
-                UpdatingTwseText = "計算融資維持率…";
-                RebuildMarginMetricHistories();
+                if (rebuildMarginMetrics)
+                {
+                    UpdatingTwseText = "計算融資維持率…";
+                    RebuildMarginMetricHistories();
+                    await _twseMarginMetricRepository.ReplaceAllAsync(_twseMarginMetricHistories);
+                }
+                else
+                {
+                    UpdatingTwseText = "載入融資維持率…";
+                    var marginMetricHistories = await _twseMarginMetricRepository.LoadAllHistoriesAsync(dbProgress);
+                    _twseMarginMetricHistories.Clear();
+                    _twseMarginMetricHistories.AddRange(marginMetricHistories.Where(x => x != null));
+                }
 
                 var latest = _twseT86Histories
                     .SelectMany(x => x.RecordsByDate.Values)
@@ -472,6 +487,7 @@ namespace StockTracker.ViewModels
                 .ToList();
 
             var marginRecords = _twseMarginHistories.SelectMany(x => x.RecordsByDate.Values).ToList();
+            var marginMetricRecords = _twseMarginMetricHistories.SelectMany(x => x.RecordsByDate.Values).ToList();
 
             var prevDate = allRecords.Where(x => x.TradeDate.Date < latestDate).Select(x => x.TradeDate.Date).DefaultIfEmpty(DateTime.MinValue).Max();
             var prevRanks = allRecords
@@ -497,6 +513,17 @@ namespace StockTracker.ViewModels
                 var marginNet = marginRecord != null ? marginRecord.MarginPurchaseSales : 0;
                 var prevMarginBal = prevMarginRecord != null ? prevMarginRecord.MarginBalance : 0;
                 var marginBal = marginRecord != null ? marginRecord.MarginBalance : 0;
+                var marginMetric = marginMetricRecords.FirstOrDefault(x => x.Record != null && x.Record.TradeDate.Date == latestDate && string.Equals(x.Record.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase));
+                var maintenanceRatio = marginMetric != null ? marginMetric.MarginMaintenanceRatio : 0d;
+                var averageCost = marginMetric != null ? marginMetric.MarginAverageCost : 0d;
+                var totalLoan = marginMetric != null ? marginMetric.TotalLoan : 0d;
+                var maintenanceStatus = maintenanceRatio <= 0d
+                    ? "無資料"
+                    : maintenanceRatio < 130d
+                        ? "警戒"
+                        : maintenanceRatio < 166.7d
+                            ? "留意"
+                            : "安全";
 
                 TwseRankingItems.Add(new TwseT86RankingItem
                 {
@@ -519,7 +546,11 @@ namespace StockTracker.ViewModels
                         $"\n三大法人買賣超: {record.ThreeMajorNet:N0}" +
                         $"\n前日融資餘額: {prevMarginBal:N0}" +
                         $"\n今日融資變化: {marginNet:N0}" +
-                        $"\n今日融資餘額: {marginBal:N0}"
+                        $"\n今日融資餘額: {marginBal:N0}" +
+                        $"\n融資維持率: {(maintenanceRatio > 0d ? maintenanceRatio.ToString("F2") + "%" : "0.00%")}" +
+                        $" ({maintenanceStatus})" +
+                        $"\n融資平均成本: {averageCost:F2}" +
+                        $"\n融資借款估值: {totalLoan:N0}"
                 });
             }
 
