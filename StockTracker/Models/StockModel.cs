@@ -251,4 +251,35 @@ namespace StockTracker.Models
         public string Name { get; set; }
         public System.Collections.Generic.Dictionary<DateTime, TwseMarginRecord> RecordsByDate { get; set; } = new System.Collections.Generic.Dictionary<DateTime, TwseMarginRecord>();
     }
+
+    public class DailyCloseRecord
+    {
+        public DateTime TradeDate { get; set; }
+        public string Symbol { get; set; }
+        public string Name { get; set; }
+        public double Close { get; set; }
+    }
+
+    public class DailyCloseHistory
+    {
+        public string Symbol { get; set; }
+        public string Name { get; set; }
+        public System.Collections.Generic.Dictionary<DateTime, DailyCloseRecord> RecordsByDate { get; set; } = new System.Collections.Generic.Dictionary<DateTime, DailyCloseRecord>();
+    }
+
+    public class TwseMarginMetricResult
+    {
+        public TwseMarginRecord Record { get; set; }
+        public double Close { get; set; }
+        public double TotalLoan { get; set; }
+        public double MarginMaintenanceRatio { get; set; }
+        public double MarginAverageCost { get; set; }
+    }
+
+    public class TwseMarginMetricHistory
+    {
+        public string Symbol { get; set; }
+        public string Name { get; set; }
+        public System.Collections.Generic.Dictionary<DateTime, TwseMarginMetricResult> RecordsByDate { get; set; } = new System.Collections.Generic.Dictionary<DateTime, TwseMarginMetricResult>();
+    }
 }

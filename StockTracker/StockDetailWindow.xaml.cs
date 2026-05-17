@@ -62,6 +62,23 @@ namespace StockTracker
             }
         }
 
+        private void MarginMaintenanceCanvas_OnMouseMove(object sender, MouseEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is StockViewModel stock)
+            {
+                var point = e.GetPosition((IInputElement)sender);
+                stock.UpdateMarginMaintenanceCrosshair(point.X);
+            }
+        }
+
+        private void MarginMaintenanceCanvas_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is StockViewModel stock)
+            {
+                stock.ClearMarginMaintenanceCrosshair();
+            }
+        }
+
         private void ThreeMajorCanvas_OnMouseLeave(object sender, MouseEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is StockViewModel stock)

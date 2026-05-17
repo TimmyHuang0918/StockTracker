@@ -49,6 +49,8 @@ namespace StockTracker.ViewModels
         private readonly List<double> _lastDisplaySignalSeries = new List<double>();
         private readonly List<double> _lastDisplayRsiSeries = new List<double>();
         private readonly List<MarginBalancePointVisual> _lastDisplayMarginBalanceSeries = new List<MarginBalancePointVisual>();
+        private readonly Dictionary<DateTime, TwseMarginMetricResult> _marginMetricByDate = new Dictionary<DateTime, TwseMarginMetricResult>();
+        private readonly List<MarginMaintenancePointVisual> _lastDisplayMarginMaintenanceSeries = new List<MarginMaintenancePointVisual>();
         private readonly List<ThreeMajorPointData> _lastDisplayThreeMajorSeries = new List<ThreeMajorPointData>();
         private readonly Dictionary<DateTime, int> _recommendationScoreCache = new Dictionary<DateTime, int>();
         private readonly Dictionary<DateTime, List<string>> _recommendationReasonsCache = new Dictionary<DateTime, List<string>>();
@@ -61,6 +63,9 @@ namespace StockTracker.ViewModels
         private double _marginCrosshairX;
         private Visibility _marginCrosshairVisibility = Visibility.Collapsed;
         private string _marginHoverInfo;
+        private double _marginMaintenanceCrosshairX;
+        private Visibility _marginMaintenanceCrosshairVisibility = Visibility.Collapsed;
+        private string _marginMaintenanceHoverInfo;
         private double _threeMajorCrosshairX;
         private Visibility _threeMajorCrosshairVisibility = Visibility.Collapsed;
         private string _threeMajorHoverInfo;
@@ -75,6 +80,7 @@ namespace StockTracker.ViewModels
             MacdHistogram = new ObservableCollection<HistogramBarVisual>();
             VolumeBars = new ObservableCollection<HistogramBarVisual>();
             MarginBalanceBars = new ObservableCollection<HistogramBarVisual>();
+            MarginMaintenancePoints = new PointCollection();
             SignalMarkers = new ObservableCollection<SignalMarkerVisual>();
             TimeLabels = new ObservableCollection<TimeLabelVisual>();
             PriceLevels = new ObservableCollection<PriceLevelVisual>();
@@ -82,6 +88,7 @@ namespace StockTracker.ViewModels
             RsiLevels = new ObservableCollection<PriceLevelVisual>();
             VolumeLevels = new ObservableCollection<PriceLevelVisual>();
             MarginBalanceLevels = new ObservableCollection<PriceLevelVisual>();
+            MarginMaintenanceLevels = new ObservableCollection<PriceLevelVisual>();
 
             Ma5Points = new PointCollection();
             Ma20Points = new PointCollection();
@@ -272,6 +279,7 @@ namespace StockTracker.ViewModels
 
             detailVm.SetTwseT86Records(_twseByDate.Values);
             detailVm.SetTwseMarginRecords(_marginByDate.Values);
+            detailVm.SetTwseMarginMetricRecords(_marginMetricByDate.Values);
             foreach (var candle in _candles)
             {
                 detailVm.UpdateFromKLine(candle);
@@ -315,6 +323,7 @@ namespace StockTracker.ViewModels
 
         public decimal LatestVolume => _candles.Count == 0 ? 0 : _candles.Last().Volume;
         public long LatestMarginBalance => _marginByDate.Count == 0 ? 0 : _marginByDate.OrderBy(x => x.Key).Last().Value.MarginBalance;
+        public double LatestMarginMaintenanceRatio => _marginMetricByDate.Count == 0 ? 0 : _marginMetricByDate.OrderBy(x => x.Key).Last().Value.MarginMaintenanceRatio;
         public double MacdSignal => _signalSeries.LastOrDefault();
         public double MacdHistogramValue => (_macdSeries.Any() && _signalSeries.Any()) ? _macdSeries.Last() - _signalSeries.Last() : 0;
 
@@ -332,6 +341,7 @@ namespace StockTracker.ViewModels
         public PointCollection SignalLinePoints { get; private set; }
 
         public PointCollection RsiLinePoints { get; private set; }
+        public PointCollection MarginMaintenancePoints { get; private set; }
         public PointCollection ThreeMajorNetPoints { get; private set; }
         public PointCollection ForeignNetPoints { get; private set; }
         public PointCollection InvestmentTrustNetPoints { get; private set; }
@@ -345,8 +355,10 @@ namespace StockTracker.ViewModels
         public ObservableCollection<PriceLevelVisual> RsiLevels { get; }
         public ObservableCollection<PriceLevelVisual> VolumeLevels { get; }
         public ObservableCollection<PriceLevelVisual> MarginBalanceLevels { get; }
+        public ObservableCollection<PriceLevelVisual> MarginMaintenanceLevels { get; }
         public ObservableCollection<PriceLevelVisual> ThreeMajorLevels { get; }
         public Visibility MarginBalanceChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility MarginMaintenanceChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ThreeMajorChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
 
         public double MarginCrosshairX
@@ -355,6 +367,36 @@ namespace StockTracker.ViewModels
             private set
             {
                 _marginCrosshairX = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double MarginMaintenanceCrosshairX
+        {
+            get => _marginMaintenanceCrosshairX;
+            private set
+            {
+                _marginMaintenanceCrosshairX = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public Visibility MarginMaintenanceCrosshairVisibility
+        {
+            get => _marginMaintenanceCrosshairVisibility;
+            private set
+            {
+                _marginMaintenanceCrosshairVisibility = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string MarginMaintenanceHoverInfo
+        {
+            get => _marginMaintenanceHoverInfo;
+            private set
+            {
+                _marginMaintenanceHoverInfo = value;
                 OnPropertyChanged();
             }
         }
@@ -611,6 +653,7 @@ namespace StockTracker.ViewModels
             MacdLinePoints.Clear();
             SignalLinePoints.Clear();
             RsiLinePoints.Clear();
+            MarginMaintenancePoints.Clear();
             VolumeBars.Clear();
             SignalMarkers.Clear();
             TimeLabels.Clear();
@@ -620,6 +663,7 @@ namespace StockTracker.ViewModels
             VolumeLevels.Clear();
             MarginBalanceBars.Clear();
             MarginBalanceLevels.Clear();
+            MarginMaintenanceLevels.Clear();
             ThreeMajorLevels.Clear();
             ThreeMajorNetPoints.Clear();
             ForeignNetPoints.Clear();
@@ -627,9 +671,13 @@ namespace StockTracker.ViewModels
             DealerNetPoints.Clear();
             _recommendationScoreCache.Clear();
             _recommendationReasonsCache.Clear();
+            _marginMetricByDate.Clear();
             _lastDisplayMarginBalanceSeries.Clear();
+            _lastDisplayMarginMaintenanceSeries.Clear();
             MarginCrosshairVisibility = Visibility.Collapsed;
             MarginHoverInfo = null;
+            MarginMaintenanceCrosshairVisibility = Visibility.Collapsed;
+            MarginMaintenanceHoverInfo = null;
             _lastDisplayThreeMajorSeries.Clear();
             ThreeMajorZeroY = 0;
             ThreeMajorCrosshairVisibility = Visibility.Collapsed;
@@ -639,6 +687,8 @@ namespace StockTracker.ViewModels
             _lastDisplayRsiSeries.Clear();
             ClearCrosshair();
             OnPropertyChanged(nameof(LatestVolume));
+            OnPropertyChanged(nameof(LatestMarginBalance));
+            OnPropertyChanged(nameof(LatestMarginMaintenanceRatio));
 
             foreach (var detailVm in _detailViewModels.ToList())
             {
@@ -692,6 +742,31 @@ namespace StockTracker.ViewModels
             foreach (var detailVm in _detailViewModels.ToList())
             {
                 detailVm.SetTwseMarginRecords(_marginByDate.Values);
+            }
+        }
+
+        public void SetTwseMarginMetricRecords(IEnumerable<TwseMarginMetricResult> records)
+        {
+            _marginMetricByDate.Clear();
+            if (records != null)
+            {
+                foreach (var record in records)
+                {
+                    if (record?.Record == null)
+                    {
+                        continue;
+                    }
+
+                    _marginMetricByDate[record.Record.TradeDate.Date] = record;
+                }
+            }
+
+            OnPropertyChanged(nameof(LatestMarginMaintenanceRatio));
+            RebuildVisuals();
+
+            foreach (var detailVm in _detailViewModels.ToList())
+            {
+                detailVm.SetTwseMarginMetricRecords(_marginMetricByDate.Values);
             }
         }
 
@@ -1154,6 +1229,7 @@ namespace StockTracker.ViewModels
             RebuildRsiVisuals(candles);
             RebuildVolumeVisuals(candles);
             RebuildMarginBalanceVisuals(candles);
+            RebuildMarginMaintenanceVisuals(candles);
             RebuildThreeMajorVisuals(candles);
         }
 
@@ -1233,6 +1309,81 @@ namespace StockTracker.ViewModels
             }
 
             OnPropertyChanged(nameof(LatestMarginBalance));
+        }
+
+        private void RebuildMarginMaintenanceVisuals(IReadOnlyList<CandleData> sourceCandles)
+        {
+            if (SelectedKLineInterval != "日K" || sourceCandles == null || sourceCandles.Count == 0)
+            {
+                MarginMaintenanceLevels.Clear();
+                MarginMaintenancePoints = new PointCollection();
+                _lastDisplayMarginMaintenanceSeries.Clear();
+                MarginMaintenanceCrosshairVisibility = Visibility.Collapsed;
+                MarginMaintenanceHoverInfo = null;
+                OnPropertyChanged(nameof(MarginMaintenancePoints));
+                return;
+            }
+
+            var values = sourceCandles.Select(candle =>
+            {
+                TwseMarginMetricResult metric;
+                if (_marginMetricByDate.TryGetValue(candle.Time.Date, out metric))
+                {
+                    return new MarginMaintenancePointVisual
+                    {
+                        Time = candle.Time,
+                        Close = metric.Close,
+                        TotalLoan = metric.TotalLoan,
+                        MarginAverageCost = metric.MarginAverageCost,
+                        MarginMaintenanceRatio = metric.MarginMaintenanceRatio,
+                        MarginBalance = metric.Record?.MarginBalance ?? 0,
+                        MarginPurchaseSales = metric.Record?.MarginPurchaseSales ?? 0,
+                        HasData = metric.MarginMaintenanceRatio > 0d
+                    };
+                }
+
+                return new MarginMaintenancePointVisual
+                {
+                    Time = candle.Time,
+                    HasData = false
+                };
+            }).ToList();
+
+            var validRatios = values.Where(x => x.HasData).Select(x => x.MarginMaintenanceRatio).ToList();
+            var min = validRatios.Count == 0 ? 100d : Math.Min(100d, validRatios.Min());
+            var max = validRatios.Count == 0 ? 200d : Math.Max(200d, validRatios.Max());
+            var range = Math.Max(1d, max - min);
+
+            MarginMaintenanceLevels.Clear();
+            const int maintenanceLevelCount = 5;
+            for (var i = 0; i < maintenanceLevelCount; i++)
+            {
+                var ratio = i / (double)(maintenanceLevelCount - 1);
+                var value = max - range * ratio;
+                var y = Scale(value, min, range, VolumeChartHeight);
+                MarginMaintenanceLevels.Add(new PriceLevelVisual
+                {
+                    Y = y,
+                    LabelTop = Math.Max(2, Math.Min(VolumeChartHeight - 14, y - 7)),
+                    Text = value.ToString("F1") + "%"
+                });
+            }
+
+            var points = new PointCollection();
+            _lastDisplayMarginMaintenanceSeries.Clear();
+            for (var i = 0; i < values.Count; i++)
+            {
+                var x = CalculateCenterX(i, values.Count, _chartPaddingWidth);
+                if (values[i].HasData)
+                {
+                    points.Add(new Point(x, Scale(values[i].MarginMaintenanceRatio, min, range, VolumeChartHeight)));
+                }
+                _lastDisplayMarginMaintenanceSeries.Add(values[i]);
+            }
+
+            MarginMaintenancePoints = points;
+            OnPropertyChanged(nameof(MarginMaintenancePoints));
+            OnPropertyChanged(nameof(LatestMarginMaintenanceRatio));
         }
 
         private void RebuildThreeMajorVisuals(IReadOnlyList<CandleData> sourceCandles)
@@ -1392,6 +1543,43 @@ namespace StockTracker.ViewModels
         {
             MarginCrosshairVisibility = Visibility.Collapsed;
             MarginHoverInfo = null;
+        }
+
+        public void UpdateMarginMaintenanceCrosshair(double x)
+        {
+            if (_lastDisplayMarginMaintenanceSeries.Count == 0)
+            {
+                MarginMaintenanceCrosshairVisibility = Visibility.Collapsed;
+                MarginMaintenanceHoverInfo = null;
+                return;
+            }
+
+            var clampedX = Math.Max(0, Math.Min(_chartPaddingWidth, x));
+            var nearestIndex = GetNearestCandleIndex(clampedX, _lastDisplayMarginMaintenanceSeries.Count, _chartPaddingWidth);
+            var item = _lastDisplayMarginMaintenanceSeries[nearestIndex];
+            MarginMaintenanceCrosshairX = CalculateCenterX(nearestIndex, _lastDisplayMarginMaintenanceSeries.Count, _chartPaddingWidth);
+            MarginMaintenanceCrosshairVisibility = Visibility.Visible;
+
+            if (!item.HasData)
+            {
+                MarginMaintenanceHoverInfo = $"日期: {item.Time:yyyy/MM/dd}\n維持率資料: 無";
+                return;
+            }
+
+            MarginMaintenanceHoverInfo =
+                $"日期: {item.Time:yyyy/MM/dd}" +
+                $"\n維持率: {item.MarginMaintenanceRatio:F2}%" +
+                $"\n收盤價: {item.Close:F2}" +
+                $"\n融資平均成本: {item.MarginAverageCost:F2}" +
+                $"\n融資借款估值: {item.TotalLoan:N0}" +
+                $"\n融資餘額: {item.MarginBalance:N0}" +
+                $"\n融資增減: {item.MarginPurchaseSales:N0}";
+        }
+
+        public void ClearMarginMaintenanceCrosshair()
+        {
+            MarginMaintenanceCrosshairVisibility = Visibility.Collapsed;
+            MarginMaintenanceHoverInfo = null;
         }
 
         public void ClearThreeMajorCrosshair()
@@ -1677,6 +1865,18 @@ namespace StockTracker.ViewModels
             public long InvestmentTrustNet { get; set; }
             public long DealerNet { get; set; }
             public long ThreeMajorNet { get; set; }
+        }
+
+        private class MarginMaintenancePointVisual
+        {
+            public DateTime Time { get; set; }
+            public double Close { get; set; }
+            public double TotalLoan { get; set; }
+            public double MarginMaintenanceRatio { get; set; }
+            public double MarginAverageCost { get; set; }
+            public long MarginBalance { get; set; }
+            public long MarginPurchaseSales { get; set; }
+            public bool HasData { get; set; }
         }
     }
 }

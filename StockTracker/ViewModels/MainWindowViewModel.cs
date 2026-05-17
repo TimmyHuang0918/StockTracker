@@ -20,8 +20,12 @@ namespace StockTracker.ViewModels
         private readonly CapitalApiService _apiService;
         private readonly TwseT86Repository _twseT86Repository;
         private readonly TwseMarginRepository _twseMarginRepository;
+        private readonly DailyPriceRepository _dailyPriceRepository;
+        private readonly MarginMetricCalculator _marginMetricCalculator;
         private readonly List<TwseT86History> _twseT86Histories = new List<TwseT86History>();
         private readonly List<TwseMarginHistory> _twseMarginHistories = new List<TwseMarginHistory>();
+        private readonly List<DailyCloseHistory> _dailyCloseHistories = new List<DailyCloseHistory>();
+        private readonly List<TwseMarginMetricHistory> _twseMarginMetricHistories = new List<TwseMarginMetricHistory>();
         private string _newSymbol;
         private string _systemMessage;
         private string _selectedGlobalKLineInterval = "日K";
@@ -42,6 +46,10 @@ namespace StockTracker.ViewModels
 
             var marginDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_margin.db");
             _twseMarginRepository = new TwseMarginRepository(marginDbPath);
+
+            var dailyPriceDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "daily_price.db");
+            _dailyPriceRepository = new DailyPriceRepository(dailyPriceDbPath);
+            _marginMetricCalculator = new MarginMetricCalculator();
 
             Stocks = new ObservableCollection<StockViewModel>();
             TwseRankingItems = new ObservableCollection<TwseT86RankingItem>();
@@ -338,10 +346,12 @@ namespace StockTracker.ViewModels
 
                 UpdatingTwseText = "下載中…";
                 var fetcher = new InstitutionalDataFetcher();
+                var priceFetcher = new DailyPriceFetcher();
 
                 // Find existing dates from DB
                 var existingDatesT86 = _twseT86Repository.GetExistingDates();
                 var existingDatesMargin = _twseMarginRepository.GetExistingDates();
+                var existingDatesPrice = _dailyPriceRepository.GetExistingDates();
 
                 var progress = new Progress<string>(msg =>
                 {
@@ -352,8 +362,9 @@ namespace StockTracker.ViewModels
                 {
                     bool hasT86 = existingDatesT86.Contains(date.Date);
                     bool hasMargin = existingDatesMargin.Contains(date.Date);
+                    bool hasPrice = existingDatesPrice.Contains(date.Date);
 
-                    if (hasT86 && hasMargin)
+                    if (hasT86 && hasMargin && hasPrice)
                     {
                         continue;
                     }
@@ -366,6 +377,13 @@ namespace StockTracker.ViewModels
 
                     if (marginRecords.Count > 0)
                         await _twseMarginRepository.UpsertAsync(marginRecords);
+
+                    if (!hasPrice)
+                    {
+                        var priceRecords = await priceFetcher.FetchAsync(date);
+                        if (priceRecords.Count > 0)
+                            await _dailyPriceRepository.UpsertAsync(priceRecords);
+                    }
 
                     await Task.Delay(2000); // 避免過快被鎖
                 }
@@ -409,6 +427,14 @@ namespace StockTracker.ViewModels
                 var marginHistories = await _twseMarginRepository.LoadAllHistoriesAsync(dbProgress);
                 _twseMarginHistories.Clear();
                 _twseMarginHistories.AddRange(marginHistories.Where(x => x != null));
+
+                UpdatingTwseText = "載入日收盤價…";
+                var dailyPriceHistories = await _dailyPriceRepository.LoadAllHistoriesAsync(dbProgress);
+                _dailyCloseHistories.Clear();
+                _dailyCloseHistories.AddRange(dailyPriceHistories.Where(x => x != null));
+
+                UpdatingTwseText = "計算融資維持率…";
+                RebuildMarginMetricHistories();
 
                 var latest = _twseT86Histories
                     .SelectMany(x => x.RecordsByDate.Values)
@@ -546,6 +572,49 @@ namespace StockTracker.ViewModels
 
             var marginHistory = _twseMarginHistories.FirstOrDefault(x => string.Equals(x.Symbol, stockVm.Symbol, StringComparison.OrdinalIgnoreCase));
             stockVm.SetTwseMarginRecords(marginHistory == null ? null : marginHistory.RecordsByDate.Values);
+
+            var marginMetricHistory = _twseMarginMetricHistories.FirstOrDefault(x => string.Equals(x.Symbol, stockVm.Symbol, StringComparison.OrdinalIgnoreCase));
+            stockVm.SetTwseMarginMetricRecords(marginMetricHistory == null ? null : marginMetricHistory.RecordsByDate.Values);
+        }
+
+        private void RebuildMarginMetricHistories()
+        {
+            _twseMarginMetricHistories.Clear();
+
+            var priceBySymbol = _dailyCloseHistories
+                .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol))
+                .GroupBy(x => x.Symbol, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.Last(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var marginHistory in _twseMarginHistories.Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol)))
+            {
+                DailyCloseHistory closeHistory;
+                priceBySymbol.TryGetValue(marginHistory.Symbol, out closeHistory);
+
+                var orderedRecords = marginHistory.RecordsByDate.Values
+                    .OrderBy(x => x.TradeDate)
+                    .ToList();
+
+                var priceDict = closeHistory == null
+                    ? new Dictionary<DateTime, double>()
+                    : closeHistory.RecordsByDate.ToDictionary(x => x.Key, x => x.Value.Close);
+
+                var metricResults = _marginMetricCalculator.CalculateMarginMetrics(orderedRecords, priceDict);
+                if (metricResults.Count == 0)
+                {
+                    continue;
+                }
+
+                _twseMarginMetricHistories.Add(new TwseMarginMetricHistory
+                {
+                    Symbol = marginHistory.Symbol,
+                    Name = marginHistory.Name,
+                    RecordsByDate = metricResults
+                        .Where(x => x.Record != null)
+                        .GroupBy(x => x.Record.TradeDate.Date)
+                        .ToDictionary(x => x.Key, x => x.Last())
+                });
+            }
         }
 
 

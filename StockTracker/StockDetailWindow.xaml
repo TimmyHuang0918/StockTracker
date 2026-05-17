@@ -409,6 +409,54 @@
                 </Border>
 
                 <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="8" Background="{DynamicResource SurfaceBrush}" Margin="0,0,0,10"
+                        Visibility="{Binding MarginMaintenanceChartVisibility}">
+                    <StackPanel>
+                        <TextBlock Margin="0,0,0,6">
+                            <Run Text="融資維持率   最新: "/>
+                            <Run Text="{Binding LatestMarginMaintenanceRatio, StringFormat=F2, Mode=OneWay}"/>
+                            <Run Text="%"/>
+                        </TextBlock>
+                        <TextBlock Margin="0,0,0,4" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"
+                                   Text="Y軸：融資維持率(%)    X軸：時間(由左到右)"/>
+                        <Viewbox Stretch="Fill" Height="100"
+                                 Width="{Binding RelativeSource={RelativeSource AncestorType=Border}, Path=ActualWidth}">
+                            <Canvas Width="{Binding ChartWidth}" Height="100" Background="{DynamicResource SurfaceAltBrush}"
+                                    MouseMove="MarginMaintenanceCanvas_OnMouseMove" MouseLeave="MarginMaintenanceCanvas_OnMouseLeave"
+                                    ToolTip="{Binding MarginMaintenanceHoverInfo}">
+                                <ItemsControl ItemsSource="{Binding MarginMaintenanceLevels}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="0"/>
+                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Canvas>
+                                                <Line X1="0" X2="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Y1="0" Y2="0"
+                                                      Stroke="{DynamicResource AppBorderBrush}" StrokeDashArray="2,3" StrokeThickness="0.8"/>
+                                                <TextBlock Canvas.Left="{Binding DataContext.ChartWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                           Canvas.Top="{Binding LabelTop}"
+                                                           Margin="4,0,0,0"
+                                                           Text="{Binding Text}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="9"/>
+                                            </Canvas>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Polyline Points="{Binding MarginMaintenancePoints}" Stroke="#FF5AD1FF" StrokeThickness="1.8"/>
+                                <Line X1="{Binding MarginMaintenanceCrosshairX}" X2="{Binding MarginMaintenanceCrosshairX}" Y1="0" Y2="100"
+                                      Visibility="{Binding MarginMaintenanceCrosshairVisibility}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1" StrokeDashArray="3,2"/>
+                            </Canvas>
+                        </Viewbox>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="8" Background="{DynamicResource SurfaceBrush}" Margin="0,0,0,10"
                         Visibility="{Binding ThreeMajorChartVisibility}">
                     <StackPanel>
                         <TextBlock Margin="0,0,0,6">
