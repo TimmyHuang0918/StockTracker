@@ -1,6 +1,5 @@
-using StockTracker.Models;
-using StockTracker.Services;
 using StockManager.Library;
+using StockTracker.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -39,8 +38,8 @@ namespace StockTracker.ViewModels
         private double _macdZeroY;
         private double _threeMajorZeroY;
         private string _selectedKLineInterval = "1分K";
-	private string _selectedKLineCount= "300";
-	private string _signal = "中立";
+        private string _selectedKLineCount = "300";
+        private string _signal = "中立";
         private string _lastNotifiedSignal = string.Empty;
         private List<string> _latestRecommendationReasons = new List<string>();
         private int _maxDisplayPoints = 60;
@@ -235,36 +234,36 @@ namespace StockTracker.ViewModels
             }
         }
 
-	public string SelectedKLineCount
-	{
-	    get => _selectedKLineCount;
-	    set
-	    {
-		if (_selectedKLineCount == value || string.IsNullOrWhiteSpace(value))
-		{
-		    return;
-		}
+        public string SelectedKLineCount
+        {
+            get => _selectedKLineCount;
+            set
+            {
+                if (_selectedKLineCount == value || string.IsNullOrWhiteSpace(value))
+                {
+                    return;
+                }
 
-		_selectedKLineCount = value;
-		OnPropertyChanged();
-		OnPropertyChanged(nameof(_chartPaddingWidth));
-		RebuildVisuals();
-	    }
-	}
+                _selectedKLineCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(_chartPaddingWidth));
+                RebuildVisuals();
+            }
+        }
 
-	public StockViewModel CreateDetailViewModel()
-	{
-	    var detailVm = new StockViewModel(Symbol, Name)
-	    {
-		_selectedKLineInterval = _selectedKLineInterval,
-		_maxDisplayPoints = _maxDisplayPoints
-	    };
+        public StockViewModel CreateDetailViewModel()
+        {
+            var detailVm = new StockViewModel(Symbol, Name)
+            {
+                _selectedKLineInterval = _selectedKLineInterval,
+                _maxDisplayPoints = _maxDisplayPoints
+            };
 
             detailVm.OnPropertyChanged(nameof(SelectedKLineInterval));
             detailVm.OnPropertyChanged(nameof(ChartWidth));
 
-	    detailVm.SetTwseT86Records(_twseByDate.Values);
-	    foreach (var candle in _candles)
+            detailVm.SetTwseT86Records(_twseByDate.Values);
+            foreach (var candle in _candles)
             {
                 detailVm.UpdateFromKLine(candle);
             }
@@ -424,7 +423,7 @@ namespace StockTracker.ViewModels
 
             _maxDisplayPoints = candidate;
 
-	    OnPropertyChanged(nameof(ChartWidth));
+            OnPropertyChanged(nameof(ChartWidth));
             RebuildVisuals();
         }
 
@@ -447,18 +446,18 @@ namespace StockTracker.ViewModels
             var hist = macd - signal;
             var rsi = nearestIndex < _lastDisplayRsiSeries.Count ? _lastDisplayRsiSeries[nearestIndex] : 50;
 
-	    CrosshairX = clampedX;
-	    CrosshairY = clampedY;
-	    CrosshairVisibility = Visibility.Visible;
-	    HoverInfo =
-		$"時間: {candle.Time:yyyy/MM/dd HH:mm}" +
-		$"\n開: {candle.Open:F2}  高: {candle.High:F2}  低: {candle.Low:F2}  收: {candle.Close:F2}" +
-		$"\n漲跌幅: {candle.PercentageChange:F2}%  游標價: {priceAtCursor:F2}  成交量: {candle.Volume:N0}" +
-		$"\nMA5: {candle.MA5:F2}  MA20: {candle.MA20:F2}  MA120: {candle.MA120:F2}  MA240: {candle.MA240:F2}" +
-		$"\nBB上軌: {candle.BollingerUpper:F2}  中軌: {candle.BollingerMiddle:F2}  下軌: {candle.BollingerLower:F2}" +
-		$"\nMACD: {macd:F4}  DEA: {signal:F4}  柱狀: {hist:F4}" +
-		$"\nRSI: {rsi:F2}" +
-		BuildRecommendationTooltip(nearestIndex, candle);
+            CrosshairX = clampedX;
+            CrosshairY = clampedY;
+            CrosshairVisibility = Visibility.Visible;
+            HoverInfo =
+                $"時間: {candle.Time:yyyy/MM/dd HH:mm}" +
+                $"\n開: {candle.Open:F2}  高: {candle.High:F2}  低: {candle.Low:F2}  收: {candle.Close:F2}" +
+                $"\n漲跌幅: {candle.PercentageChange:F2}%  游標價: {priceAtCursor:F2}  成交量: {candle.Volume:N0}" +
+                $"\nMA5: {candle.MA5:F2}  MA20: {candle.MA20:F2}  MA120: {candle.MA120:F2}  MA240: {candle.MA240:F2}" +
+                $"\nBB上軌: {candle.BollingerUpper:F2}  中軌: {candle.BollingerMiddle:F2}  下軌: {candle.BollingerLower:F2}" +
+                $"\nMACD: {macd:F4}  DEA: {signal:F4}  柱狀: {hist:F4}" +
+                $"\nRSI: {rsi:F2}" +
+                BuildRecommendationTooltip(nearestIndex, candle);
         }
 
         public void ClearCrosshair()
@@ -467,35 +466,35 @@ namespace StockTracker.ViewModels
             HoverInfo = null;
         }
 
-	public void ApplyInstantCandle(CandleData instantCandle, string interval)
-	{
-	    if (instantCandle == null)
-	    {
-		return;
-	    }
+        public void ApplyInstantCandle(CandleData instantCandle, string interval)
+        {
+            if (instantCandle == null)
+            {
+                return;
+            }
 
-	    var alignedTime = AlignTimeToInterval(instantCandle.Time, interval);
-	    var incoming = new CandleData
-	    {
-		Time = alignedTime,
-		Open = instantCandle.Open,
-		High = instantCandle.High,
-		Low = instantCandle.Low,
-		Close = instantCandle.Close,
-		Volume = instantCandle.Volume
-	    };
+            var alignedTime = AlignTimeToInterval(instantCandle.Time, interval);
+            var incoming = new CandleData
+            {
+                Time = alignedTime,
+                Open = instantCandle.Open,
+                High = instantCandle.High,
+                Low = instantCandle.Low,
+                Close = instantCandle.Close,
+                Volume = instantCandle.Volume
+            };
 
-	    var existing = _candles.FirstOrDefault(x => x.Time == alignedTime);
-	    if (existing != null)
-	    {
-		incoming.Open = existing.Open;
-		incoming.High = Math.Max(existing.High, incoming.High);
-		incoming.Low = Math.Min(existing.Low, incoming.Low);
-		incoming.Volume = existing.Volume + incoming.Volume;
-	    }
+            var existing = _candles.FirstOrDefault(x => x.Time == alignedTime);
+            if (existing != null)
+            {
+                incoming.Open = existing.Open;
+                incoming.High = Math.Max(existing.High, incoming.High);
+                incoming.Low = Math.Min(existing.Low, incoming.Low);
+                incoming.Volume = existing.Volume + incoming.Volume;
+            }
 
-	    UpdateFromKLine(incoming);
-	}
+            UpdateFromKLine(incoming);
+        }
 
         public void UpdateFromKLine(CandleData candle)
         {
@@ -536,68 +535,68 @@ namespace StockTracker.ViewModels
 
             var latest = _candles.LastOrDefault();
             LatestPrice = latest?.Close ?? normalized.Close;
-	    RecalculateIndicatorsOnCandles();
-	    ChangePercent = latest.PercentageChange;
-	    UpdateSignal();
+            RecalculateIndicatorsOnCandles();
+            ChangePercent = latest.PercentageChange;
+            UpdateSignal();
             RebuildVisuals();
             OnPropertyChanged(nameof(LatestVolume));
 
-	    foreach (var detailVm in _detailViewModels.ToList())
-	    {
-		detailVm.UpdateFromKLine(normalized);
-	    }
+            foreach (var detailVm in _detailViewModels.ToList())
+            {
+                detailVm.UpdateFromKLine(normalized);
+            }
         }
 
-	public void ClearData()
-	{
-	    _candles.Clear();
-	    _signalHistory.Clear();
-	    _lastNotifiedSignal = string.Empty;
-	    LatestPrice = 0;
-	    ChangePercent = 0;
-	    UpdateLatestChangeBrush();
-	    MA5 = 0;
-	    MA20 = 0;
-	    MACD = 0;
-	    RSI = 0;
-	    LatestPriceY = 0;
-	    MacdZeroY = 0;
-	    Candles.Clear();
-	    Ma5Points.Clear();
-	    Ma20Points.Clear();
-	    MacdHistogram.Clear();
-	    MacdLinePoints.Clear();
-	    SignalLinePoints.Clear();
-	    RsiLinePoints.Clear();
-	    VolumeBars.Clear();
-	    SignalMarkers.Clear();
-	    TimeLabels.Clear();
-	    PriceLevels.Clear();
-	    MacdLevels.Clear();
-	    RsiLevels.Clear();
-	    VolumeLevels.Clear();
-	    ThreeMajorLevels.Clear();
-	    ThreeMajorNetPoints.Clear();
-	    ForeignNetPoints.Clear();
-	    InvestmentTrustNetPoints.Clear();
-	    DealerNetPoints.Clear();
-	    _recommendationScoreCache.Clear();
-	    _recommendationReasonsCache.Clear();
-	    _lastDisplayThreeMajorSeries.Clear();
-	    ThreeMajorZeroY = 0;
+        public void ClearData()
+        {
+            _candles.Clear();
+            _signalHistory.Clear();
+            _lastNotifiedSignal = string.Empty;
+            LatestPrice = 0;
+            ChangePercent = 0;
+            UpdateLatestChangeBrush();
+            MA5 = 0;
+            MA20 = 0;
+            MACD = 0;
+            RSI = 0;
+            LatestPriceY = 0;
+            MacdZeroY = 0;
+            Candles.Clear();
+            Ma5Points.Clear();
+            Ma20Points.Clear();
+            MacdHistogram.Clear();
+            MacdLinePoints.Clear();
+            SignalLinePoints.Clear();
+            RsiLinePoints.Clear();
+            VolumeBars.Clear();
+            SignalMarkers.Clear();
+            TimeLabels.Clear();
+            PriceLevels.Clear();
+            MacdLevels.Clear();
+            RsiLevels.Clear();
+            VolumeLevels.Clear();
+            ThreeMajorLevels.Clear();
+            ThreeMajorNetPoints.Clear();
+            ForeignNetPoints.Clear();
+            InvestmentTrustNetPoints.Clear();
+            DealerNetPoints.Clear();
+            _recommendationScoreCache.Clear();
+            _recommendationReasonsCache.Clear();
+            _lastDisplayThreeMajorSeries.Clear();
+            ThreeMajorZeroY = 0;
             ThreeMajorCrosshairVisibility = Visibility.Collapsed;
             ThreeMajorHoverInfo = null;
-	    _lastDisplayMacdSeries.Clear();
-	    _lastDisplaySignalSeries.Clear();
-	    _lastDisplayRsiSeries.Clear();
-	    ClearCrosshair();
-	    OnPropertyChanged(nameof(LatestVolume));
+            _lastDisplayMacdSeries.Clear();
+            _lastDisplaySignalSeries.Clear();
+            _lastDisplayRsiSeries.Clear();
+            ClearCrosshair();
+            OnPropertyChanged(nameof(LatestVolume));
 
-	    foreach (var detailVm in _detailViewModels.ToList())
-	    {
-		detailVm.ClearData();
-	    }
-	}
+            foreach (var detailVm in _detailViewModels.ToList())
+            {
+                detailVm.ClearData();
+            }
+        }
 
         public void SetTwseT86Records(IEnumerable<TwseT86Record> records)
         {
@@ -623,79 +622,79 @@ namespace StockTracker.ViewModels
             }
         }
 
-	private void RecalculateIndicatorsOnCandles()
-	{
-	    if (_candles.Count == 0)
-	    {
-		MA5 = 0;
-		MA20 = 0;
-		MA120 = 0;
-		MACD = 0;
-		RSI = 0;
-		_macdSeries.Clear();
-		_signalSeries.Clear();
-		return;
-	    }
+        private void RecalculateIndicatorsOnCandles()
+        {
+            if (_candles.Count == 0)
+            {
+                MA5 = 0;
+                MA20 = 0;
+                MA120 = 0;
+                MACD = 0;
+                RSI = 0;
+                _macdSeries.Clear();
+                _signalSeries.Clear();
+                return;
+            }
 
-	    var closes = _candles.Select(x => (double)x.Close).ToList();
-	    var ema12 = CalculateEmaSeries(closes, 12);
-	    var ema26 = CalculateEmaSeries(closes, 26);
-	    var macdSeries = new List<double>(_candles.Count);
-	    for (var i = 0; i < closes.Count; i++)
-	    {
-		macdSeries.Add(ema12[i] - ema26[i]);
-	    }
+            var closes = _candles.Select(x => (double)x.Close).ToList();
+            var ema12 = CalculateEmaSeries(closes, 12);
+            var ema26 = CalculateEmaSeries(closes, 26);
+            var macdSeries = new List<double>(_candles.Count);
+            for (var i = 0; i < closes.Count; i++)
+            {
+                macdSeries.Add(ema12[i] - ema26[i]);
+            }
 
-	    var signalSeries = CalculateEmaSeries(macdSeries, 9);
+            var signalSeries = CalculateEmaSeries(macdSeries, 9);
 
-	    for (var i = 0; i < _candles.Count; i++)
-	    {
-		var ma5Start = Math.Max(0, i - 4);
-		var ma20Start = Math.Max(0, i - 19);
-		var ma120Start = Math.Max(0, i - 119);
-		var ma240Start = Math.Max(0, i - 239);
-		var ma5Count = i - ma5Start + 1;
-		var ma20Count = i - ma20Start + 1;
-		var ma120Count = i - ma120Start + 1;
-		var ma240Count = i - ma240Start + 1;
+            for (var i = 0; i < _candles.Count; i++)
+            {
+                var ma5Start = Math.Max(0, i - 4);
+                var ma20Start = Math.Max(0, i - 19);
+                var ma120Start = Math.Max(0, i - 119);
+                var ma240Start = Math.Max(0, i - 239);
+                var ma5Count = i - ma5Start + 1;
+                var ma20Count = i - ma20Start + 1;
+                var ma120Count = i - ma120Start + 1;
+                var ma240Count = i - ma240Start + 1;
 
-		_candles[i].MA5 = closes.Skip(ma5Start).Take(ma5Count).Average();
-		_candles[i].MA20 = closes.Skip(ma20Start).Take(ma20Count).Average();
-		_candles[i].MA120 = closes.Skip(ma120Start).Take(ma120Count).Average();
-		_candles[i].MA240 = closes.Skip(ma240Start).Take(ma240Count).Average();
-		_candles[i].MACD = macdSeries[i];
-		_candles[i].MacdSignal = signalSeries[i];
-		_candles[i].MacdHistogram = macdSeries[i] - signalSeries[i];
-		_candles[i].RSI = CalculateRsiAt(i, 14, closes);
-		if(i > 0)
-		    _candles[i].PercentageChange = (_candles[i].Close - _candles[i - 1].Close) / _candles[i - 1].Close * 100;
+                _candles[i].MA5 = closes.Skip(ma5Start).Take(ma5Count).Average();
+                _candles[i].MA20 = closes.Skip(ma20Start).Take(ma20Count).Average();
+                _candles[i].MA120 = closes.Skip(ma120Start).Take(ma120Count).Average();
+                _candles[i].MA240 = closes.Skip(ma240Start).Take(ma240Count).Average();
+                _candles[i].MACD = macdSeries[i];
+                _candles[i].MacdSignal = signalSeries[i];
+                _candles[i].MacdHistogram = macdSeries[i] - signalSeries[i];
+                _candles[i].RSI = CalculateRsiAt(i, 14, closes);
+                if (i > 0)
+                    _candles[i].PercentageChange = (_candles[i].Close - _candles[i - 1].Close) / _candles[i - 1].Close * 100;
 
-		// Bollinger Bands (20-period, 2 std dev)
-		var bbSlice = closes.Skip(ma20Start).Take(ma20Count).ToList();
-		var bbMid = _candles[i].MA20;
-		var variance = bbSlice.Sum(v => (v - bbMid) * (v - bbMid)) / bbSlice.Count;
-		var stdDev = Math.Sqrt(variance);
-		_candles[i].BollingerMiddle = bbMid;
-		_candles[i].BollingerUpper = bbMid + 2 * stdDev;
-		_candles[i].BollingerLower = bbMid - 2 * stdDev;
-	    }
+                // Bollinger Bands (20-period, 2 std dev)
+                var bbSlice = closes.Skip(ma20Start).Take(ma20Count).ToList();
+                var bbMid = _candles[i].MA20;
+                var variance = bbSlice.Sum(v => (v - bbMid) * (v - bbMid)) / bbSlice.Count;
+                var stdDev = Math.Sqrt(variance);
+                _candles[i].BollingerMiddle = bbMid;
+                _candles[i].BollingerUpper = bbMid + 2 * stdDev;
+                _candles[i].BollingerLower = bbMid - 2 * stdDev;
+            }
 
-	    var latest = _candles[_candles.Count - 1];
-	    MA5 = latest.MA5;
-	    MA20 = latest.MA20;
-	    MA120 = latest.MA120;
-	    MA240 = latest.MA240;
-	    MACD = latest.MACD;
-	    RSI = latest.RSI;
+            var latest = _candles[_candles.Count - 1];
+            MA5 = latest.MA5;
+            MA20 = latest.MA20;
+            MA120 = latest.MA120;
+            MA240 = latest.MA240;
+            MACD = latest.MACD;
+            RSI = latest.RSI;
 
-	    _macdSeries.Clear();
-	    _macdSeries.AddRange(macdSeries);
-	    _signalSeries.Clear();
-	    _signalSeries.AddRange(signalSeries);
+            _macdSeries.Clear();
+            _macdSeries.AddRange(macdSeries);
+            _signalSeries.Clear();
+            _signalSeries.AddRange(signalSeries);
 
-	    OnPropertyChanged(nameof(MacdSignal));
-	    OnPropertyChanged(nameof(MacdHistogramValue));
-	}
+            OnPropertyChanged(nameof(MacdSignal));
+            OnPropertyChanged(nameof(MacdHistogramValue));
+        }
 
         private static List<double> CalculateEmaSeries(IReadOnlyList<double> source, int period)
         {
@@ -735,16 +734,16 @@ namespace StockTracker.ViewModels
             LatestChangeBrush = Brushes.Gainsboro;
         }
 
-	private void UpdateSignal()
-	{
-	    if (_candles.Count < 20)
-	    {
-		Signal = "資料不足";
-		_latestRecommendationReasons.Clear();
-		return;
-	    }
+        private void UpdateSignal()
+        {
+            if (_candles.Count < 20)
+            {
+                Signal = "資料不足";
+                _latestRecommendationReasons.Clear();
+                return;
+            }
 
-	    var latestCandle = _candles.Last();
+            var latestCandle = _candles.Last();
 
             if (_selectedKLineInterval == "日K")
             {
@@ -787,13 +786,13 @@ namespace StockTracker.ViewModels
                 var intradayRecommendation = TradingRecommendationLibrary.CalculateIntradayRecommendation(
                     _candles,
                     (double)LatestPrice);
-                
+
                 _latestRecommendationReasons = intradayRecommendation.Reasons ?? new List<string>();
                 Signal = intradayRecommendation.Action;
-		_recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
+                _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
 
-		var actionSignal = ResolveActionSignal(Signal);
-                int score = Signal.Contains("強烈") ? 100 : Signal.Contains("偏多") || Signal.Contains("偏空") ? 70 : 50; 
+                var actionSignal = ResolveActionSignal(Signal);
+                int score = Signal.Contains("強烈") ? 100 : Signal.Contains("偏多") || Signal.Contains("偏空") ? 70 : 50;
                 var shouldRecord = score >= 70;
                 var signalKey = $"{actionSignal}_{score / 15}";
 
@@ -812,60 +811,60 @@ namespace StockTracker.ViewModels
                     {
                         SignalTriggered?.Invoke(this, actionSignal);
                     }
-                }               
+                }
             }
         }
 
-	private static string ResolveActionSignal(string suggestion)
-	{
-	    if (string.IsNullOrWhiteSpace(suggestion))
-	    {
-		return "中立";
-	    }
+        private static string ResolveActionSignal(string suggestion)
+        {
+            if (string.IsNullOrWhiteSpace(suggestion))
+            {
+                return "中立";
+            }
 
-	    if (suggestion.Contains("買入") || suggestion.Contains("偏多") || suggestion.Contains("做多"))
-	    {
-		return "買進訊號";
-	    }
+            if (suggestion.Contains("買入") || suggestion.Contains("偏多") || suggestion.Contains("做多"))
+            {
+                return "買進訊號";
+            }
 
-	    if (suggestion.Contains("賣出") || suggestion.Contains("偏空") || suggestion.Contains("做空"))
-	    {
-		return "賣出訊號";
-	    }
+            if (suggestion.Contains("賣出") || suggestion.Contains("偏空") || suggestion.Contains("做空"))
+            {
+                return "賣出訊號";
+            }
 
-	    return "中立";
-	}
+            return "中立";
+        }
 
-	private string BuildRecommendationTooltip(int nearestIndex, CandleData candle)
-	{
-	    if (_lastDisplayCandles == null || _lastDisplayCandles.Count == 0 || nearestIndex < 0 || nearestIndex >= _lastDisplayCandles.Count)
-	    {
-		return string.Empty;
-	    }
+        private string BuildRecommendationTooltip(int nearestIndex, CandleData candle)
+        {
+            if (_lastDisplayCandles == null || _lastDisplayCandles.Count == 0 || nearestIndex < 0 || nearestIndex >= _lastDisplayCandles.Count)
+            {
+                return string.Empty;
+            }
 
-	    var marker = _signalHistory.LastOrDefault(x => x.Time == candle.Time);
+            var marker = _signalHistory.LastOrDefault(x => x.Time == candle.Time);
 
-	    int score;
-	    List<string> reasons;
-	    if (!_recommendationScoreCache.TryGetValue(candle.Time, out score))
-	    {
-		if (marker == null)
-		{
-		    return string.Empty;
-		}
-		score = marker.Score;
-	    }
+            int score;
+            List<string> reasons;
+            if (!_recommendationScoreCache.TryGetValue(candle.Time, out score))
+            {
+                if (marker == null)
+                {
+                    return string.Empty;
+                }
+                score = marker.Score;
+            }
 
-	    if (!_recommendationReasonsCache.TryGetValue(candle.Time, out reasons))
-	    {
-		reasons = new List<string>();
-	    }
+            if (!_recommendationReasonsCache.TryGetValue(candle.Time, out reasons))
+            {
+                reasons = new List<string>();
+            }
 
-	    var suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(score);
-	    var markerText = marker == null ? string.Empty : $"\n訊號標記: {marker.Signal}";
-	    var topReasons = reasons.Take(50).Select(r => $"- {r}");
-	    return $"\n建議: {suggestion} ({score}){markerText}\n建議理由:\n" + string.Join("\n", topReasons);
-	}
+            var suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(score);
+            var markerText = marker == null ? string.Empty : $"\n訊號標記: {marker.Signal}";
+            var topReasons = reasons.Take(50).Select(r => $"- {r}");
+            return $"\n建議: {suggestion} ({score}){markerText}\n建議理由:\n" + string.Join("\n", topReasons);
+        }
 
         private void RebuildVisuals()
         {
@@ -890,154 +889,154 @@ namespace StockTracker.ViewModels
             _lastDisplaySignalSeries.AddRange(candles.Select(x => x.MacdSignal));
             _lastDisplayRsiSeries.AddRange(candles.Select(x => x.RSI));
 
-	    Candles.Clear();
-	    var ma5Points = new PointCollection();
-	    var ma20Points = new PointCollection();
-	    var ma120Points = new PointCollection();
-	    var ma240Points = new PointCollection();
-	    var bollingerUpperPoints = new PointCollection();
-	    var bollingerMiddlePoints = new PointCollection();
-	    var bollingerLowerPoints = new PointCollection();
+            Candles.Clear();
+            var ma5Points = new PointCollection();
+            var ma20Points = new PointCollection();
+            var ma120Points = new PointCollection();
+            var ma240Points = new PointCollection();
+            var bollingerUpperPoints = new PointCollection();
+            var bollingerMiddlePoints = new PointCollection();
+            var bollingerLowerPoints = new PointCollection();
 
-	    for (var i = 0; i < candles.Count; i++)
-	    {
-		var item = candles[i];
-		var centerX = CalculateCenterX(i, candles.Count, _chartPaddingWidth);
-		var x = centerX - 4;
-		var openY = Scale((double)item.Open, minPrice, priceRange, CandleChartHeight);
-		var closeY = Scale((double)item.Close, minPrice, priceRange, CandleChartHeight);
-		var highY = Scale((double)item.High, minPrice, priceRange, CandleChartHeight);
-		var lowY = Scale((double)item.Low, minPrice, priceRange, CandleChartHeight);
+            for (var i = 0; i < candles.Count; i++)
+            {
+                var item = candles[i];
+                var centerX = CalculateCenterX(i, candles.Count, _chartPaddingWidth);
+                var x = centerX - 4;
+                var openY = Scale((double)item.Open, minPrice, priceRange, CandleChartHeight);
+                var closeY = Scale((double)item.Close, minPrice, priceRange, CandleChartHeight);
+                var highY = Scale((double)item.High, minPrice, priceRange, CandleChartHeight);
+                var lowY = Scale((double)item.Low, minPrice, priceRange, CandleChartHeight);
 
-		Candles.Add(new CandlestickVisual
-		{
-		    X = x,
-		    DateTime = item.Time,
-		    WickTop = Math.Min(highY, lowY),
-		    WickBottom = Math.Max(highY, lowY),
-		    BodyTop = Math.Min(openY, closeY),
-		    BodyHeight = Math.Max(2, Math.Abs(openY - closeY)),
-		    BodyBrush = item.Close >= item.Open ? Brushes.IndianRed : Brushes.SeaGreen
-		});
-		ma5Points.Add(new Point(centerX, Scale(candles[i].MA5, minPrice, priceRange, CandleChartHeight)));
-		ma20Points.Add(new Point(centerX, Scale(candles[i].MA20, minPrice, priceRange, CandleChartHeight)));
-		if (candles[i].MA120 > 0)
-		    ma120Points.Add(new Point(centerX, Scale(candles[i].MA120, minPrice, priceRange, CandleChartHeight)));
-		if (candles[i].MA240 > 0)
-		    ma240Points.Add(new Point(centerX, Scale(candles[i].MA240, minPrice, priceRange, CandleChartHeight)));
-		if (candles[i].BollingerUpper > 0)
-		{
-		    bollingerUpperPoints.Add(new Point(centerX, Scale(candles[i].BollingerUpper, minPrice, priceRange, CandleChartHeight)));
-		    bollingerMiddlePoints.Add(new Point(centerX, Scale(candles[i].BollingerMiddle, minPrice, priceRange, CandleChartHeight)));
-		    bollingerLowerPoints.Add(new Point(centerX, Scale(candles[i].BollingerLower, minPrice, priceRange, CandleChartHeight)));
-		}
-	    }
+                Candles.Add(new CandlestickVisual
+                {
+                    X = x,
+                    DateTime = item.Time,
+                    WickTop = Math.Min(highY, lowY),
+                    WickBottom = Math.Max(highY, lowY),
+                    BodyTop = Math.Min(openY, closeY),
+                    BodyHeight = Math.Max(2, Math.Abs(openY - closeY)),
+                    BodyBrush = item.Close >= item.Open ? Brushes.IndianRed : Brushes.SeaGreen
+                });
+                ma5Points.Add(new Point(centerX, Scale(candles[i].MA5, minPrice, priceRange, CandleChartHeight)));
+                ma20Points.Add(new Point(centerX, Scale(candles[i].MA20, minPrice, priceRange, CandleChartHeight)));
+                if (candles[i].MA120 > 0)
+                    ma120Points.Add(new Point(centerX, Scale(candles[i].MA120, minPrice, priceRange, CandleChartHeight)));
+                if (candles[i].MA240 > 0)
+                    ma240Points.Add(new Point(centerX, Scale(candles[i].MA240, minPrice, priceRange, CandleChartHeight)));
+                if (candles[i].BollingerUpper > 0)
+                {
+                    bollingerUpperPoints.Add(new Point(centerX, Scale(candles[i].BollingerUpper, minPrice, priceRange, CandleChartHeight)));
+                    bollingerMiddlePoints.Add(new Point(centerX, Scale(candles[i].BollingerMiddle, minPrice, priceRange, CandleChartHeight)));
+                    bollingerLowerPoints.Add(new Point(centerX, Scale(candles[i].BollingerLower, minPrice, priceRange, CandleChartHeight)));
+                }
+            }
 
-	    Ma5Points = ma5Points;
-	    Ma20Points = ma20Points;
-	    Ma120Points = ma120Points;
-	    Ma240Points = ma240Points;
-	    BollingerUpperPoints = bollingerUpperPoints;
-	    BollingerMiddlePoints = bollingerMiddlePoints;
-	    BollingerLowerPoints = bollingerLowerPoints;
-	    LatestPriceY = Scale((double)LatestPrice, minPrice, priceRange, CandleChartHeight);
-	    OnPropertyChanged(nameof(Ma5Points));
-	    OnPropertyChanged(nameof(Ma20Points));
-	    OnPropertyChanged(nameof(Ma120Points));
-	    OnPropertyChanged(nameof(Ma240Points));
-	    OnPropertyChanged(nameof(BollingerUpperPoints));
-	    OnPropertyChanged(nameof(BollingerMiddlePoints));
-	    OnPropertyChanged(nameof(BollingerLowerPoints));
-	    OnPropertyChanged(nameof(_chartPaddingWidth));
+            Ma5Points = ma5Points;
+            Ma20Points = ma20Points;
+            Ma120Points = ma120Points;
+            Ma240Points = ma240Points;
+            BollingerUpperPoints = bollingerUpperPoints;
+            BollingerMiddlePoints = bollingerMiddlePoints;
+            BollingerLowerPoints = bollingerLowerPoints;
+            LatestPriceY = Scale((double)LatestPrice, minPrice, priceRange, CandleChartHeight);
+            OnPropertyChanged(nameof(Ma5Points));
+            OnPropertyChanged(nameof(Ma20Points));
+            OnPropertyChanged(nameof(Ma120Points));
+            OnPropertyChanged(nameof(Ma240Points));
+            OnPropertyChanged(nameof(BollingerUpperPoints));
+            OnPropertyChanged(nameof(BollingerMiddlePoints));
+            OnPropertyChanged(nameof(BollingerLowerPoints));
+            OnPropertyChanged(nameof(_chartPaddingWidth));
 
-	    SignalMarkers.Clear();
-	    var listCandles = Candles.ToList();
+            SignalMarkers.Clear();
+            var listCandles = Candles.ToList();
 
-	    // Collect valid signals with their display indices
-	    var validSignals = new List<System.Tuple<int, SignalMarkerData>>();
-	    foreach (var signal in _signalHistory.Where(x => x.Index >= 0))
-	    {
-		var displayIndex = listCandles.FindIndex(c => c.DateTime == signal.Time);
-		if (displayIndex < 0)
-		{
-		    displayIndex = signal.Index - displayOffset;
-		}
-		if (displayIndex >= 0 && displayIndex < candles.Count)
-		{
-		    validSignals.Add(System.Tuple.Create(displayIndex, signal));
-		}
-	    }
+            // Collect valid signals with their display indices
+            var validSignals = new List<System.Tuple<int, SignalMarkerData>>();
+            foreach (var signal in _signalHistory.Where(x => x.Index >= 0))
+            {
+                var displayIndex = listCandles.FindIndex(c => c.DateTime == signal.Time);
+                if (displayIndex < 0)
+                {
+                    displayIndex = signal.Index - displayOffset;
+                }
+                if (displayIndex >= 0 && displayIndex < candles.Count)
+                {
+                    validSignals.Add(System.Tuple.Create(displayIndex, signal));
+                }
+            }
 
-	    // Filter: prefer strongest signal, keep min 5-candle gap
-	    var filteredSignals = new List<System.Tuple<int, SignalMarkerData>>();
-	    foreach (var item in validSignals.OrderByDescending(x => Math.Abs(x.Item2.Score - 50)))
-	    {
-		if (!filteredSignals.Any(f => Math.Abs(f.Item1 - item.Item1) < 5))
-		{
-		    filteredSignals.Add(item);
-		}
-	    }
+            // Filter: prefer strongest signal, keep min 5-candle gap
+            var filteredSignals = new List<System.Tuple<int, SignalMarkerData>>();
+            foreach (var item in validSignals.OrderByDescending(x => Math.Abs(x.Item2.Score - 50)))
+            {
+                if (!filteredSignals.Any(f => Math.Abs(f.Item1 - item.Item1) < 5))
+                {
+                    filteredSignals.Add(item);
+                }
+            }
 
-	    foreach (var entry in filteredSignals)
-	    {
-		var displayIndex = entry.Item1;
-		var signal = entry.Item2;
+            foreach (var entry in filteredSignals)
+            {
+                var displayIndex = entry.Item1;
+                var signal = entry.Item2;
 
-		var x = Candles[displayIndex].X;
-		var candleHigh = (double)candles[displayIndex].High;
-		var candleLow = (double)candles[displayIndex].Low;
-		var highY = Scale(candleHigh, minPrice, priceRange, CandleChartHeight);
-		var lowY = Scale(candleLow, minPrice, priceRange, CandleChartHeight);
+                var x = Candles[displayIndex].X;
+                var candleHigh = (double)candles[displayIndex].High;
+                var candleLow = (double)candles[displayIndex].Low;
+                var highY = Scale(candleHigh, minPrice, priceRange, CandleChartHeight);
+                var lowY = Scale(candleLow, minPrice, priceRange, CandleChartHeight);
 
-		string text;
-		Brush brush;
-		double offsetY;
+                string text;
+                Brush brush;
+                double offsetY;
 
-		if (signal.Score >= 85)
-		{
-		    text = "▲";
-		    brush = Brushes.Red;
-		    offsetY = highY - 22;
-		}
-		else if (signal.Score >= 70)
-		{
-		    text = "▲";
-		    brush = Brushes.OrangeRed;
-		    offsetY = highY - 20;
-		}
-		else if (signal.Score >= 55)
-		{
-		    text = "▲";
-		    brush = Brushes.Orange;
-		    offsetY = highY - 18;
-		}
-		else if (signal.Score <= 15)
-		{
-		    text = "▼";
-		    brush = Brushes.DarkGreen;
-		    offsetY = lowY + 8;
-		}
-		else if (signal.Score <= 30)
-		{
-		    text = "▼";
-		    brush = Brushes.MediumSeaGreen;
-		    offsetY = lowY + 8;
-		}
-		else
-		{
-		    text = "▼";
-		    brush = Brushes.LightGreen;
-		    offsetY = lowY + 8;
-		}
+                if (signal.Score >= 85)
+                {
+                    text = "▲";
+                    brush = Brushes.Red;
+                    offsetY = highY - 22;
+                }
+                else if (signal.Score >= 70)
+                {
+                    text = "▲";
+                    brush = Brushes.OrangeRed;
+                    offsetY = highY - 20;
+                }
+                else if (signal.Score >= 55)
+                {
+                    text = "▲";
+                    brush = Brushes.Orange;
+                    offsetY = highY - 18;
+                }
+                else if (signal.Score <= 15)
+                {
+                    text = "▼";
+                    brush = Brushes.DarkGreen;
+                    offsetY = lowY + 8;
+                }
+                else if (signal.Score <= 30)
+                {
+                    text = "▼";
+                    brush = Brushes.MediumSeaGreen;
+                    offsetY = lowY + 8;
+                }
+                else
+                {
+                    text = "▼";
+                    brush = Brushes.LightGreen;
+                    offsetY = lowY + 8;
+                }
 
-		SignalMarkers.Add(new SignalMarkerVisual
-		{
-		    X = x - 2,
-		    Y = offsetY,
-		    Text = text,
-		    Brush = brush
-		});
-	    }
+                SignalMarkers.Add(new SignalMarkerVisual
+                {
+                    X = x - 2,
+                    Y = offsetY,
+                    Text = text,
+                    Brush = brush
+                });
+            }
 
             TimeLabels.Clear();
             var labelStep = Math.Max(1, candles.Count / 8);
@@ -1450,26 +1449,26 @@ namespace StockTracker.ViewModels
             return (int)Math.Round(ratio * (count - 1));
         }
 
-	private static DateTime AlignTimeToInterval(DateTime time, string interval)
-	{
-	    switch (interval)
-	    {
-		case "5分K":
-		{
-		    var minute = (time.Minute / 5) * 5;
-		    return new DateTime(time.Year, time.Month, time.Day, time.Hour, minute, 0);
-		}
-		case "3分K":
-		{
-		    var minute = (time.Minute / 3) * 3;
-		    return new DateTime(time.Year, time.Month, time.Day, time.Hour, minute, 0);
-		}
-		case "日K":
-		    return time.Date;
-		default:
-		    return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0);
-	    }
-	}
+        private static DateTime AlignTimeToInterval(DateTime time, string interval)
+        {
+            switch (interval)
+            {
+                case "5分K":
+                    {
+                        var minute = (time.Minute / 5) * 5;
+                        return new DateTime(time.Year, time.Month, time.Day, time.Hour, minute, 0);
+                    }
+                case "3分K":
+                    {
+                        var minute = (time.Minute / 3) * 3;
+                        return new DateTime(time.Year, time.Month, time.Day, time.Hour, minute, 0);
+                    }
+                case "日K":
+                    return time.Date;
+                default:
+                    return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0);
+            }
+        }
 
         private class SignalMarkerData
         {

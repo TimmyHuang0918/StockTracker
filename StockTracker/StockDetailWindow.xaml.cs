@@ -1,6 +1,6 @@
+using StockTracker.ViewModels;
 using System.Windows;
 using System.Windows.Input;
-using StockTracker.ViewModels;
 
 namespace StockTracker
 {

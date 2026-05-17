@@ -19,8 +19,8 @@ namespace StockTracker.Models
         public decimal High { get; set; }
         public decimal Low { get; set; }
         public decimal Close { get; set; }
-	public decimal PercentageChange { get; set; }
-	public long Volume { get; set; }
+        public decimal PercentageChange { get; set; }
+        public long Volume { get; set; }
         public double MA5 { get; set; }
         public double MA20 { get; set; }
         public double MA120 { get; set; }
@@ -77,97 +77,164 @@ namespace StockTracker.Models
 
     public class TwseT86Record
     {
-	public string Market { get; set; } // 新增市場欄位
-	/// <summary>
-	/// 交易日期
-	/// </summary>
-	public DateTime TradeDate { get; set; }
+        public string Market { get; set; } // 新增市場欄位
+        /// <summary>
+        /// 交易日期
+        /// </summary>
+        public DateTime TradeDate { get; set; }
 
-	/// <summary>
-	/// 證券代號
-	/// </summary>
-	public string Symbol { get; set; }
+        /// <summary>
+        /// 證券代號
+        /// </summary>
+        public string Symbol { get; set; }
 
-	/// <summary>
-	/// 證券名稱
-	/// </summary>
-	public string Name { get; set; }
+        /// <summary>
+        /// 證券名稱
+        /// </summary>
+        public string Name { get; set; }
 
-	/// <summary>
-	/// 外陸資買進股數 (不含外資自營商)
-	/// </summary>
-	public long ForeignBuy { get; set; }
+        /// <summary>
+        /// 外陸資買進股數 (不含外資自營商)
+        /// </summary>
+        public long ForeignBuy { get; set; }
 
-	/// <summary>
-	/// 外陸資賣出股數 (不含外資自營商)
-	/// </summary>
-	public long ForeignSell { get; set; }
+        /// <summary>
+        /// 外陸資賣出股數 (不含外資自營商)
+        /// </summary>
+        public long ForeignSell { get; set; }
 
-	/// <summary>
-	/// 外陸資買賣超股數 (不含外資自營商)
-	/// </summary>
-	public long ForeignNet { get; set; }
+        /// <summary>
+        /// 外陸資買賣超股數 (不含外資自營商)
+        /// </summary>
+        public long ForeignNet { get; set; }
 
-	/// <summary>
-	/// 投信買進股數
-	/// </summary>
-	public long InvestmentTrustBuy { get; set; }
+        /// <summary>
+        /// 投信買進股數
+        /// </summary>
+        public long InvestmentTrustBuy { get; set; }
 
-	/// <summary>
-	/// 投信賣出股數
-	/// </summary>
-	public long InvestmentTrustSell { get; set; }
+        /// <summary>
+        /// 投信賣出股數
+        /// </summary>
+        public long InvestmentTrustSell { get; set; }
 
-	/// <summary>
-	/// 投信買賣超股數
-	/// </summary>
-	public long InvestmentTrustNet { get; set; }
+        /// <summary>
+        /// 投信買賣超股數
+        /// </summary>
+        public long InvestmentTrustNet { get; set; }
 
-	/// <summary>
-	/// 自營商買賣超股數 (合計：自行買賣 + 避險)
-	/// </summary>
-	public long DealerNet { get; set; }
+        /// <summary>
+        /// 自營商買賣超股數 (合計：自行買賣 + 避險)
+        /// </summary>
+        public long DealerNet { get; set; }
 
-	/// <summary>
-	/// 自營商買進股數 (自行買賣)
-	/// </summary>
-	public long DealerSelfBuy { get; set; }
+        /// <summary>
+        /// 自營商買進股數 (自行買賣)
+        /// </summary>
+        public long DealerSelfBuy { get; set; }
 
-	/// <summary>
-	/// 自營商賣出股數 (自行買賣)
-	/// </summary>
-	public long DealerSelfSell { get; set; }
+        /// <summary>
+        /// 自營商賣出股數 (自行買賣)
+        /// </summary>
+        public long DealerSelfSell { get; set; }
 
-	/// <summary>
-	/// 自營商買賣超股數 (自行買賣)
-	/// </summary>
-	public long DealerSelfNet { get; set; }
+        /// <summary>
+        /// 自營商買賣超股數 (自行買賣)
+        /// </summary>
+        public long DealerSelfNet { get; set; }
 
-	/// <summary>
-	/// 自營商買進股數 (避險)
-	/// </summary>
-	public long DealerHedgeBuy { get; set; }
+        /// <summary>
+        /// 自營商買進股數 (避險)
+        /// </summary>
+        public long DealerHedgeBuy { get; set; }
 
-	/// <summary>
-	/// 自營商賣出股數 (避險)
-	/// </summary>
-	public long DealerHedgeSell { get; set; }
+        /// <summary>
+        /// 自營商賣出股數 (避險)
+        /// </summary>
+        public long DealerHedgeSell { get; set; }
 
-	/// <summary>
-	/// 自營商買賣超股數 (避險)
-	/// </summary>
-	public long DealerHedgeNet { get; set; }
+        /// <summary>
+        /// 自營商買賣超股數 (避險)
+        /// </summary>
+        public long DealerHedgeNet { get; set; }
 
-	/// <summary>
-	/// 三大法人買賣超股數 (外資 + 投信 + 自營商合計)
-	/// </summary>
-	public long ThreeMajorNet { get; set; }
+        /// <summary>
+        /// 三大法人買賣超股數 (外資 + 投信 + 自營商合計)
+        /// </summary>
+        public long ThreeMajorNet { get; set; }
     }
 
     public class TwseT86History
     {
-	public string Symbol { get; set; }
-	public string Name { get; set; }
-	public System.Collections.Generic.Dictionary<DateTime, TwseT86Record> RecordsByDate { get; set; } = new System.Collections.Generic.Dictionary<DateTime, TwseT86Record>();
+        public string Symbol { get; set; }
+        public string Name { get; set; }
+        public System.Collections.Generic.Dictionary<DateTime, TwseT86Record> RecordsByDate { get; set; } = new System.Collections.Generic.Dictionary<DateTime, TwseT86Record>();
+    }
+
+    public class TwseMarginRecord
+    {
+        public string Market { get; set; }
+
+        /// <summary>
+        /// 交易日期
+        /// </summary>
+        public DateTime TradeDate { get; set; }
+
+        /// <summary>
+        /// 證券代號
+        /// </summary>
+        public string Symbol { get; set; }
+
+        /// <summary>
+        /// 證券名稱
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// 融資增減
+        /// </summary>
+        public long MarginPurchaseSales { get; set; }
+
+        /// <summary>
+        /// 融資賣出
+        /// </summary>
+        public long MarginSales { get; set; }
+
+        /// <summary>
+        /// 融資現金償還
+        /// </summary>
+        public long MarginRedemption { get; set; }
+
+        /// <summary>
+        /// 融資餘額
+        /// </summary>
+        public long MarginBalance { get; set; }
+
+        /// <summary>
+        /// 融券買進
+        /// </summary>
+        public long ShortCovering { get; set; }
+
+        /// <summary>
+        /// 融券賣出
+        /// </summary>
+        public long ShortSales { get; set; }
+
+        /// <summary>
+        /// 融券現券償還
+        /// </summary>
+        public long ShortRedemption { get; set; }
+
+        /// <summary>
+        /// 融券餘額
+        /// </summary>
+        public long ShortBalance { get; set; }
+    }
+
+    public class TwseMarginHistory
+    {
+        public string Symbol { get; set; }
+        public string Name { get; set; }
+        public System.Collections.Generic.Dictionary<DateTime, TwseMarginRecord> RecordsByDate { get; set; } = new System.Collections.Generic.Dictionary<DateTime, TwseMarginRecord>();
     }
 }

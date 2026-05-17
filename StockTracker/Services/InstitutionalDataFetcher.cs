@@ -1,11 +1,11 @@
+using Newtonsoft.Json.Linq;
+using StockTracker.Models;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using StockTracker.Models;
 
 namespace StockTracker.Services
 {
@@ -20,30 +20,88 @@ namespace StockTracker.Services
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
         }
 
-        public async Task<List<TwseT86Record>> FetchAsync(DateTime date, IProgress<string> progress = null)
+        public async Task<(List<TwseT86Record> T86Records, List<TwseMarginRecord> MarginRecords)> FetchAsync(DateTime date, IProgress<string> progress = null)
         {
-            var records = new List<TwseT86Record>();
+            var t86Records = new List<TwseT86Record>();
+            var marginRecords = new List<TwseMarginRecord>();
 
             if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
             {
                 progress?.Report($"⚠️ {date:yyyyMMdd} 為假日，跳過");
-                return records;
+                return (t86Records, marginRecords);
             }
 
             var twseRecords = await GetTwseInstitutionalDataAsync(date);
             var tpexRecords = await GetTpexInstitutionalDataAsync(date);
 
-            records.AddRange(twseRecords);
-            records.AddRange(tpexRecords);
+            t86Records.AddRange(twseRecords);
+            t86Records.AddRange(tpexRecords);
 
-            if (records.Count == 0)
+            var marginTwse = await GetTwseMarginDataAsync(date);
+            marginRecords.AddRange(marginTwse);
+
+            if (t86Records.Count == 0 && marginRecords.Count == 0)
             {
                 progress?.Report($"⚠️ {date:yyyyMMdd} 無任何資料");
-                return records;
+                return (t86Records, marginRecords);
             }
 
             progress?.Report($"✅ {date:yyyyMMdd} 下載完成");
-            return records;
+            return (t86Records, marginRecords);
+        }
+
+        private async Task<List<TwseMarginRecord>> GetTwseMarginDataAsync(DateTime date)
+        {
+            var url = $"https://www.twse.com.tw/exchangeReport/TWTA1U?response=json&date={date:yyyyMMdd}";
+            try
+            {
+                var resp = await _httpClient.GetStringAsync(url);
+                var json = JObject.Parse(resp);
+
+                if (json["stat"]?.ToString() != "OK")
+                {
+                    return new List<TwseMarginRecord>();
+                }
+
+                var data = json["data"];
+                if (data == null) return new List<TwseMarginRecord>();
+
+                var records = new List<TwseMarginRecord>();
+
+                foreach (var item in data)
+                {
+                    var record = new TwseMarginRecord
+                    {
+                        TradeDate = date.Date,
+                        Market = "上市",
+                        Symbol = item[0]?.ToString().Trim(),
+                        Name = item[1]?.ToString().Trim(),
+                        MarginBalance = ParseLongWrapper(item[6]?.ToString()),
+                        MarginPurchaseSales = ParseLongWrapper(item[6]?.ToString()) - ParseLongWrapper(item[2]?.ToString()),
+                        MarginRedemption = ParseLongWrapper(item[4]?.ToString()),
+                        ShortCovering = ParseLongWrapper(item[8]?.ToString()),
+                        ShortSales = ParseLongWrapper(item[9]?.ToString()),
+                        ShortRedemption = ParseLongWrapper(item[10]?.ToString()),
+                        ShortBalance = ParseLongWrapper(item[11]?.ToString())
+                    };
+
+                    if (!string.IsNullOrWhiteSpace(record.Symbol))
+                    {
+                        records.Add(record);
+                    }
+                }
+
+                return records;
+            }
+            catch
+            {
+                return new List<TwseMarginRecord>();
+            }
+        }
+
+        private long ParseLongWrapper(string val)
+        {
+            return ParseLong(val);
         }
 
         private async Task<List<TwseT86Record>> GetTwseInstitutionalDataAsync(DateTime date)
@@ -54,7 +112,7 @@ namespace StockTracker.Services
                 var resp = await _httpClient.GetAsync(url);
                 resp.EnsureSuccessStatusCode();
                 var rawBytes = await resp.Content.ReadAsByteArrayAsync();
-                
+
                 // TWSE returns Big5
                 var enc = Encoding.GetEncoding("big5");
                 var text = enc.GetString(rawBytes);
@@ -100,11 +158,11 @@ namespace StockTracker.Services
                     Market = "上市"
                 };
 
-                for(int j=0; j<headerCols.Count; j++)
+                for (int j = 0; j < headerCols.Count; j++)
                 {
                     var colName = headerCols[j];
                     string val = cols[j];
-                    if(string.IsNullOrWhiteSpace(val)) val = "0";
+                    if (string.IsNullOrWhiteSpace(val)) val = "0";
 
                     if (colName == "證券代號") record.Symbol = val.Replace("=", "").Trim('"');
                     else if (colName == "證券名稱") record.Name = val.Trim('"');
@@ -144,13 +202,13 @@ namespace StockTracker.Services
 
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Referrer = new Uri("https://www.tpex.org.tw/");
-            
+
             try
             {
                 var resp = await _httpClient.SendAsync(req);
                 resp.EnsureSuccessStatusCode();
                 var rawBytes = await resp.Content.ReadAsByteArrayAsync();
-                
+
                 // TPEx uses ms950/cp950 which big5 will decode
                 var enc = Encoding.GetEncoding("big5");
                 var text = enc.GetString(rawBytes);
@@ -196,11 +254,11 @@ namespace StockTracker.Services
                     Market = "上櫃"
                 };
 
-                for(int j=0; j<headerCols.Count; j++)
+                for (int j = 0; j < headerCols.Count; j++)
                 {
                     var colName = headerCols[j];
                     string val = cols[j].Trim('=', '"');
-                    if(string.IsNullOrWhiteSpace(val)) val = "0";
+                    if (string.IsNullOrWhiteSpace(val)) val = "0";
 
                     if (colName == "代號") record.Symbol = val.Replace("=", "").Trim('"');
                     else if (colName == "名稱") record.Name = val.Trim('"');

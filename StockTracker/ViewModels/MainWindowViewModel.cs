@@ -4,17 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using StockTracker.Services;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Xml.Linq;
 
 namespace StockTracker.ViewModels
 {
@@ -22,7 +19,9 @@ namespace StockTracker.ViewModels
     {
         private readonly CapitalApiService _apiService;
         private readonly TwseT86Repository _twseT86Repository;
+        private readonly TwseMarginRepository _twseMarginRepository;
         private readonly List<TwseT86History> _twseT86Histories = new List<TwseT86History>();
+        private readonly List<TwseMarginHistory> _twseMarginHistories = new List<TwseMarginHistory>();
         private string _newSymbol;
         private string _systemMessage;
         private string _selectedGlobalKLineInterval = "日K";
@@ -40,6 +39,10 @@ namespace StockTracker.ViewModels
             _apiService = apiService;
             var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_t86.db");
             _twseT86Repository = new TwseT86Repository(dbPath);
+
+            var marginDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_margin.db");
+            _twseMarginRepository = new TwseMarginRepository(marginDbPath);
+
             Stocks = new ObservableCollection<StockViewModel>();
             TwseRankingItems = new ObservableCollection<TwseT86RankingItem>();
             SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
@@ -124,7 +127,7 @@ namespace StockTracker.ViewModels
         public ObservableCollection<StockViewModel> Stocks { get; }
         public CapitalApiService ApiService => _apiService;
         public IReadOnlyList<string> GlobalKLineIntervals { get; } = new[] { "日K", "5分K", "3分K", "1分K" };
-        public IReadOnlyList<string> GlobalKLineCount { get; } = new[] { "30","60", "120", "150","240","300" };
+        public IReadOnlyList<string> GlobalKLineCount { get; } = new[] { "30", "60", "120", "150", "240", "300" };
 
         public string SelectedGlobalKLineInterval
         {
@@ -194,7 +197,7 @@ namespace StockTracker.ViewModels
             set
             {
                 _newSymbol = value;
-                OnPropertyChanged(); 
+                OnPropertyChanged();
                 OnPropertyChanged(nameof(NewSymbolRelativeName));
             }
         }
@@ -203,7 +206,7 @@ namespace StockTracker.ViewModels
         {
             get
             {
-                var stockInfo =  _apiService.GetRelativeStockMessage(_newSymbol);
+                var stockInfo = _apiService.GetRelativeStockMessage(_newSymbol);
                 var isEmpty = stockInfo.bstrStockName == "";
                 return isEmpty ? "None" : stockInfo.bstrStockName;
             }
@@ -295,7 +298,7 @@ namespace StockTracker.ViewModels
         private async Task AddOrSubscribeAsync(List<string> symbolList, List<string> nameList)
         {
             int count = symbolList.Count;
-            if (count  != nameList.Count)
+            if (count != nameList.Count)
                 return;
 
             List<Tuple<string, string>> applyStocks = new List<Tuple<string, string>>();
@@ -311,7 +314,7 @@ namespace StockTracker.ViewModels
             string subScribeString = string.Join(",", from s in applyStocks select s.Item1);
             await _apiService.SubscribeAsync(subScribeString);
 
-            foreach(var eachStock in applyStocks)
+            foreach (var eachStock in applyStocks)
             {
                 var stockVm = new StockViewModel(eachStock.Item1, eachStock.Item2);
                 stockVm.SelectedKLineInterval = SelectedGlobalKLineInterval;
@@ -337,7 +340,8 @@ namespace StockTracker.ViewModels
                 var fetcher = new InstitutionalDataFetcher();
 
                 // Find existing dates from DB
-                var existingDates = _twseT86Repository.GetExistingDates();
+                var existingDatesT86 = _twseT86Repository.GetExistingDates();
+                var existingDatesMargin = _twseMarginRepository.GetExistingDates();
 
                 var progress = new Progress<string>(msg =>
                 {
@@ -346,15 +350,22 @@ namespace StockTracker.ViewModels
 
                 for (var date = startDt; date <= endDt; date = date.AddDays(1))
                 {
-                    if (existingDates.Contains(date.Date))
+                    bool hasT86 = existingDatesT86.Contains(date.Date);
+                    bool hasMargin = existingDatesMargin.Contains(date.Date);
+
+                    if (hasT86 && hasMargin)
                     {
                         continue;
                     }
 
                     UpdatingTwseText = $"下載 {date:yyyyMMdd} …";
-                    var records = await fetcher.FetchAsync(date, progress);
-                    if (records.Count > 0)
-                        await _twseT86Repository.UpsertAsync(records);
+                    var (t86Records, marginRecords) = await fetcher.FetchAsync(date, progress);
+
+                    if (t86Records.Count > 0)
+                        await _twseT86Repository.UpsertAsync(t86Records);
+
+                    if (marginRecords.Count > 0)
+                        await _twseMarginRepository.UpsertAsync(marginRecords);
 
                     await Task.Delay(2000); // 避免過快被鎖
                 }
@@ -394,6 +405,11 @@ namespace StockTracker.ViewModels
                 _twseT86Histories.Clear();
                 _twseT86Histories.AddRange(histories.Where(x => x != null));
 
+                UpdatingTwseText = "載入融資融券…";
+                var marginHistories = await _twseMarginRepository.LoadAllHistoriesAsync(dbProgress);
+                _twseMarginHistories.Clear();
+                _twseMarginHistories.AddRange(marginHistories.Where(x => x != null));
+
                 var latest = _twseT86Histories
                     .SelectMany(x => x.RecordsByDate.Values)
                     .OrderByDescending(x => x.TradeDate)
@@ -429,6 +445,8 @@ namespace StockTracker.ViewModels
                 .ThenBy(x => x.Symbol)
                 .ToList();
 
+            var marginRecords = _twseMarginHistories.SelectMany(x => x.RecordsByDate.Values).ToList();
+
             var prevDate = allRecords.Where(x => x.TradeDate.Date < latestDate).Select(x => x.TradeDate.Date).DefaultIfEmpty(DateTime.MinValue).Max();
             var prevRanks = allRecords
                 .Where(x => prevDate != DateTime.MinValue && x.TradeDate.Date == prevDate)
@@ -445,6 +463,15 @@ namespace StockTracker.ViewModels
                 var rank = i + 1;
                 var rankDelta = hasPrev ? prevRank - rank : 0;
 
+                var marginRecord = marginRecords.FirstOrDefault(x => x.TradeDate.Date == latestDate && string.Equals(x.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase));
+                var prevMarginRecord = prevDate != DateTime.MinValue
+                    ? marginRecords.FirstOrDefault(x => x.TradeDate.Date == prevDate && string.Equals(x.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase))
+                    : null;
+
+                var marginNet = marginRecord != null ? marginRecord.MarginPurchaseSales : 0;
+                var prevMarginBal = prevMarginRecord != null ? prevMarginRecord.MarginBalance : 0;
+                var marginBal = marginRecord != null ? marginRecord.MarginBalance : 0;
+
                 TwseRankingItems.Add(new TwseT86RankingItem
                 {
                     Rank = rank,
@@ -452,6 +479,9 @@ namespace StockTracker.ViewModels
                     Name = record.Name,
                     Market = record.Market ?? string.Empty,
                     ThreeMajorNet = record.ThreeMajorNet,
+                    MarginNet = marginNet,
+                    MarginNetText = marginNet > 0 ? $"▲{marginNet:N0}" : marginNet < 0 ? $"▼{Math.Abs(marginNet):N0}" : "-",
+                    MarginNetBrush = marginNet > 0 ? Brushes.IndianRed : marginNet < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
                     RankDeltaText = !hasPrev ? "NEW" : rankDelta > 0 ? $"▲{rankDelta}" : rankDelta < 0 ? $"▼{Math.Abs(rankDelta)}" : "-",
                     RankDeltaBrush = !hasPrev ? Brushes.SkyBlue : rankDelta > 0 ? Brushes.IndianRed : rankDelta < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
                     TooltipText =
@@ -460,7 +490,10 @@ namespace StockTracker.ViewModels
                         $"\n外資 買:{record.ForeignBuy:N0} 賣:{record.ForeignSell:N0} 淨:{record.ForeignNet:N0}" +
                         $"\n投信 買:{record.InvestmentTrustBuy:N0} 賣:{record.InvestmentTrustSell:N0} 淨:{record.InvestmentTrustNet:N0}" +
                         $"\n自營商 淨:{record.DealerNet:N0} (自買:{record.DealerSelfNet:N0} / 避險:{record.DealerHedgeNet:N0})" +
-                        $"\n三大法人買賣超: {record.ThreeMajorNet:N0}"
+                        $"\n三大法人買賣超: {record.ThreeMajorNet:N0}" +
+                        $"\n前日融資餘額: {prevMarginBal:N0}" +
+                        $"\n今日融資變化: {marginNet:N0}" +
+                        $"\n今日融資餘額: {marginBal:N0}"
                 });
             }
 
@@ -552,6 +585,9 @@ namespace StockTracker.ViewModels
             public string Name { get; set; }
             public string Market { get; set; }
             public long ThreeMajorNet { get; set; }
+            public long MarginNet { get; set; }
+            public string MarginNetText { get; set; }
+            public Brush MarginNetBrush { get; set; }
             public string RankDeltaText { get; set; }
             public Brush RankDeltaBrush { get; set; }
             public string TooltipText { get; set; }

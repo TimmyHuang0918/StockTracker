@@ -1,10 +1,10 @@
+using StockTracker.Models;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using StockTracker.Models;
 
 namespace StockTracker.Services
 {
@@ -74,7 +74,8 @@ namespace StockTracker.Services
                         while (rdr.Read())
                             if (DateTime.TryParse(rdr.GetString(0), out var d))
                                 result.Add(d.Date);
-            }   }
+                }
+            }
             return result;
         }
 
@@ -109,17 +110,17 @@ namespace StockTracker.Services
                             foreach (var r in records)
                             {
                                 cmd.Parameters.Clear();
-                                cmd.Parameters.AddWithValue("@td",  r.TradeDate.ToString("yyyy-MM-dd"));
+                                cmd.Parameters.AddWithValue("@td", r.TradeDate.ToString("yyyy-MM-dd"));
                                 cmd.Parameters.AddWithValue("@mkt", r.Market ?? string.Empty);
                                 cmd.Parameters.AddWithValue("@sym", r.Symbol ?? string.Empty);
-                                cmd.Parameters.AddWithValue("@nm",  r.Name   ?? string.Empty);
-                                cmd.Parameters.AddWithValue("@fb",  r.ForeignBuy);
-                                cmd.Parameters.AddWithValue("@fs",  r.ForeignSell);
-                                cmd.Parameters.AddWithValue("@fn",  r.ForeignNet);
-                                cmd.Parameters.AddWithValue("@ib",  r.InvestmentTrustBuy);
-                                cmd.Parameters.AddWithValue("@is",  r.InvestmentTrustSell);
-                                cmd.Parameters.AddWithValue("@in",  r.InvestmentTrustNet);
-                                cmd.Parameters.AddWithValue("@dn",  r.DealerNet);
+                                cmd.Parameters.AddWithValue("@nm", r.Name ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@fb", r.ForeignBuy);
+                                cmd.Parameters.AddWithValue("@fs", r.ForeignSell);
+                                cmd.Parameters.AddWithValue("@fn", r.ForeignNet);
+                                cmd.Parameters.AddWithValue("@ib", r.InvestmentTrustBuy);
+                                cmd.Parameters.AddWithValue("@is", r.InvestmentTrustSell);
+                                cmd.Parameters.AddWithValue("@in", r.InvestmentTrustNet);
+                                cmd.Parameters.AddWithValue("@dn", r.DealerNet);
                                 cmd.Parameters.AddWithValue("@dsb", r.DealerSelfBuy);
                                 cmd.Parameters.AddWithValue("@dss", r.DealerSelfSell);
                                 cmd.Parameters.AddWithValue("@dsn", r.DealerSelfNet);
@@ -173,24 +174,24 @@ ORDER BY Symbol, TradeDate";
                             {
                                 records.Add(new TwseT86Record
                                 {
-                                    TradeDate          = DateTime.Parse(rdr.GetString(0)),
-                                    Market             = rdr.GetString(1),
-                                    Symbol             = rdr.GetString(2),
-                                    Name               = rdr.GetString(3),
-                                    ForeignBuy         = rdr.GetInt64(4),
-                                    ForeignSell        = rdr.GetInt64(5),
-                                    ForeignNet         = rdr.GetInt64(6),
-                                    InvestmentTrustBuy  = rdr.GetInt64(7),
+                                    TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                    Market = rdr.GetString(1),
+                                    Symbol = rdr.GetString(2),
+                                    Name = rdr.GetString(3),
+                                    ForeignBuy = rdr.GetInt64(4),
+                                    ForeignSell = rdr.GetInt64(5),
+                                    ForeignNet = rdr.GetInt64(6),
+                                    InvestmentTrustBuy = rdr.GetInt64(7),
                                     InvestmentTrustSell = rdr.GetInt64(8),
-                                    InvestmentTrustNet  = rdr.GetInt64(9),
-                                    DealerNet          = rdr.GetInt64(10),
-                                    DealerSelfBuy      = rdr.GetInt64(11),
-                                    DealerSelfSell     = rdr.GetInt64(12),
-                                    DealerSelfNet      = rdr.GetInt64(13),
-                                    DealerHedgeBuy     = rdr.GetInt64(14),
-                                    DealerHedgeSell    = rdr.GetInt64(15),
-                                    DealerHedgeNet     = rdr.GetInt64(16),
-                                    ThreeMajorNet      = rdr.GetInt64(17)
+                                    InvestmentTrustNet = rdr.GetInt64(9),
+                                    DealerNet = rdr.GetInt64(10),
+                                    DealerSelfBuy = rdr.GetInt64(11),
+                                    DealerSelfSell = rdr.GetInt64(12),
+                                    DealerSelfNet = rdr.GetInt64(13),
+                                    DealerHedgeBuy = rdr.GetInt64(14),
+                                    DealerHedgeSell = rdr.GetInt64(15),
+                                    DealerHedgeNet = rdr.GetInt64(16),
+                                    ThreeMajorNet = rdr.GetInt64(17)
                                 });
                                 read++;
                                 if (read % 500 == 0)
@@ -206,7 +207,7 @@ ORDER BY Symbol, TradeDate";
                     .Select(g => new TwseT86History
                     {
                         Symbol = g.Key,
-                        Name   = g.Select(x => x.Name)
+                        Name = g.Select(x => x.Name)
                                   .LastOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty,
                         RecordsByDate = g
                             .OrderBy(x => x.TradeDate)
@@ -245,24 +246,24 @@ WHERE TradeDate = @td";
                             while (rdr.Read())
                                 records.Add(new TwseT86Record
                                 {
-                                    TradeDate           = DateTime.Parse(rdr.GetString(0)),
-                                    Market              = rdr.GetString(1),
-                                    Symbol              = rdr.GetString(2),
-                                    Name                = rdr.GetString(3),
-                                    ForeignBuy          = rdr.GetInt64(4),
-                                    ForeignSell         = rdr.GetInt64(5),
-                                    ForeignNet          = rdr.GetInt64(6),
-                                    InvestmentTrustBuy  = rdr.GetInt64(7),
+                                    TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                    Market = rdr.GetString(1),
+                                    Symbol = rdr.GetString(2),
+                                    Name = rdr.GetString(3),
+                                    ForeignBuy = rdr.GetInt64(4),
+                                    ForeignSell = rdr.GetInt64(5),
+                                    ForeignNet = rdr.GetInt64(6),
+                                    InvestmentTrustBuy = rdr.GetInt64(7),
                                     InvestmentTrustSell = rdr.GetInt64(8),
-                                    InvestmentTrustNet  = rdr.GetInt64(9),
-                                    DealerNet           = rdr.GetInt64(10),
-                                    DealerSelfBuy       = rdr.GetInt64(11),
-                                    DealerSelfSell      = rdr.GetInt64(12),
-                                    DealerSelfNet       = rdr.GetInt64(13),
-                                    DealerHedgeBuy      = rdr.GetInt64(14),
-                                    DealerHedgeSell     = rdr.GetInt64(15),
-                                    DealerHedgeNet      = rdr.GetInt64(16),
-                                    ThreeMajorNet       = rdr.GetInt64(17)
+                                    InvestmentTrustNet = rdr.GetInt64(9),
+                                    DealerNet = rdr.GetInt64(10),
+                                    DealerSelfBuy = rdr.GetInt64(11),
+                                    DealerSelfSell = rdr.GetInt64(12),
+                                    DealerSelfNet = rdr.GetInt64(13),
+                                    DealerHedgeBuy = rdr.GetInt64(14),
+                                    DealerHedgeSell = rdr.GetInt64(15),
+                                    DealerHedgeNet = rdr.GetInt64(16),
+                                    ThreeMajorNet = rdr.GetInt64(17)
                                 });
                     }
                 }

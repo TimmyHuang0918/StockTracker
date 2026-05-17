@@ -4,7 +4,6 @@ using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -195,7 +194,7 @@ namespace StockTracker.ViewModels
                         }
                     }
                 }
-                
+
                 if (loaded.Count > 0)
                 {
                     foreach (var s in loaded)
@@ -286,7 +285,7 @@ namespace StockTracker.ViewModels
             {
                 ProgressText = "正在獲取代號列表...";
                 ProgressValue = 0;
-                
+
                 var results = new List<RankedStock>();
                 var distinctSymbols = new List<string>();
 
@@ -303,141 +302,141 @@ namespace StockTracker.ViewModels
 
                 ProgressText = $"找到 {distinctSymbols.Count} 檔 4 碼股票，開始分析...";
 
-		int totalChecked = 0;
+                int totalChecked = 0;
 
-		MainWindow.BuildDateRangeForBars("日K", 300, out var startDate, out var endDate);
+                MainWindow.BuildDateRangeForBars("日K", 300, out var startDate, out var endDate);
 
-		int kLineCount = -1;
+                int kLineCount = -1;
 
-		// 第一階段：單緒獲取所有K線資料
-		var symbolDataMap = new Dictionary<string, (string Name, List<CandleData> Candles)>();
+                // 第一階段：單緒獲取所有K線資料
+                var symbolDataMap = new Dictionary<string, (string Name, List<CandleData> Candles)>();
 
-		foreach (var symbol in distinctSymbols)
-		{
-		    var stockInfo = _apiService.GetRelativeStockMessage(symbol);
+                foreach (var symbol in distinctSymbols)
+                {
+                    var stockInfo = _apiService.GetRelativeStockMessage(symbol);
 
-		    if (!string.IsNullOrEmpty(stockInfo.bstrStockName))
-		    {
-			var candles = new List<CandleData>();
-			Action<string, CandleData> onKLineReceived = null;
+                    if (!string.IsNullOrEmpty(stockInfo.bstrStockName))
+                    {
+                        var candles = new List<CandleData>();
+                        Action<string, CandleData> onKLineReceived = null;
 
-			onKLineReceived = (incomingSymbol, candle) => 
-			{
-			    if (incomingSymbol == symbol)
-			    {
-				candles.Add(candle);
-			    }
-			};
+                        onKLineReceived = (incomingSymbol, candle) =>
+                        {
+                            if (incomingSymbol == symbol)
+                            {
+                                candles.Add(candle);
+                            }
+                        };
 
-			_apiService.KLineDataReceived += onKLineReceived;
+                        _apiService.KLineDataReceived += onKLineReceived;
 
-			_apiService.RequestKLineByDate(symbol, 4, 1, 0, startDate, endDate, 0);
+                        _apiService.RequestKLineByDate(symbol, 4, 1, 0, startDate, endDate, 0);
 
-			if(kLineCount == -1)
-			{
-			    await Task.Delay(2000); 
-			    kLineCount = candles.Count;
-			}
-			else
-			{
-			    var start = DateTime.UtcNow;
-			    while (kLineCount >= candles.Count)
-			    {
-				await Task.Delay(50);
-				if ((DateTime.UtcNow - start).TotalSeconds > 2) 
-				{
-				    kLineCount = Math.Min(kLineCount, candles.Count);
-				    break;
-				}
-			    }
-			}
+                        if (kLineCount == -1)
+                        {
+                            await Task.Delay(2000);
+                            kLineCount = candles.Count;
+                        }
+                        else
+                        {
+                            var start = DateTime.UtcNow;
+                            while (kLineCount >= candles.Count)
+                            {
+                                await Task.Delay(50);
+                                if ((DateTime.UtcNow - start).TotalSeconds > 2)
+                                {
+                                    kLineCount = Math.Min(kLineCount, candles.Count);
+                                    break;
+                                }
+                            }
+                        }
 
-			_apiService.KLineDataReceived -= onKLineReceived;
-			symbolDataMap[symbol] = (stockInfo.bstrStockName, candles);
-		    }
+                        _apiService.KLineDataReceived -= onKLineReceived;
+                        symbolDataMap[symbol] = (stockInfo.bstrStockName, candles);
+                    }
 
-		    totalChecked++;
-		    ProgressValue = ((double)totalChecked / distinctSymbols.Count) * 50; // 下載佔 50%
-		    ProgressText = $"下載K線資料至第 {totalChecked} 檔股票，共 {distinctSymbols.Count} 檔 4 碼股票";
+                    totalChecked++;
+                    ProgressValue = ((double)totalChecked / distinctSymbols.Count) * 50; // 下載佔 50%
+                    ProgressText = $"下載K線資料至第 {totalChecked} 檔股票，共 {distinctSymbols.Count} 檔 4 碼股票";
 
-		    await System.Windows.Threading.Dispatcher.Yield();
-		}
+                    await System.Windows.Threading.Dispatcher.Yield();
+                }
 
-		// 第二階段：多執行緒計算推薦指標
-		ProgressText = "分析K線資料計算分數中...";
-		await System.Windows.Threading.Dispatcher.Yield();
+                // 第二階段：多執行緒計算推薦指標
+                ProgressText = "分析K線資料計算分數中...";
+                await System.Windows.Threading.Dispatcher.Yield();
 
-		int analyzeChecked = 0;
-		var lockObj = new object();
+                int analyzeChecked = 0;
+                var lockObj = new object();
 
-		await Task.Run(() => 
-		{
-		    Parallel.ForEach(symbolDataMap, kvp => 
-		    {
-			var symbol = kvp.Key;
-			var name = kvp.Value.Name;
-			var candles = kvp.Value.Candles;
+                await Task.Run(() =>
+                {
+                    Parallel.ForEach(symbolDataMap, kvp =>
+                    {
+                        var symbol = kvp.Key;
+                        var name = kvp.Value.Name;
+                        var candles = kvp.Value.Candles;
 
-			if (candles.Any())
-			{
-			    candles.Sort((a,b) => a.Time.CompareTo(b.Time));
+                        if (candles.Any())
+                        {
+                            candles.Sort((a, b) => a.Time.CompareTo(b.Time));
 
-			    var dummyVm = new StockViewModel(symbol, name);
-			    foreach(var c in candles)
-			    {
-				dummyVm.UpdateFromKLine(c);
-			    }
+                            var dummyVm = new StockViewModel(symbol, name);
+                            foreach (var c in candles)
+                            {
+                                dummyVm.UpdateFromKLine(c);
+                            }
 
-			    TwseT86History t86History;
-			    lock(lockObj)
-			    {
-				t86History = _mainViewModel.TwseT86Histories.FirstOrDefault(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
-			    }
+                            TwseT86History t86History;
+                            lock (lockObj)
+                            {
+                                t86History = _mainViewModel.TwseT86Histories.FirstOrDefault(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+                            }
 
-			    var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
-				dummyVm.GetPublicCandles(), 
-				(double)dummyVm.LatestPrice,
-				(double?)dummyVm.ChangePercent,
-				(double)candles[Math.Max(0, candles.Count - 2)].Close,
-				new TwseT86History 
-				{ 
-				    Symbol = symbol, 
-				    Name = name, 
-				    RecordsByDate = t86History?.RecordsByDate ?? new Dictionary<DateTime, TwseT86Record>()
-				},
-				candles.Last().Time);
+                            var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                                dummyVm.GetPublicCandles(),
+                                (double)dummyVm.LatestPrice,
+                                (double?)dummyVm.ChangePercent,
+                                (double)candles[Math.Max(0, candles.Count - 2)].Close,
+                                new TwseT86History
+                                {
+                                    Symbol = symbol,
+                                    Name = name,
+                                    RecordsByDate = t86History?.RecordsByDate ?? new Dictionary<DateTime, TwseT86Record>()
+                                },
+                                candles.Last().Time);
 
-			    long latestNet = 0;
-			    if (t86History != null && t86History.RecordsByDate.Any())
-			    {
-				latestNet = t86History.RecordsByDate.OrderByDescending(r => r.Key).First().Value.ThreeMajorNet;
-			    }
+                            long latestNet = 0;
+                            if (t86History != null && t86History.RecordsByDate.Any())
+                            {
+                                latestNet = t86History.RecordsByDate.OrderByDescending(r => r.Key).First().Value.ThreeMajorNet;
+                            }
 
-			    lock (lockObj)
-			    {
-				results.Add(new RankedStock
-				{
-				    Symbol = symbol,
-				    Name = name,
-				    LatestPrice = dummyVm.LatestPrice,
-				    ChangePercent = dummyVm.ChangePercent,
-				    Score = recommendation.Score,
-				    ThreeMajorNet = latestNet
-				});
+                            lock (lockObj)
+                            {
+                                results.Add(new RankedStock
+                                {
+                                    Symbol = symbol,
+                                    Name = name,
+                                    LatestPrice = dummyVm.LatestPrice,
+                                    ChangePercent = dummyVm.ChangePercent,
+                                    Score = recommendation.Score,
+                                    ThreeMajorNet = latestNet
+                                });
 
-				analyzeChecked++;
-				ProgressValue = 50 + (((double)analyzeChecked / symbolDataMap.Count) * 50);
-				if (analyzeChecked % 50 == 0) // Reduce update frequency to improve performance
-				{
-				    System.Windows.Application.Current.Dispatcher.Invoke(() => 
-				    {
-					ProgressText = $"分析K線資料計算分數中... ({analyzeChecked}/{symbolDataMap.Count})";
-				    });
-				}
-			    }
-			}
-		    });
-		});
+                                analyzeChecked++;
+                                ProgressValue = 50 + (((double)analyzeChecked / symbolDataMap.Count) * 50);
+                                if (analyzeChecked % 50 == 0) // Reduce update frequency to improve performance
+                                {
+                                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                                    {
+                                        ProgressText = $"分析K線資料計算分數中... ({analyzeChecked}/{symbolDataMap.Count})";
+                                    });
+                                }
+                            }
+                        }
+                    });
+                });
 
                 // 依 Score 由高至低排序
                 results = results.OrderByDescending(r => r.Score).ToList();

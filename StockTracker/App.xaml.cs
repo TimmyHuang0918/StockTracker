@@ -1,5 +1,5 @@
-﻿using System.Windows;
 using StockManager.Services;
+using System.Windows;
 
 namespace StockTracker
 {

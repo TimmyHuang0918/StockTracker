@@ -221,8 +221,10 @@
     </Compile>
     <Compile Include="Services\CapitalApiService.cs" />
     <Compile Include="Services\InstitutionalDataFetcher.cs" />
+    <Compile Include="Services\MarginDataFetcher.cs" />
     <Compile Include="Services\SKAPI.cs" />
     <Compile Include="Services\TradingRecommendationLibrary.cs" />
+    <Compile Include="Services\TwseMarginRepository.cs" />
     <Compile Include="Services\TwseT86Repository.cs" />
     <Compile Include="StockDetailWindow.xaml.cs">
       <DependentUpon>StockDetailWindow.xaml</DependentUpon>

@@ -1,4 +1,4 @@
-﻿<Window x:Class="StockTracker.MainWindow"
+<Window x:Class="StockTracker.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -371,17 +371,19 @@
                         <!-- 表頭 -->
                         <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="48"/>
-                                <ColumnDefinition Width="100"/>
-                                <ColumnDefinition Width="72"/>
-                                <ColumnDefinition Width="50"/>
+                                <ColumnDefinition Width="30"/>
+                                <ColumnDefinition Width="45"/>
+                                <ColumnDefinition Width="70"/>
+                                <ColumnDefinition Width="65"/>
+                                <ColumnDefinition Width="75"/>
+                                <ColumnDefinition Width="55"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="#"    Foreground="{DynamicResource MutedForegroundBrush}"/>
                             <TextBlock Grid.Column="1" Text="代號"  Foreground="{DynamicResource MutedForegroundBrush}"/>
                             <TextBlock Grid.Column="2" Text="名稱"  Foreground="{DynamicResource MutedForegroundBrush}"/>
                             <TextBlock Grid.Column="3" Text="買賣超" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Right"/>
-                            <TextBlock Grid.Column="4" Text="升降"  Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="資增減" Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="5" Text="升降"  Foreground="{DynamicResource MutedForegroundBrush}" TextAlignment="Center"/>
                         </Grid>
                         <ListBox ItemsSource="{Binding FilteredTwseRankingItems}" BorderThickness="0" Background="{DynamicResource SurfaceAltBrush}"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -389,17 +391,19 @@
                                 <DataTemplate>
                                     <Grid Margin="0,1" ToolTip="{Binding TooltipText}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="40"/>
-                                            <ColumnDefinition Width="48"/>
-                                            <ColumnDefinition Width="100"/>
-                                            <ColumnDefinition Width="72"/>
-                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="30"/>
+                                            <ColumnDefinition Width="45"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="65"/>
+                                            <ColumnDefinition Width="75"/>
+                                            <ColumnDefinition Width="55"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Rank}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Symbol}"/>
                                         <TextBlock Grid.Column="2" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Grid.Column="3" Text="{Binding ThreeMajorNet, StringFormat=N0}" TextAlignment="Right"/>
-                                        <TextBlock Grid.Column="4" Text="{Binding RankDeltaText}" Foreground="{Binding RankDeltaBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding MarginNetText}" Foreground="{Binding MarginNetBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                        <TextBlock Grid.Column="5" Text="{Binding RankDeltaText}" Foreground="{Binding RankDeltaBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
