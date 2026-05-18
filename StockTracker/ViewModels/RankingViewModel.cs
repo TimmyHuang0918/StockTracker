@@ -305,6 +305,8 @@ namespace StockTracker.ViewModels
                 int totalChecked = 0;
 
                 MainWindow.BuildDateRangeForBars("日K", 300, out var startDate, out var endDate);
+                DateTime scanHistoryStartDate;
+                DateTime.TryParseExact(startDate, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out scanHistoryStartDate);
 
                 int kLineCount = -1;
 
@@ -368,6 +370,7 @@ namespace StockTracker.ViewModels
 
                 int analyzeChecked = 0;
                 var lockObj = new object();
+                var t86HistoryMap = await _mainViewModel.LoadAllTwseT86HistoriesForScanAsync(scanHistoryStartDate);
 
                 await Task.Run(() =>
                 {
@@ -388,10 +391,7 @@ namespace StockTracker.ViewModels
                             }
 
                             TwseT86History t86History;
-                            lock (lockObj)
-                            {
-                                t86History = _mainViewModel.TwseT86Histories.FirstOrDefault(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
-                            }
+                            t86HistoryMap.TryGetValue(symbol, out t86History);
 
                             var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
                                 dummyVm.GetPublicCandles(),
@@ -440,6 +440,10 @@ namespace StockTracker.ViewModels
 
                 // 依 Score 由高至低排序
                 results = results.OrderByDescending(r => r.Score).ToList();
+
+                symbolDataMap.Clear();
+                t86HistoryMap = null;
+                distinctSymbols.Clear();
 
                 RankedStocks.Clear();
                 for (int i = 0; i < results.Count; i++)

@@ -25,7 +25,6 @@ namespace StockTracker.ViewModels
         private readonly MarginMetricCalculator _marginMetricCalculator;
         private readonly List<TwseT86History> _twseT86Histories = new List<TwseT86History>();
         private readonly List<TwseMarginHistory> _twseMarginHistories = new List<TwseMarginHistory>();
-        private readonly List<DailyCloseHistory> _dailyCloseHistories = new List<DailyCloseHistory>();
         private readonly List<TwseMarginMetricHistory> _twseMarginMetricHistories = new List<TwseMarginMetricHistory>();
         private string _newSymbol;
         private string _systemMessage;
@@ -38,6 +37,9 @@ namespace StockTracker.ViewModels
         private string _updatingTwseText;
         private string _rankingFilter = "全部顯示";
         private ICollectionView _filteredTwseRankingItems;
+        private int _trackedHistorySymbolCount;
+        private int _trackedHistoryRecordCount;
+        private int _rankingDisplayCount;
         private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
         public MainWindowViewModel(CapitalApiService apiService)
         {
@@ -96,6 +98,41 @@ namespace StockTracker.ViewModels
         }
 
         public string UpdateTwseHistoryButtonText => IsUpdatingTwseHistory ? "更新中…" : "更新資料";
+
+        public int TrackedHistorySymbolCount
+        {
+            get => _trackedHistorySymbolCount;
+            private set
+            {
+                _trackedHistorySymbolCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CacheStatusText));
+            }
+        }
+
+        public int TrackedHistoryRecordCount
+        {
+            get => _trackedHistoryRecordCount;
+            private set
+            {
+                _trackedHistoryRecordCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CacheStatusText));
+            }
+        }
+
+        public int RankingDisplayCount
+        {
+            get => _rankingDisplayCount;
+            private set
+            {
+                _rankingDisplayCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CacheStatusText));
+            }
+        }
+
+        public string CacheStatusText => $"暫存追蹤股票: {TrackedHistorySymbolCount:N0} 檔 / {TrackedHistoryRecordCount:N0} 筆，排行顯示: {RankingDisplayCount:N0} 筆";
 
         public ObservableCollection<TwseT86RankingItem> TwseRankingItems { get; }
 
@@ -170,8 +207,6 @@ namespace StockTracker.ViewModels
                 OnPropertyChanged();
             }
         }
-
-        public IReadOnlyList<TwseT86History> TwseT86Histories => _twseT86Histories;
 
         public string SelectedGlobalKLineCount
         {
@@ -258,7 +293,7 @@ namespace StockTracker.ViewModels
             vm?.UpdateFromKLine(candle);
         }
 
-        private async Task SubscribeSymbolAsync()
+        public async Task SubscribeSymbolAsync()
         {
             var symbol = NewSymbol?.Trim();
             if (string.IsNullOrWhiteSpace(symbol))
@@ -299,11 +334,13 @@ namespace StockTracker.ViewModels
             }
 
             await _apiService.SubscribeAsync(symbol);
+            await EnsureTrackedHistoryLoadedAsync(symbol);
             var stockVm = new StockViewModel(symbol, name);
             stockVm.SelectedKLineInterval = SelectedGlobalKLineInterval;
             ApplyTwseRecordsToStock(stockVm);
             stockVm.SignalTriggered += StockVmOnSignalTriggered;
             Stocks.Add(stockVm);
+            UpdateCacheStatus();
             SaveSubscriptions();
         }
 
@@ -324,16 +361,27 @@ namespace StockTracker.ViewModels
             }
 
             string subScribeString = string.Join(",", from s in applyStocks select s.Item1);
-            await _apiService.SubscribeAsync(subScribeString);
 
             foreach (var eachStock in applyStocks)
             {
                 var stockVm = new StockViewModel(eachStock.Item1, eachStock.Item2);
                 stockVm.SelectedKLineInterval = SelectedGlobalKLineInterval;
-                ApplyTwseRecordsToStock(stockVm);
                 stockVm.SignalTriggered += StockVmOnSignalTriggered;
                 Stocks.Add(stockVm);
             }
+
+            await _apiService.SubscribeAsync(subScribeString);
+
+            foreach (var eachStock in applyStocks)
+            {
+                await EnsureTrackedHistoryLoadedAsync(eachStock.Item1);
+                var stockVm = Stocks.FirstOrDefault(x => string.Equals(x.Symbol, eachStock.Item1, StringComparison.OrdinalIgnoreCase));
+                if (stockVm != null)
+                {
+                    ApplyTwseRecordsToStock(stockVm);
+                }
+            }
+            UpdateCacheStatus();
             SaveSubscriptions();
         }
 
@@ -416,6 +464,14 @@ namespace StockTracker.ViewModels
             UpdatingTwseText = "讀取資料庫…";
             try
             {
+                var trackedSymbols = LoadSavedSubscriptions();
+                if (trackedSymbols.Count == 0)
+                {
+                    trackedSymbols.Add("2330");
+                    trackedSymbols.Add("2317");
+                    trackedSymbols.Add("0050");
+                }
+
                 // 從 SQLite 讀取全量資料（有進度回報）
                 var dbProgress = new Progress<(int current, int total)>(p =>
                     Application.Current.Dispatcher.Invoke(() =>
@@ -423,41 +479,34 @@ namespace StockTracker.ViewModels
                             ? $"載入中 {p.current:N0} / {p.total:N0}"
                             : "載入中…"));
 
-                var histories = await _twseT86Repository.LoadAllHistoriesAsync(dbProgress);
-                _twseT86Histories.Clear();
-                _twseT86Histories.AddRange(histories.Where(x => x != null));
+                UpdatingTwseText = "載入三大法人排行…";
+                await BuildTwseRankingListAsync();
 
-                UpdatingTwseText = "載入融資融券…";
-                var marginHistories = await _twseMarginRepository.LoadAllHistoriesAsync(dbProgress);
-                _twseMarginHistories.Clear();
-                _twseMarginHistories.AddRange(marginHistories.Where(x => x != null));
+                UpdatingTwseText = "載入已追蹤股票三大法人資料…";
+                var histories = await _twseT86Repository.LoadHistoriesBySymbolsAsync(trackedSymbols);
+                ReplaceTrackedHistories(_twseT86Histories, histories);
 
-                UpdatingTwseText = "載入日收盤價…";
-                var dailyPriceHistories = await _dailyPriceRepository.LoadAllHistoriesAsync(dbProgress);
-                _dailyCloseHistories.Clear();
-                _dailyCloseHistories.AddRange(dailyPriceHistories.Where(x => x != null));
+                UpdatingTwseText = "載入已追蹤股票融資融券…";
+                var marginHistories = await _twseMarginRepository.LoadHistoriesBySymbolsAsync(trackedSymbols);
+                ReplaceTrackedHistories(_twseMarginHistories, marginHistories);
+
+                UpdatingTwseText = rebuildMarginMetrics ? "載入已追蹤股票日收盤價…" : UpdatingTwseText;
 
                 if (rebuildMarginMetrics)
                 {
                     UpdatingTwseText = "計算融資維持率…";
-                    RebuildMarginMetricHistories();
+                    var dailyPriceHistories = await _dailyPriceRepository.LoadHistoriesBySymbolsAsync(trackedSymbols);
+                    RebuildMarginMetricHistories(marginHistories, dailyPriceHistories);
                     await _twseMarginMetricRepository.ReplaceAllAsync(_twseMarginMetricHistories);
                 }
                 else
                 {
-                    UpdatingTwseText = "載入融資維持率…";
-                    var marginMetricHistories = await _twseMarginMetricRepository.LoadAllHistoriesAsync(dbProgress);
-                    _twseMarginMetricHistories.Clear();
-                    _twseMarginMetricHistories.AddRange(marginMetricHistories.Where(x => x != null));
+                    UpdatingTwseText = "載入已追蹤股票融資維持率…";
+                    var marginMetricHistories = await _twseMarginMetricRepository.LoadHistoriesBySymbolsAsync(trackedSymbols);
+                    ReplaceTrackedHistories(_twseMarginMetricHistories, marginMetricHistories);
                 }
 
-                var latest = _twseT86Histories
-                    .SelectMany(x => x.RecordsByDate.Values)
-                    .OrderByDescending(x => x.TradeDate)
-                    .ThenBy(x => x.Symbol)
-                    .FirstOrDefault();
-                LatestTwseT86Record = latest;
-                BuildTwseRankingList();
+                UpdateCacheStatus();
             }
             finally
             {
@@ -466,32 +515,48 @@ namespace StockTracker.ViewModels
             }
         }
 
-        private void BuildTwseRankingList()
+        private async Task BuildTwseRankingListAsync()
         {
             TwseRankingItems.Clear();
-            var allRecords = _twseT86Histories.SelectMany(x => x.RecordsByDate.Values).ToList();
+            var latestDates = _twseT86Repository.GetLatestTradeDates(2);
+            if (latestDates.Count == 0)
+            {
+                LatestRankingDate = DateTime.MinValue;
+                LatestTwseT86Record = null;
+                return;
+            }
+
+            var latestDate = latestDates[0];
+            var prevDate = latestDates.Count > 1 ? latestDates[1] : DateTime.MinValue;
+            LatestRankingDate = latestDate;
+            OnPropertyChanged(nameof(LatestRankingDate));
+
+            var latestRecords = (await _twseT86Repository.LoadByDateAsync(latestDate)).ToList();
+            LatestTwseT86Record = latestRecords.OrderBy(x => x.Symbol).FirstOrDefault();
+
+            var previousRecords = prevDate == DateTime.MinValue
+                ? new List<TwseT86Record>()
+                : (await _twseT86Repository.LoadByDateAsync(prevDate)).ToList();
+
+            var allRecords = latestRecords;
             if (allRecords.Count == 0)
             {
                 LatestRankingDate = DateTime.MinValue;
                 return;
             }
 
-            var latestDate = allRecords.Max(x => x.TradeDate.Date);
-            LatestRankingDate = latestDate;
-            OnPropertyChanged(nameof(LatestRankingDate));
-
-            var latestRecords = allRecords
-                .Where(x => x.TradeDate.Date == latestDate)
+            latestRecords = latestRecords
                 .OrderByDescending(x => x.ThreeMajorNet)
                 .ThenBy(x => x.Symbol)
                 .ToList();
 
-            var marginRecords = _twseMarginHistories.SelectMany(x => x.RecordsByDate.Values).ToList();
-            var marginMetricRecords = _twseMarginMetricHistories.SelectMany(x => x.RecordsByDate.Values).ToList();
+            var marginRecords = await _twseMarginRepository.LoadByDateAsync(latestDate);
+            var marginMetricRecords = await _twseMarginMetricRepository.LoadByDateAsync(latestDate);
+            var prevMarginRecords = prevDate == DateTime.MinValue
+                ? new List<TwseMarginRecord>()
+                : (await _twseMarginRepository.LoadByDateAsync(prevDate)).ToList();
 
-            var prevDate = allRecords.Where(x => x.TradeDate.Date < latestDate).Select(x => x.TradeDate.Date).DefaultIfEmpty(DateTime.MinValue).Max();
-            var prevRanks = allRecords
-                .Where(x => prevDate != DateTime.MinValue && x.TradeDate.Date == prevDate)
+            var prevRanks = previousRecords
                 .OrderByDescending(x => x.ThreeMajorNet)
                 .ThenBy(x => x.Symbol)
                 .Select((x, idx) => new { x.Symbol, Rank = idx + 1 })
@@ -505,15 +570,15 @@ namespace StockTracker.ViewModels
                 var rank = i + 1;
                 var rankDelta = hasPrev ? prevRank - rank : 0;
 
-                var marginRecord = marginRecords.FirstOrDefault(x => x.TradeDate.Date == latestDate && string.Equals(x.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase));
+                var marginRecord = marginRecords.FirstOrDefault(x => string.Equals(x.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase));
                 var prevMarginRecord = prevDate != DateTime.MinValue
-                    ? marginRecords.FirstOrDefault(x => x.TradeDate.Date == prevDate && string.Equals(x.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase))
+                    ? prevMarginRecords.FirstOrDefault(x => string.Equals(x.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase))
                     : null;
 
                 var marginNet = marginRecord != null ? marginRecord.MarginPurchaseSales : 0;
                 var prevMarginBal = prevMarginRecord != null ? prevMarginRecord.MarginBalance : 0;
                 var marginBal = marginRecord != null ? marginRecord.MarginBalance : 0;
-                var marginMetric = marginMetricRecords.FirstOrDefault(x => x.Record != null && x.Record.TradeDate.Date == latestDate && string.Equals(x.Record.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase));
+                var marginMetric = marginMetricRecords.FirstOrDefault(x => x.Record != null && string.Equals(x.Record.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase));
                 var maintenanceRatio = marginMetric != null ? marginMetric.MarginMaintenanceRatio : 0d;
                 var averageCost = marginMetric != null ? marginMetric.MarginAverageCost : 0d;
                 var totalLoan = marginMetric != null ? marginMetric.TotalLoan : 0d;
@@ -560,6 +625,7 @@ namespace StockTracker.ViewModels
                 FilteredTwseRankingItems = CollectionViewSource.GetDefaultView(TwseRankingItems);
             }
             ApplyRankingFilter();
+            UpdateCacheStatus();
         }
 
         private void ApplyRankingFilter()
@@ -608,16 +674,40 @@ namespace StockTracker.ViewModels
             stockVm.SetTwseMarginMetricRecords(marginMetricHistory == null ? null : marginMetricHistory.RecordsByDate.Values);
         }
 
-        private void RebuildMarginMetricHistories()
+        public async Task<IReadOnlyDictionary<string, TwseT86History>> LoadAllTwseT86HistoriesForScanAsync(DateTime? startDate = null)
+        {
+            var latestRecords = await _twseT86Repository.LoadByDateAsync(LatestRankingDate == DateTime.MinValue ? DateTime.Today : LatestRankingDate);
+            var allSymbols = latestRecords
+                .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol))
+                .Select(x => x.Symbol)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var result = new Dictionary<string, TwseT86History>(StringComparer.OrdinalIgnoreCase);
+            const int batchSize = 250;
+            for (var i = 0; i < allSymbols.Count; i += batchSize)
+            {
+                var batchSymbols = allSymbols.Skip(i).Take(batchSize).ToList();
+                var histories = await _twseT86Repository.LoadHistoriesBySymbolsAsync(batchSymbols, startDate);
+                foreach (var history in histories.Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol)))
+                {
+                    result[history.Symbol] = history;
+                }
+            }
+
+            return result;
+        }
+
+        private void RebuildMarginMetricHistories(IEnumerable<TwseMarginHistory> marginHistories, IEnumerable<DailyCloseHistory> dailyPriceHistories)
         {
             _twseMarginMetricHistories.Clear();
 
-            var priceBySymbol = _dailyCloseHistories
+            var priceBySymbol = (dailyPriceHistories ?? Enumerable.Empty<DailyCloseHistory>())
                 .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol))
                 .GroupBy(x => x.Symbol, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(x => x.Key, x => x.Last(), StringComparer.OrdinalIgnoreCase);
 
-            foreach (var marginHistory in _twseMarginHistories.Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol)))
+            foreach (var marginHistory in (marginHistories ?? Enumerable.Empty<TwseMarginHistory>()).Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol)))
             {
                 DailyCloseHistory closeHistory;
                 priceBySymbol.TryGetValue(marginHistory.Symbol, out closeHistory);
@@ -646,6 +736,51 @@ namespace StockTracker.ViewModels
                         .ToDictionary(x => x.Key, x => x.Last())
                 });
             }
+        }
+
+        private static void ReplaceTrackedHistories<T>(List<T> target, IEnumerable<T> source)
+        {
+            target.Clear();
+            target.AddRange((source ?? Enumerable.Empty<T>()).Where(x => x != null));
+        }
+
+        private async Task EnsureTrackedHistoryLoadedAsync(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return;
+            }
+
+            var symbols = new[] { symbol };
+
+            var t86History = await _twseT86Repository.LoadHistoriesBySymbolsAsync(symbols);
+            _twseT86Histories.RemoveAll(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+            _twseT86Histories.AddRange(t86History.Where(x => x != null));
+
+            var marginHistory = await _twseMarginRepository.LoadHistoriesBySymbolsAsync(symbols);
+            _twseMarginHistories.RemoveAll(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+            _twseMarginHistories.AddRange(marginHistory.Where(x => x != null));
+
+            var marginMetricHistory = await _twseMarginMetricRepository.LoadHistoriesBySymbolsAsync(symbols);
+            _twseMarginMetricHistories.RemoveAll(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+            _twseMarginMetricHistories.AddRange(marginMetricHistory.Where(x => x != null));
+        }
+
+        private void RemoveTrackedHistory(string symbol)
+        {
+            _twseT86Histories.RemoveAll(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+            _twseMarginHistories.RemoveAll(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+            _twseMarginMetricHistories.RemoveAll(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private void UpdateCacheStatus()
+        {
+            TrackedHistorySymbolCount = Stocks.Count;
+            TrackedHistoryRecordCount =
+                _twseT86Histories.Sum(x => x?.RecordsByDate.Count ?? 0) +
+                _twseMarginHistories.Sum(x => x?.RecordsByDate.Count ?? 0) +
+                _twseMarginMetricHistories.Sum(x => x?.RecordsByDate.Count ?? 0);
+            RankingDisplayCount = TwseRankingItems.Count;
         }
 
 

@@ -167,5 +167,70 @@ ORDER BY Symbol, TradeDate";
                     .ToList();
             });
         }
+
+        public Task<IReadOnlyList<DailyCloseHistory>> LoadHistoriesBySymbolsAsync(IEnumerable<string> symbols)
+        {
+            return Task.Run<IReadOnlyList<DailyCloseHistory>>(() =>
+            {
+                var symbolList = (symbols ?? Enumerable.Empty<string>())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (symbolList.Count == 0)
+                {
+                    return new List<DailyCloseHistory>();
+                }
+
+                var records = new List<DailyCloseRecord>();
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        var parameterNames = new List<string>();
+                        for (var i = 0; i < symbolList.Count; i++)
+                        {
+                            var parameterName = "@sym" + i;
+                            parameterNames.Add(parameterName);
+                            cmd.Parameters.AddWithValue(parameterName, symbolList[i]);
+                        }
+
+                        cmd.CommandText = $@"
+SELECT TradeDate, Symbol, Name, Close
+FROM DailyPrice
+WHERE Symbol IN ({string.Join(",", parameterNames)})
+ORDER BY Symbol, TradeDate";
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                records.Add(new DailyCloseRecord
+                                {
+                                    TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                    Symbol = rdr.GetString(1),
+                                    Name = rdr.GetString(2),
+                                    Close = Convert.ToDouble(rdr.GetValue(3))
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return records
+                    .GroupBy(x => x.Symbol)
+                    .Select(g => new DailyCloseHistory
+                    {
+                        Symbol = g.Key,
+                        Name = g.Select(x => x.Name).LastOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty,
+                        RecordsByDate = g.OrderBy(x => x.TradeDate)
+                            .GroupBy(x => x.TradeDate.Date)
+                            .ToDictionary(x => x.Key, x => x.Last())
+                    })
+                    .OrderBy(x => x.Symbol)
+                    .ToList();
+            });
+        }
     }
 }

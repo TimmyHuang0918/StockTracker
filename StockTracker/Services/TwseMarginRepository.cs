@@ -193,5 +193,126 @@ ORDER BY Symbol, TradeDate";
                 return dict.Values.ToList();
             });
         }
+
+        public Task<IReadOnlyList<TwseMarginHistory>> LoadHistoriesBySymbolsAsync(IEnumerable<string> symbols)
+        {
+            return Task.Run<IReadOnlyList<TwseMarginHistory>>(() =>
+            {
+                var symbolList = (symbols ?? Enumerable.Empty<string>())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (symbolList.Count == 0)
+                {
+                    return new List<TwseMarginHistory>();
+                }
+
+                var records = new List<TwseMarginRecord>();
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        var parameterNames = new List<string>();
+                        for (var i = 0; i < symbolList.Count; i++)
+                        {
+                            var parameterName = "@sym" + i;
+                            parameterNames.Add(parameterName);
+                            cmd.Parameters.AddWithValue(parameterName, symbolList[i]);
+                        }
+
+                        cmd.CommandText = $@"
+SELECT TradeDate,Market,Symbol,Name,
+       MarginPurchaseSales,MarginSales,MarginRedemption,MarginBalance,
+       ShortCovering,ShortSales,ShortRedemption,ShortBalance
+FROM Margin
+WHERE Symbol IN ({string.Join(",", parameterNames)})
+ORDER BY Symbol, TradeDate";
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                records.Add(new TwseMarginRecord
+                                {
+                                    TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                    Market = rdr.GetString(1),
+                                    Symbol = rdr.GetString(2),
+                                    Name = rdr.GetString(3),
+                                    MarginPurchaseSales = rdr.GetInt64(4),
+                                    MarginSales = rdr.GetInt64(5),
+                                    MarginRedemption = rdr.GetInt64(6),
+                                    MarginBalance = rdr.GetInt64(7),
+                                    ShortCovering = rdr.GetInt64(8),
+                                    ShortSales = rdr.GetInt64(9),
+                                    ShortRedemption = rdr.GetInt64(10),
+                                    ShortBalance = rdr.GetInt64(11)
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return records
+                    .GroupBy(x => x.Symbol)
+                    .Select(g => new TwseMarginHistory
+                    {
+                        Symbol = g.Key,
+                        Name = g.Select(x => x.Name).LastOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty,
+                        RecordsByDate = g.OrderBy(x => x.TradeDate)
+                            .GroupBy(x => x.TradeDate.Date)
+                            .ToDictionary(x => x.Key, x => x.Last())
+                    })
+                    .OrderBy(x => x.Symbol)
+                    .ToList();
+            });
+        }
+
+        public Task<IReadOnlyList<TwseMarginRecord>> LoadByDateAsync(DateTime date)
+        {
+            return Task.Run<IReadOnlyList<TwseMarginRecord>>(() =>
+            {
+                var records = new List<TwseMarginRecord>();
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+SELECT TradeDate,Market,Symbol,Name,
+       MarginPurchaseSales,MarginSales,MarginRedemption,MarginBalance,
+       ShortCovering,ShortSales,ShortRedemption,ShortBalance
+FROM Margin
+WHERE TradeDate = @td
+ORDER BY Symbol";
+                        cmd.Parameters.AddWithValue("@td", date.ToString("yyyy-MM-dd"));
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                records.Add(new TwseMarginRecord
+                                {
+                                    TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                    Market = rdr.GetString(1),
+                                    Symbol = rdr.GetString(2),
+                                    Name = rdr.GetString(3),
+                                    MarginPurchaseSales = rdr.GetInt64(4),
+                                    MarginSales = rdr.GetInt64(5),
+                                    MarginRedemption = rdr.GetInt64(6),
+                                    MarginBalance = rdr.GetInt64(7),
+                                    ShortCovering = rdr.GetInt64(8),
+                                    ShortSales = rdr.GetInt64(9),
+                                    ShortRedemption = rdr.GetInt64(10),
+                                    ShortBalance = rdr.GetInt64(11)
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return records;
+            });
+        }
     }
 }

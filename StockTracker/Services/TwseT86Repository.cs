@@ -79,6 +79,33 @@ namespace StockTracker.Services
             return result;
         }
 
+        public IReadOnlyList<DateTime> GetLatestTradeDates(int count)
+        {
+            var result = new List<DateTime>();
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT DISTINCT TradeDate FROM T86 ORDER BY TradeDate DESC LIMIT @count";
+                    cmd.Parameters.AddWithValue("@count", Math.Max(1, count));
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        while (rdr.Read())
+                        {
+                            DateTime tradeDate;
+                            if (DateTime.TryParse(rdr.GetString(0), out tradeDate))
+                            {
+                                result.Add(tradeDate.Date);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
         // ── 批次寫入（UPSERT）────────────────────────────────────────────────
         public Task UpsertAsync(IEnumerable<TwseT86Record> records)
         {
@@ -218,6 +245,181 @@ ORDER BY Symbol, TradeDate";
                     .ToList();
 
                 return histories;
+            });
+        }
+
+        public Task<IReadOnlyList<TwseT86History>> LoadHistoriesBySymbolsAsync(IEnumerable<string> symbols)
+        {
+            return Task.Run<IReadOnlyList<TwseT86History>>(() =>
+            {
+                var symbolList = (symbols ?? Enumerable.Empty<string>())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (symbolList.Count == 0)
+                {
+                    return new List<TwseT86History>();
+                }
+
+                var records = new List<TwseT86Record>();
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        var parameterNames = new List<string>();
+                        for (var i = 0; i < symbolList.Count; i++)
+                        {
+                            var parameterName = "@sym" + i;
+                            parameterNames.Add(parameterName);
+                            cmd.Parameters.AddWithValue(parameterName, symbolList[i]);
+                        }
+
+                        cmd.CommandText = $@"
+SELECT TradeDate,Market,Symbol,Name,
+       ForeignBuy,ForeignSell,ForeignNet,
+       InvTrustBuy,InvTrustSell,InvTrustNet,
+       DealerNet,DealerSelfBuy,DealerSelfSell,DealerSelfNet,
+       DealerHedgeBuy,DealerHedgeSell,DealerHedgeNet,
+       ThreeMajorNet
+FROM T86
+WHERE Symbol IN ({string.Join(",", parameterNames)})
+ORDER BY Symbol, TradeDate";
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                records.Add(new TwseT86Record
+                                {
+                                    TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                    Market = rdr.GetString(1),
+                                    Symbol = rdr.GetString(2),
+                                    Name = rdr.GetString(3),
+                                    ForeignBuy = rdr.GetInt64(4),
+                                    ForeignSell = rdr.GetInt64(5),
+                                    ForeignNet = rdr.GetInt64(6),
+                                    InvestmentTrustBuy = rdr.GetInt64(7),
+                                    InvestmentTrustSell = rdr.GetInt64(8),
+                                    InvestmentTrustNet = rdr.GetInt64(9),
+                                    DealerNet = rdr.GetInt64(10),
+                                    DealerSelfBuy = rdr.GetInt64(11),
+                                    DealerSelfSell = rdr.GetInt64(12),
+                                    DealerSelfNet = rdr.GetInt64(13),
+                                    DealerHedgeBuy = rdr.GetInt64(14),
+                                    DealerHedgeSell = rdr.GetInt64(15),
+                                    DealerHedgeNet = rdr.GetInt64(16),
+                                    ThreeMajorNet = rdr.GetInt64(17)
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return records
+                    .GroupBy(x => x.Symbol)
+                    .Select(g => new TwseT86History
+                    {
+                        Symbol = g.Key,
+                        Name = g.Select(x => x.Name).LastOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty,
+                        RecordsByDate = g.OrderBy(x => x.TradeDate)
+                            .GroupBy(x => x.TradeDate.Date)
+                            .ToDictionary(x => x.Key, x => x.Last())
+                    })
+                    .OrderBy(x => x.Symbol)
+                    .ToList();
+            });
+        }
+
+        public Task<IReadOnlyList<TwseT86History>> LoadHistoriesBySymbolsAsync(IEnumerable<string> symbols, DateTime? startDate)
+        {
+            return Task.Run<IReadOnlyList<TwseT86History>>(() =>
+            {
+                var symbolList = (symbols ?? Enumerable.Empty<string>())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (symbolList.Count == 0)
+                {
+                    return new List<TwseT86History>();
+                }
+
+                var records = new List<TwseT86Record>();
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        var parameterNames = new List<string>();
+                        for (var i = 0; i < symbolList.Count; i++)
+                        {
+                            var parameterName = "@sym" + i;
+                            parameterNames.Add(parameterName);
+                            cmd.Parameters.AddWithValue(parameterName, symbolList[i]);
+                        }
+
+                        var dateFilter = string.Empty;
+                        if (startDate.HasValue)
+                        {
+                            dateFilter = " AND TradeDate >= @startDate";
+                            cmd.Parameters.AddWithValue("@startDate", startDate.Value.ToString("yyyy-MM-dd"));
+                        }
+
+                        cmd.CommandText = $@"
+SELECT TradeDate,Market,Symbol,Name,
+       ForeignBuy,ForeignSell,ForeignNet,
+       InvTrustBuy,InvTrustSell,InvTrustNet,
+       DealerNet,DealerSelfBuy,DealerSelfSell,DealerSelfNet,
+       DealerHedgeBuy,DealerHedgeSell,DealerHedgeNet,
+       ThreeMajorNet
+FROM T86
+WHERE Symbol IN ({string.Join(",", parameterNames)}){dateFilter}
+ORDER BY Symbol, TradeDate";
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                records.Add(new TwseT86Record
+                                {
+                                    TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                    Market = rdr.GetString(1),
+                                    Symbol = rdr.GetString(2),
+                                    Name = rdr.GetString(3),
+                                    ForeignBuy = rdr.GetInt64(4),
+                                    ForeignSell = rdr.GetInt64(5),
+                                    ForeignNet = rdr.GetInt64(6),
+                                    InvestmentTrustBuy = rdr.GetInt64(7),
+                                    InvestmentTrustSell = rdr.GetInt64(8),
+                                    InvestmentTrustNet = rdr.GetInt64(9),
+                                    DealerNet = rdr.GetInt64(10),
+                                    DealerSelfBuy = rdr.GetInt64(11),
+                                    DealerSelfSell = rdr.GetInt64(12),
+                                    DealerSelfNet = rdr.GetInt64(13),
+                                    DealerHedgeBuy = rdr.GetInt64(14),
+                                    DealerHedgeSell = rdr.GetInt64(15),
+                                    DealerHedgeNet = rdr.GetInt64(16),
+                                    ThreeMajorNet = rdr.GetInt64(17)
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return records
+                    .GroupBy(x => x.Symbol)
+                    .Select(g => new TwseT86History
+                    {
+                        Symbol = g.Key,
+                        Name = g.Select(x => x.Name).LastOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty,
+                        RecordsByDate = g.OrderBy(x => x.TradeDate)
+                            .GroupBy(x => x.TradeDate.Date)
+                            .ToDictionary(x => x.Key, x => x.Last())
+                    })
+                    .OrderBy(x => x.Symbol)
+                    .ToList();
             });
         }
 

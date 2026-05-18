@@ -60,7 +60,7 @@ namespace StockTracker
             }
         }
 
-        private void btnSubscribe_Click(object sender, RoutedEventArgs e)
+        private async void btnSubscribe_Click(object sender, RoutedEventArgs e)
         {
             var symbol = textBoxSubscribe.Text?.Trim();
             if (string.IsNullOrWhiteSpace(symbol))
@@ -68,17 +68,22 @@ namespace StockTracker
                 return;
             }
 
-            if (DataContext is MainWindowViewModel vm)
+            if (!(DataContext is MainWindowViewModel vm))
             {
-                vm.NewSymbol = symbol;
-                if (vm.SubscribeCommand.CanExecute(null))
-                {
-                    vm.SubscribeCommand.Execute(null);
-                }
+                return;
             }
 
-            BuildDateRangeForBars((DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, 120, out var startDate, out var endDate);
-            ResolveKLineRequest((DataContext as MainWindowViewModel)?.SelectedGlobalKLineInterval, out var kLineType, out var minuteNumber);
+            vm.NewSymbol = symbol;
+            await vm.SubscribeSymbolAsync();
+
+            int.TryParse(vm.SelectedGlobalKLineCount, out var kLineCount);
+            if (kLineCount <= 0)
+            {
+                kLineCount = 120;
+            }
+
+            BuildDateRangeForBars(vm.SelectedGlobalKLineInterval, kLineCount, out var startDate, out var endDate);
+            ResolveKLineRequest(vm.SelectedGlobalKLineInterval, out var kLineType, out var minuteNumber);
             _apiService?.RequestKLineByDate(symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
         }
 

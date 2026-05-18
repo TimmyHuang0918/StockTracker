@@ -175,5 +175,124 @@ ORDER BY Symbol, TradeDate";
                     .ToList();
             });
         }
+
+        public Task<IReadOnlyList<TwseMarginMetricHistory>> LoadHistoriesBySymbolsAsync(IEnumerable<string> symbols)
+        {
+            return Task.Run<IReadOnlyList<TwseMarginMetricHistory>>(() =>
+            {
+                var symbolList = (symbols ?? Enumerable.Empty<string>())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (symbolList.Count == 0)
+                {
+                    return new List<TwseMarginMetricHistory>();
+                }
+
+                var metrics = new List<TwseMarginMetricResult>();
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        var parameterNames = new List<string>();
+                        for (var i = 0; i < symbolList.Count; i++)
+                        {
+                            var parameterName = "@sym" + i;
+                            parameterNames.Add(parameterName);
+                            cmd.Parameters.AddWithValue(parameterName, symbolList[i]);
+                        }
+
+                        cmd.CommandText = $@"
+SELECT TradeDate, Symbol, Name, Market, MarginPurchaseSales, MarginBalance, Close, TotalLoan, MarginMaintenanceRatio, MarginAverageCost
+FROM MarginMetric
+WHERE Symbol IN ({string.Join(",", parameterNames)})
+ORDER BY Symbol, TradeDate";
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                metrics.Add(new TwseMarginMetricResult
+                                {
+                                    Record = new TwseMarginRecord
+                                    {
+                                        TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                        Symbol = rdr.GetString(1),
+                                        Name = rdr.GetString(2),
+                                        Market = rdr.GetString(3),
+                                        MarginPurchaseSales = rdr.GetInt64(4),
+                                        MarginBalance = rdr.GetInt64(5)
+                                    },
+                                    Close = Convert.ToDouble(rdr.GetValue(6)),
+                                    TotalLoan = Convert.ToDouble(rdr.GetValue(7)),
+                                    MarginMaintenanceRatio = Convert.ToDouble(rdr.GetValue(8)),
+                                    MarginAverageCost = Convert.ToDouble(rdr.GetValue(9))
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return metrics
+                    .GroupBy(x => x.Record.Symbol)
+                    .Select(g => new TwseMarginMetricHistory
+                    {
+                        Symbol = g.Key,
+                        Name = g.Select(x => x.Record.Name).LastOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty,
+                        RecordsByDate = g.OrderBy(x => x.Record.TradeDate)
+                            .GroupBy(x => x.Record.TradeDate.Date)
+                            .ToDictionary(x => x.Key, x => x.Last())
+                    })
+                    .OrderBy(x => x.Symbol)
+                    .ToList();
+            });
+        }
+
+        public Task<IReadOnlyList<TwseMarginMetricResult>> LoadByDateAsync(DateTime date)
+        {
+            return Task.Run<IReadOnlyList<TwseMarginMetricResult>>(() =>
+            {
+                var metrics = new List<TwseMarginMetricResult>();
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+SELECT TradeDate, Symbol, Name, Market, MarginPurchaseSales, MarginBalance, Close, TotalLoan, MarginMaintenanceRatio, MarginAverageCost
+FROM MarginMetric
+WHERE TradeDate = @td
+ORDER BY Symbol";
+                        cmd.Parameters.AddWithValue("@td", date.ToString("yyyy-MM-dd"));
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                metrics.Add(new TwseMarginMetricResult
+                                {
+                                    Record = new TwseMarginRecord
+                                    {
+                                        TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                        Symbol = rdr.GetString(1),
+                                        Name = rdr.GetString(2),
+                                        Market = rdr.GetString(3),
+                                        MarginPurchaseSales = rdr.GetInt64(4),
+                                        MarginBalance = rdr.GetInt64(5)
+                                    },
+                                    Close = Convert.ToDouble(rdr.GetValue(6)),
+                                    TotalLoan = Convert.ToDouble(rdr.GetValue(7)),
+                                    MarginMaintenanceRatio = Convert.ToDouble(rdr.GetValue(8)),
+                                    MarginAverageCost = Convert.ToDouble(rdr.GetValue(9))
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return metrics;
+            });
+        }
     }
 }
