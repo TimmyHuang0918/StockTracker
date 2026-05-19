@@ -3,6 +3,7 @@ using StockTracker.Models;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace StockTracker.Services
@@ -107,19 +108,43 @@ namespace StockTracker.Services
 
         private async Task<List<DailyCloseRecord>> GetTpexDailyCloseAsync(DateTime date)
         {
-            var rocYear = date.Year - 1911;
-            var url = $"https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes?date={rocYear}/{date:MM/dd}";
+            var url = $"https://www.tpex.org.tw/www/zh-tw/afterTrading/otc?date={date:yyyy}%2F{date:MM}%2F{date:dd}&type=AL&id=&response=csv&order=0&sort=asc";
             try
             {
-                var resp = await _httpClient.GetStringAsync(url);
-                var data = JArray.Parse(resp);
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Referrer = new Uri("https://www.tpex.org.tw/");
+
+                var response = await _httpClient.SendAsync(request);
+                response.EnsureSuccessStatusCode();
+
+                var rawBytes = await response.Content.ReadAsByteArrayAsync();
+                var text = Encoding.GetEncoding(950).GetString(rawBytes);
+                var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
                 var records = new List<DailyCloseRecord>();
-                foreach (var item in data)
+
+                foreach (var line in lines)
                 {
-                    var symbol = item["SecuritiesCompanyCode"]?.ToString().Trim();
-                    var name = item["CompanyName"]?.ToString().Trim();
-                    var close = ParseClose(item["Close"]?.ToString());
+                    var columns = ParseCsvLine(line);
+                    if (columns.Count < 3)
+                    {
+                        continue;
+                    }
+
+                    var symbol = columns[0].Trim().Trim('=', '"');
+                    var name = columns[1].Trim().Trim('"');
+                    var close = ParseClose(columns[2]);
+
+                    if (string.Equals(symbol, "代號", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     if (string.IsNullOrWhiteSpace(symbol) || close <= 0d)
+                    {
+                        continue;
+                    }
+
+                    if (!char.IsDigit(symbol[0]))
                     {
                         continue;
                     }
@@ -139,6 +164,35 @@ namespace StockTracker.Services
             {
                 return new List<DailyCloseRecord>();
             }
+        }
+
+        private static List<string> ParseCsvLine(string line)
+        {
+            var values = new List<string>();
+            var current = string.Empty;
+            var inQuotes = false;
+
+            foreach (var ch in line)
+            {
+                if (ch == '"')
+                {
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+
+                if (ch == ',' && !inQuotes)
+                {
+                    values.Add(current.Trim());
+                    current = string.Empty;
+                }
+                else
+                {
+                    current += ch;
+                }
+            }
+
+            values.Add(current.Trim());
+            return values;
         }
 
         private static int FindFieldIndex(JArray fields, string fieldName)
