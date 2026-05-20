@@ -134,9 +134,10 @@
                 <!-- K線清單 -->
                 <DockPanel Grid.Column="0" ClipToBounds="True" >
                     <TextBlock Text="全部訂閱股票 K 線總覽（雙擊可開啟詳細圖表）" FontWeight="Bold" Margin="0,0,0,8" DockPanel.Dock="Top"/>
-                    <ListBox ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" 
-                             SelectionChanged="ListBox_SelectionStockChanged"
-                             MouseDoubleClick="StockList_OnMouseDoubleClick"
+                    <ListBox x:Name="StockListBox" ItemsSource="{Binding Stocks}" BorderThickness="0" Background="{DynamicResource SurfaceBrush}" 
+                              SelectionChanged="ListBox_SelectionStockChanged"
+                              MouseDoubleClick="StockList_OnMouseDoubleClick"
+                              AllowDrop="True"
                              ScrollViewer.HorizontalScrollBarVisibility="Hidden"
                              ScrollViewer.VerticalScrollBarVisibility="Visible">
                         <ListBox.ItemsPanel>
@@ -149,6 +150,8 @@
                                 <Setter Property="MaxWidth" Value="430"/>
                                 <Setter Property="Margin" Value="0,0,10,10"/>
                                 <Setter Property="Padding" Value="0"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="BorderBrush" Value="Transparent"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Background" Value="{DynamicResource DarkSelected}"/>
@@ -160,7 +163,7 @@
                             <DataTemplate>
                                 <Border Padding="4" Margin="2" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="Transparent">
                                     <StackPanel>
-                                        <DockPanel Margin="0,0,0,6">
+                                        <DockPanel Margin="0,0,0,6" Tag="StockDragHandle" Cursor="SizeAll" ToolTip="按住這裡可拖曳調整股票位置">
                                             <Border DockPanel.Dock="Right" Padding="6,3" Margin="8,0,0,0"
                                                     Background="#AA1E1E1E" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4">
                                                 <TextBlock FontSize="15" FontWeight="SemiBold" x:Name="PriceTextBlock">
@@ -189,6 +192,8 @@
                                                 <Run Text=" - "/>
                                                 <Run Text="{Binding Name, Mode=OneWay}"/>
                                             </TextBlock>
+
+                                            <TextBlock DockPanel.Dock="Left" Margin="0,0,6,0" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="14" Text="☰"/>
 
                                         </DockPanel>
 

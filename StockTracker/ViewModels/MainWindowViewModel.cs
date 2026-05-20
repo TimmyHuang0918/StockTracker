@@ -306,6 +306,18 @@ namespace StockTracker.ViewModels
             SaveSubscriptions();
         }
 
+        public void MoveStock(int oldIndex, int newIndex)
+        {
+            if (oldIndex < 0 || oldIndex >= Stocks.Count || newIndex < 0 || newIndex >= Stocks.Count || oldIndex == newIndex)
+            {
+                return;
+            }
+
+            Stocks.Move(oldIndex, newIndex);
+            SaveSubscriptions();
+            UpdateCacheStatus();
+        }
+
         private async Task UnsubscribeSymbolAsync()
         {
             var symbol = NewSymbol?.Trim();

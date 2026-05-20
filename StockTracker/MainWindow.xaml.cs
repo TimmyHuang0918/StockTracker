@@ -6,17 +6,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace StockTracker
 {
     public partial class MainWindow : Window
     {
         private CapitalApiService _apiService;
+        private Point _stockDragStartPoint;
+        private StockViewModel _pendingDragStock;
+        private ListBoxItem _draggedItemContainer;
+        private ListBoxItem _dragTargetItemContainer;
         public MainWindow()
         {
             InitializeComponent();
             DataContextChanged += MainWindow_DataContextChanged;
+            StockListBox.PreviewMouseLeftButtonDown += StockList_OnPreviewMouseLeftButtonDown;
+            StockListBox.PreviewMouseMove += StockList_OnPreviewMouseMove;
+            StockListBox.DragOver += StockList_OnDragOver;
+            StockListBox.Drop += StockList_OnDrop;
+            StockListBox.DragLeave += StockList_OnDragLeave;
         }
 
         private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -291,6 +303,178 @@ namespace StockTracker
             {
                 textBoxSubscribe.Text = stock.Symbol;
             }
+        }
+
+        private void StockList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _stockDragStartPoint = e.GetPosition(null);
+            var dragHandle = FindDragHandle((DependencyObject)e.OriginalSource);
+            _pendingDragStock = dragHandle == null
+                ? null
+                : FindAncestor<ListBoxItem>(dragHandle)?.DataContext as StockViewModel;
+            _draggedItemContainer = dragHandle == null ? null : FindAncestor<ListBoxItem>(dragHandle);
+        }
+
+        private void StockList_OnPreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed || _pendingDragStock == null)
+            {
+                return;
+            }
+
+            var currentPosition = e.GetPosition(null);
+            if (Math.Abs(currentPosition.X - _stockDragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(currentPosition.Y - _stockDragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+
+            SetDraggedItemVisual(_draggedItemContainer);
+            DragDrop.DoDragDrop(StockListBox, new DataObject(typeof(StockViewModel), _pendingDragStock), DragDropEffects.Move);
+            ClearDragVisuals();
+            _pendingDragStock = null;
+            _draggedItemContainer = null;
+        }
+
+        private void StockList_OnDragOver(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(typeof(StockViewModel)))
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
+            e.Effects = DragDropEffects.Move;
+            var targetItem = FindAncestor<ListBoxItem>((DependencyObject)e.OriginalSource);
+            SetDragTargetVisual(targetItem);
+            e.Handled = true;
+        }
+
+        private void StockList_OnDragLeave(object sender, DragEventArgs e)
+        {
+            if (!StockListBox.IsMouseOver)
+            {
+                SetDragTargetVisual(null);
+            }
+        }
+
+        private void StockList_OnDrop(object sender, DragEventArgs e)
+        {
+            if (!(DataContext is MainWindowViewModel vm))
+            {
+                ClearDragVisuals();
+                return;
+            }
+
+            var sourceStock = e.Data.GetData(typeof(StockViewModel)) as StockViewModel;
+            if (sourceStock == null)
+            {
+                ClearDragVisuals();
+                return;
+            }
+
+            var targetItem = FindAncestor<ListBoxItem>((DependencyObject)e.OriginalSource);
+            var targetStock = targetItem?.DataContext as StockViewModel;
+            var targetIndex = targetStock == null ? vm.Stocks.Count - 1 : vm.Stocks.IndexOf(targetStock);
+            if (targetIndex < 0)
+            {
+                targetIndex = vm.Stocks.Count - 1;
+            }
+
+            var sourceIndex = vm.Stocks.IndexOf(sourceStock);
+            if (sourceIndex < 0 || sourceIndex == targetIndex)
+            {
+                ClearDragVisuals();
+                return;
+            }
+
+            vm.MoveStock(sourceIndex, targetIndex);
+            StockListBox.SelectedItem = sourceStock;
+            ClearDragVisuals();
+            _pendingDragStock = null;
+            _draggedItemContainer = null;
+        }
+
+        private static T FindAncestor<T>(DependencyObject current) where T : DependencyObject
+        {
+            while (current != null)
+            {
+                if (current is T matched)
+                {
+                    return matched;
+                }
+
+                current = current is Visual || current is Visual3D
+                    ? VisualTreeHelper.GetParent(current)
+                    : LogicalTreeHelper.GetParent(current);
+            }
+
+            return null;
+        }
+
+        private void SetDraggedItemVisual(ListBoxItem item)
+        {
+            if (_draggedItemContainer != null && !ReferenceEquals(_draggedItemContainer, item))
+            {
+                _draggedItemContainer.Opacity = 1d;
+            }
+
+            _draggedItemContainer = item;
+            if (_draggedItemContainer != null)
+            {
+                _draggedItemContainer.Opacity = 0.55d;
+            }
+        }
+
+        private void SetDragTargetVisual(ListBoxItem item)
+        {
+            if (_dragTargetItemContainer != null && !ReferenceEquals(_dragTargetItemContainer, item))
+            {
+                _dragTargetItemContainer.BorderBrush = Brushes.Transparent;
+                _dragTargetItemContainer.BorderThickness = new Thickness(1);
+            }
+
+            _dragTargetItemContainer = item;
+            if (_dragTargetItemContainer != null)
+            {
+                _dragTargetItemContainer.BorderBrush = Brushes.DeepSkyBlue;
+                _dragTargetItemContainer.BorderThickness = new Thickness(2);
+            }
+        }
+
+        private void ClearDragVisuals()
+        {
+            if (_draggedItemContainer != null)
+            {
+                _draggedItemContainer.Opacity = 1d;
+            }
+
+            if (_dragTargetItemContainer != null)
+            {
+                _dragTargetItemContainer.BorderBrush = Brushes.Transparent;
+                _dragTargetItemContainer.BorderThickness = new Thickness(1);
+            }
+
+            _draggedItemContainer = null;
+            _dragTargetItemContainer = null;
+        }
+
+        private static FrameworkElement FindDragHandle(DependencyObject current)
+        {
+            while (current != null)
+            {
+                if (current is FrameworkElement element && string.Equals(element.Tag as string, "StockDragHandle", StringComparison.Ordinal))
+                {
+                    return element;
+                }
+
+                current = current is Visual || current is Visual3D
+                    ? VisualTreeHelper.GetParent(current)
+                    : LogicalTreeHelper.GetParent(current);
+            }
+
+            return null;
         }
 
         private void btnScanAll_Click(object sender, RoutedEventArgs e)
