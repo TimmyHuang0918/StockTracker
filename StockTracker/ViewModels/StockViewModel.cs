@@ -678,7 +678,6 @@ namespace StockTracker.ViewModels
             DealerNetPoints.Clear();
             _recommendationScoreCache.Clear();
             _recommendationReasonsCache.Clear();
-            _marginMetricByDate.Clear();
             _lastDisplayMarginBalanceSeries.Clear();
             _lastDisplayMarginMaintenanceSeries.Clear();
             MarginCrosshairVisibility = Visibility.Collapsed;
