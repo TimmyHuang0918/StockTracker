@@ -76,15 +76,13 @@ namespace StockTracker
             vm.NewSymbol = symbol;
             await vm.SubscribeSymbolAsync();
 
-            int.TryParse(vm.SelectedGlobalKLineCount, out var kLineCount);
-            if (kLineCount <= 0)
+            var stock = vm.Stocks.FirstOrDefault(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+            if (stock == null)
             {
-                kLineCount = 120;
+                return;
             }
 
-            BuildDateRangeForBars(vm.SelectedGlobalKLineInterval, kLineCount, out var startDate, out var endDate);
-            ResolveKLineRequest(vm.SelectedGlobalKLineInterval, out var kLineType, out var minuteNumber);
-            _apiService?.RequestKLineByDate(symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
+            RequestStockKLine(vm, stock, true);
         }
 
         private void btnUnsubscribe_Click(object sender, RoutedEventArgs e)
@@ -106,11 +104,39 @@ namespace StockTracker
 
             foreach (var stock in vm.Stocks)
             {
-                int.TryParse(vm.SelectedGlobalKLineCount, out var kLineCount);
-                BuildDateRangeForBars(vm.SelectedGlobalKLineInterval, kLineCount, out var startDate, out var endDate);
-                stock.ClearData();
-                _apiService?.RequestKLineByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
+                RequestStockKLine(vm, stock, true, kLineType, minuteNumber);
             }
+        }
+
+        private void RequestStockKLine(MainWindowViewModel vm, StockViewModel stock, bool clearData, short? resolvedKLineType = null, short? resolvedMinuteNumber = null)
+        {
+            if (vm == null || stock == null)
+            {
+                return;
+            }
+
+            int.TryParse(vm.SelectedGlobalKLineCount, out var kLineCount);
+            if (kLineCount <= 0)
+            {
+                kLineCount = 120;
+            }
+
+            var kLineType = resolvedKLineType ?? 4;
+            var minuteNumber = resolvedMinuteNumber ?? 0;
+            if (!resolvedKLineType.HasValue || !resolvedMinuteNumber.HasValue)
+            {
+                ResolveKLineRequest(vm.SelectedGlobalKLineInterval, out var resolvedType, out var resolvedMinute);
+                kLineType = resolvedType;
+                minuteNumber = resolvedMinute;
+            }
+
+            if (clearData)
+            {
+                stock.ClearData();
+            }
+
+            BuildDateRangeForBars(vm.SelectedGlobalKLineInterval, kLineCount, out var startDate, out var endDate);
+            _apiService?.RequestKLineByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
         }
 
         private void MainWindow_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)

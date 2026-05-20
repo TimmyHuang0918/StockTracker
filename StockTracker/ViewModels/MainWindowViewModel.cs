@@ -333,13 +333,15 @@ namespace StockTracker.ViewModels
                 return;
             }
 
-            await _apiService.SubscribeAsync(symbol);
-            await EnsureTrackedHistoryLoadedAsync(symbol);
             var stockVm = new StockViewModel(symbol, name);
             stockVm.SelectedKLineInterval = SelectedGlobalKLineInterval;
-            ApplyTwseRecordsToStock(stockVm);
             stockVm.SignalTriggered += StockVmOnSignalTriggered;
             Stocks.Add(stockVm);
+
+            await _apiService.SubscribeAsync(symbol);
+            await EnsureTrackedHistoryLoadedAsync(symbol);
+            ApplyTwseRecordsToStock(stockVm);
+
             UpdateCacheStatus();
             SaveSubscriptions();
         }
