@@ -4,12 +4,19 @@ using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace StockTracker.ViewModels
 {
+    public class RankedStockScorePoint
+    {
+        public DateTime Date { get; set; }
+        public int Score { get; set; }
+    }
+
     public class RankedStock
     {
         public int Rank { get; set; }
@@ -20,6 +27,21 @@ namespace StockTracker.ViewModels
         public int Score { get; set; }
         public string Suggestion { get; set; }
         public long ThreeMajorNet { get; set; }
+        public List<RankedStockScorePoint> RecentScores { get; set; } = new List<RankedStockScorePoint>();
+        public string RecentScoresText => RecentScores == null || RecentScores.Count == 0
+            ? Score.ToString(CultureInfo.InvariantCulture)
+            : string.Join(" / ", RecentScores
+                .OrderByDescending(x => x.Date)
+                .Select(x => x.Date == DateTime.MinValue
+                    ? x.Score.ToString(CultureInfo.InvariantCulture)
+                    : $"{x.Date:MM/dd}:{x.Score}"));
+        public int ScoreDay0 => GetRecentScoreByOffset(0);
+        public int ScoreDay1 => GetRecentScoreByOffset(1);
+        public int ScoreDay2 => GetRecentScoreByOffset(2);
+        public int ScoreDay3 => GetRecentScoreByOffset(3);
+        public int ScoreDay4 => GetRecentScoreByOffset(4);
+        public double AverageRecentScore => RecentScores == null || RecentScores.Count == 0 ? Score : RecentScores.Average(x => x.Score);
+        public int ScoreTrend => ScoreDay0 - ScoreDay4;
         public string NetDisplay => ThreeMajorNet > 0 ? $"+{ThreeMajorNet:N0}" : ThreeMajorNet.ToString("N0");
         public System.Windows.Media.Brush ChangePercentBrush => ChangePercent > 0 ? System.Windows.Media.Brushes.IndianRed :
                                                                   ChangePercent < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
@@ -27,6 +49,37 @@ namespace StockTracker.ViewModels
         public System.Windows.Media.Brush NetDisplayBrush => ThreeMajorNet > 0 ? System.Windows.Media.Brushes.IndianRed :
                                                                ThreeMajorNet < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
                                                                System.Windows.Media.Brushes.Gray;
+
+        public int GetConsecutiveScoreDays(int minScore)
+        {
+            if (RecentScores == null || RecentScores.Count == 0)
+            {
+                return Score >= minScore ? 1 : 0;
+            }
+
+            var streak = 0;
+            foreach (var recentScore in RecentScores.OrderByDescending(x => x.Date))
+            {
+                if (recentScore.Score < minScore)
+                {
+                    break;
+                }
+
+                streak++;
+            }
+
+            return streak;
+        }
+
+        private int GetRecentScoreByOffset(int offset)
+        {
+            if (RecentScores == null || offset < 0 || offset >= RecentScores.Count)
+            {
+                return 0;
+            }
+
+            return RecentScores.OrderByDescending(x => x.Date).ElementAt(offset).Score;
+        }
     }
 
     public class RankingViewModel : ViewModelBase
@@ -42,7 +95,21 @@ namespace StockTracker.ViewModels
         private string _searchText;
         private decimal? _minPrice;
         private decimal? _maxPrice;
+        private decimal? _minChangePercentFilter;
+        private decimal? _maxChangePercentFilter;
+        private long? _minThreeMajorNetFilter;
+        private long? _maxThreeMajorNetFilter;
+        private int? _minLatestScoreFilter;
+        private double? _minAverageScoreFilter;
+        private bool _requireScoreTrendUp;
+        private int _minConsecutiveDays;
+        private int _minConsecutiveScore = 60;
         private int _topCount = 100;
+        private string _scoreDay0Header = "D0";
+        private string _scoreDay1Header = "D1";
+        private string _scoreDay2Header = "D2";
+        private string _scoreDay3Header = "D3";
+        private string _scoreDay4Header = "D4";
 
         public RankingViewModel(CapitalApiService apiService, MainWindowViewModel mainViewModel)
         {
@@ -51,6 +118,11 @@ namespace StockTracker.ViewModels
             _dbPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "Ranking.db");
             EnsureDatabase();
             StartScanningCommand = new RelayCommand(async _ => await ScanAllStocksAsync(), _ => !_isScanning);
+            ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
+            ApplyStrongMomentumFilterCommand = new RelayCommand(_ => ApplyStrongMomentumFilter());
+            ApplyLowPriceHighScoreFilterCommand = new RelayCommand(_ => ApplyLowPriceHighScoreFilter());
+            ApplyInstitutionalMomentumFilterCommand = new RelayCommand(_ => ApplyInstitutionalMomentumFilter());
+            ApplyScoreReboundFilterCommand = new RelayCommand(_ => ApplyScoreReboundFilter());
 
             _rankedStocksView = System.Windows.Data.CollectionViewSource.GetDefaultView(RankedStocks);
             _rankedStocksView.Filter = FilterRankedStocks;
@@ -76,11 +148,111 @@ namespace StockTracker.ViewModels
             set { _maxPrice = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
         }
 
+        public decimal? MinChangePercentFilter
+        {
+            get => _minChangePercentFilter;
+            set { _minChangePercentFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MaxChangePercentFilter
+        {
+            get => _maxChangePercentFilter;
+            set { _maxChangePercentFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public long? MinThreeMajorNetFilter
+        {
+            get => _minThreeMajorNetFilter;
+            set { _minThreeMajorNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public long? MaxThreeMajorNetFilter
+        {
+            get => _maxThreeMajorNetFilter;
+            set { _maxThreeMajorNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public int? MinLatestScoreFilter
+        {
+            get => _minLatestScoreFilter;
+            set { _minLatestScoreFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public double? MinAverageScoreFilter
+        {
+            get => _minAverageScoreFilter;
+            set { _minAverageScoreFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public bool RequireScoreTrendUp
+        {
+            get => _requireScoreTrendUp;
+            set { _requireScoreTrendUp = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public int MinConsecutiveDays
+        {
+            get => _minConsecutiveDays;
+            set
+            {
+                _minConsecutiveDays = Math.Max(0, value);
+                OnPropertyChanged();
+                _rankedStocksView.Refresh();
+            }
+        }
+
+        public int MinConsecutiveScore
+        {
+            get => _minConsecutiveScore;
+            set
+            {
+                _minConsecutiveScore = value;
+                OnPropertyChanged();
+                _rankedStocksView.Refresh();
+            }
+        }
+
         public int TopCount
         {
             get => _topCount;
             set { _topCount = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
         }
+
+        public string ScoreDay0Header
+        {
+            get => _scoreDay0Header;
+            private set { _scoreDay0Header = value; OnPropertyChanged(); }
+        }
+
+        public string ScoreDay1Header
+        {
+            get => _scoreDay1Header;
+            private set { _scoreDay1Header = value; OnPropertyChanged(); }
+        }
+
+        public string ScoreDay2Header
+        {
+            get => _scoreDay2Header;
+            private set { _scoreDay2Header = value; OnPropertyChanged(); }
+        }
+
+        public string ScoreDay3Header
+        {
+            get => _scoreDay3Header;
+            private set { _scoreDay3Header = value; OnPropertyChanged(); }
+        }
+
+        public string ScoreDay4Header
+        {
+            get => _scoreDay4Header;
+            private set { _scoreDay4Header = value; OnPropertyChanged(); }
+        }
+
+        public ICommand ClearFiltersCommand { get; }
+        public ICommand ApplyStrongMomentumFilterCommand { get; }
+        public ICommand ApplyLowPriceHighScoreFilterCommand { get; }
+        public ICommand ApplyInstitutionalMomentumFilterCommand { get; }
+        public ICommand ApplyScoreReboundFilterCommand { get; }
 
         private bool FilterRankedStocks(object item)
         {
@@ -97,6 +269,14 @@ namespace StockTracker.ViewModels
 
                 if (MinPrice.HasValue && stock.LatestPrice < MinPrice.Value) return false;
                 if (MaxPrice.HasValue && stock.LatestPrice > MaxPrice.Value) return false;
+                if (MinChangePercentFilter.HasValue && stock.ChangePercent < MinChangePercentFilter.Value) return false;
+                if (MaxChangePercentFilter.HasValue && stock.ChangePercent > MaxChangePercentFilter.Value) return false;
+                if (MinThreeMajorNetFilter.HasValue && stock.ThreeMajorNet < MinThreeMajorNetFilter.Value) return false;
+                if (MaxThreeMajorNetFilter.HasValue && stock.ThreeMajorNet > MaxThreeMajorNetFilter.Value) return false;
+                if (MinLatestScoreFilter.HasValue && stock.Score < MinLatestScoreFilter.Value) return false;
+                if (MinAverageScoreFilter.HasValue && stock.AverageRecentScore < MinAverageScoreFilter.Value) return false;
+                if (RequireScoreTrendUp && stock.ScoreTrend <= 0) return false;
+                if (MinConsecutiveDays > 0 && stock.GetConsecutiveScoreDays(MinConsecutiveScore) < MinConsecutiveDays) return false;
 
                 return true;
             }
@@ -110,8 +290,9 @@ namespace StockTracker.ViewModels
             {
                 conn.Open();
 
-                // 檢查是否包含 ThreeMajorNet 欄位，因為這支 DB 可能是舊版建立的
+                // 檢查是否包含延伸欄位，因為這支 DB 可能是舊版建立的
                 bool hasThreeMajorNetColumn = false;
+                bool hasRecentScoresColumn = false;
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = "PRAGMA table_info(LatestRanking);";
@@ -123,7 +304,11 @@ namespace StockTracker.ViewModels
                             if (colName == "ThreeMajorNet")
                             {
                                 hasThreeMajorNetColumn = true;
-                                break;
+                            }
+
+                            if (colName == "RecentScores")
+                            {
+                                hasRecentScoresColumn = true;
                             }
                         }
                     }
@@ -140,7 +325,8 @@ namespace StockTracker.ViewModels
                             ChangePercent REAL NOT NULL,
                             Score INTEGER NOT NULL,
                             Suggestion TEXT NOT NULL,
-                            ThreeMajorNet INTEGER NOT NULL DEFAULT 0
+                            ThreeMajorNet INTEGER NOT NULL DEFAULT 0,
+                            RecentScores TEXT NOT NULL DEFAULT ''
                         );";
                     cmd.ExecuteNonQuery();
                 }
@@ -161,6 +347,21 @@ namespace StockTracker.ViewModels
                         // table 尚未建立時的 Alter Table 可能報錯，可忽略
                     }
                 }
+
+                if (!hasRecentScoresColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN RecentScores TEXT NOT NULL DEFAULT '';";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
         }
 
@@ -174,11 +375,12 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion, ThreeMajorNet FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion, ThreeMajorNet, RecentScores FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
                             {
+                                var recentScoresRaw = reader.IsDBNull(8) ? string.Empty : reader.GetString(8);
                                 loaded.Add(new RankedStock
                                 {
                                     Rank = reader.GetInt32(0),
@@ -188,7 +390,8 @@ namespace StockTracker.ViewModels
                                     ChangePercent = reader.GetDecimal(4),
                                     Score = reader.GetInt32(5),
                                     Suggestion = reader.GetString(6),
-                                    ThreeMajorNet = reader.IsDBNull(7) ? 0 : reader.GetInt64(7)
+                                    ThreeMajorNet = reader.IsDBNull(7) ? 0 : reader.GetInt64(7),
+                                    RecentScores = DeserializeRecentScores(recentScoresRaw, reader.GetInt32(5))
                                 });
                             }
                         }
@@ -199,7 +402,12 @@ namespace StockTracker.ViewModels
                 {
                     foreach (var s in loaded)
                         RankedStocks.Add(s);
+                    UpdateScoreHeaders(loaded);
                     ProgressText = $"已載入上次儲存的排行 ({loaded.Count} 筆)";
+                }
+                else
+                {
+                    UpdateScoreHeaders(null);
                 }
             }
             catch (Exception ex)
@@ -208,7 +416,7 @@ namespace StockTracker.ViewModels
             }
         }
 
-        private void SaveRankingToDb(List<RankedStock> topResults)
+        private void SaveRankingToDb(IEnumerable<RankedStock> rankingResults)
         {
             try
             {
@@ -224,9 +432,9 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion, ThreeMajorNet)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @sugg, @net)";
-                            foreach (var s in topResults)
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion, ThreeMajorNet, RecentScores)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @sugg, @net, @recentScores)";
+                            foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
                                 cmd.Parameters.AddWithValue("@rank", s.Rank);
@@ -237,6 +445,7 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@score", s.Score);
                                 cmd.Parameters.AddWithValue("@sugg", s.Suggestion);
                                 cmd.Parameters.AddWithValue("@net", s.ThreeMajorNet);
+                                cmd.Parameters.AddWithValue("@recentScores", SerializeRecentScores(s.RecentScores));
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -390,21 +599,13 @@ namespace StockTracker.ViewModels
                                 dummyVm.UpdateFromKLine(c);
                             }
 
+                            var enrichedCandles = dummyVm.GetPublicCandles().ToList();
+
                             TwseT86History t86History;
                             t86HistoryMap.TryGetValue(symbol, out t86History);
 
-                            var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
-                                dummyVm.GetPublicCandles(),
-                                (double)dummyVm.LatestPrice,
-                                (double?)dummyVm.ChangePercent,
-                                (double)candles[Math.Max(0, candles.Count - 2)].Close,
-                                new TwseT86History
-                                {
-                                    Symbol = symbol,
-                                    Name = name,
-                                    RecordsByDate = t86History?.RecordsByDate ?? new Dictionary<DateTime, TwseT86Record>()
-                                },
-                                candles.Last().Time);
+                            var recentScores = BuildRecentScores(enrichedCandles, t86History, symbol, name);
+                            var latestScore = recentScores.Count > 0 ? recentScores[0].Score : 0;
 
                             long latestNet = 0;
                             if (t86History != null && t86History.RecordsByDate.Any())
@@ -420,8 +621,9 @@ namespace StockTracker.ViewModels
                                     Name = name,
                                     LatestPrice = dummyVm.LatestPrice,
                                     ChangePercent = dummyVm.ChangePercent,
-                                    Score = recommendation.Score,
-                                    ThreeMajorNet = latestNet
+                                    Score = latestScore,
+                                    ThreeMajorNet = latestNet,
+                                    RecentScores = recentScores
                                 });
 
                                 analyzeChecked++;
@@ -453,7 +655,8 @@ namespace StockTracker.ViewModels
                     RankedStocks.Add(results[i]);
                 }
 
-                SaveRankingToDb(results.Take(TopCount).ToList());
+                UpdateScoreHeaders(results);
+                SaveRankingToDb(results);
 
                 ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票";
             }
@@ -466,6 +669,228 @@ namespace StockTracker.ViewModels
                 _isScanning = false;
                 CommandManager.InvalidateRequerySuggested();
             }
+        }
+
+        private static List<RankedStockScorePoint> BuildRecentScores(List<CandleData> candles, TwseT86History t86History, string symbol, string name)
+        {
+            var recentScores = new List<RankedStockScorePoint>();
+            if (candles == null || candles.Count == 0)
+            {
+                return recentScores;
+            }
+
+            var startIndex = Math.Max(0, candles.Count - 5);
+            for (var i = startIndex; i < candles.Count; i++)
+            {
+                var subset = candles.Take(i + 1).ToList();
+                if (subset.Count == 0)
+                {
+                    continue;
+                }
+
+                var latestCandle = subset[subset.Count - 1];
+                var previousClose = subset.Count > 1 ? (double)subset[subset.Count - 2].Close : (double)latestCandle.Close;
+                var filteredT86History = new TwseT86History
+                {
+                    Symbol = symbol,
+                    Name = name,
+                    RecordsByDate = (t86History?.RecordsByDate ?? new Dictionary<DateTime, TwseT86Record>())
+                        .Where(x => x.Key.Date <= latestCandle.Time.Date)
+                        .ToDictionary(x => x.Key, x => x.Value)
+                };
+
+                var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                    subset,
+                    (double)latestCandle.Close,
+                    (double?)latestCandle.PercentageChange,
+                    previousClose,
+                    filteredT86History,
+                    latestCandle.Time);
+
+                recentScores.Add(new RankedStockScorePoint
+                {
+                    Date = latestCandle.Time.Date,
+                    Score = recommendation.Score
+                });
+            }
+
+            return recentScores
+                .OrderByDescending(x => x.Date)
+                .ToList();
+        }
+
+        private static string SerializeRecentScores(IEnumerable<RankedStockScorePoint> recentScores)
+        {
+            return string.Join("|", (recentScores ?? Enumerable.Empty<RankedStockScorePoint>())
+                .OrderByDescending(x => x.Date)
+                .Select(x => $"{x.Date:yyyyMMdd}:{x.Score}"));
+        }
+
+        private static List<RankedStockScorePoint> DeserializeRecentScores(string raw, int fallbackScore)
+        {
+            var result = new List<RankedStockScorePoint>();
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                foreach (var part in raw.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var values = part.Split(':');
+                    if (values.Length != 2)
+                    {
+                        continue;
+                    }
+
+                    DateTime tradeDate;
+                    int score;
+                    if (!DateTime.TryParseExact(values[0], "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out tradeDate) ||
+                        !int.TryParse(values[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out score))
+                    {
+                        continue;
+                    }
+
+                    result.Add(new RankedStockScorePoint
+                    {
+                        Date = tradeDate.Date,
+                        Score = score
+                    });
+                }
+            }
+
+            if (result.Count == 0)
+            {
+                result.Add(new RankedStockScorePoint
+                {
+                    Date = DateTime.MinValue,
+                    Score = fallbackScore
+                });
+            }
+
+            return result
+                .OrderByDescending(x => x.Date)
+                .Take(5)
+                .ToList();
+        }
+
+        private void UpdateScoreHeaders(IEnumerable<RankedStock> stocks)
+        {
+            var scoreDates = (stocks ?? Enumerable.Empty<RankedStock>())
+                .Where(x => x != null && x.RecentScores != null)
+                .OrderByDescending(x => x.RecentScores.Count)
+                .Select(x => x.RecentScores.OrderByDescending(r => r.Date).Select(r => r.Date).ToList())
+                .FirstOrDefault();
+
+            ScoreDay0Header = FormatScoreHeader(scoreDates, 0);
+            ScoreDay1Header = FormatScoreHeader(scoreDates, 1);
+            ScoreDay2Header = FormatScoreHeader(scoreDates, 2);
+            ScoreDay3Header = FormatScoreHeader(scoreDates, 3);
+            ScoreDay4Header = FormatScoreHeader(scoreDates, 4);
+        }
+
+        private static string FormatScoreHeader(IReadOnlyList<DateTime> dates, int offset)
+        {
+            if (dates == null || offset < 0 || offset >= dates.Count)
+            {
+                return "D" + offset.ToString(CultureInfo.InvariantCulture);
+            }
+
+            return dates[offset] == DateTime.MinValue
+                ? "D" + offset.ToString(CultureInfo.InvariantCulture)
+                : dates[offset].ToString("MM/dd", CultureInfo.InvariantCulture);
+        }
+
+        private void ClearFilters()
+        {
+            ApplyFilterPreset(() =>
+            {
+                _searchText = null;
+                _minPrice = null;
+                _maxPrice = null;
+                _minChangePercentFilter = null;
+                _maxChangePercentFilter = null;
+                _minThreeMajorNetFilter = null;
+                _maxThreeMajorNetFilter = null;
+                _minLatestScoreFilter = null;
+                _minAverageScoreFilter = null;
+                _requireScoreTrendUp = false;
+                _minConsecutiveDays = 0;
+                _minConsecutiveScore = 60;
+            });
+        }
+
+        private void ApplyStrongMomentumFilter()
+        {
+            ApplyFilterPreset(() =>
+            {
+                _minConsecutiveDays = 3;
+                _minConsecutiveScore = 70;
+                _minLatestScoreFilter = 75;
+                _minAverageScoreFilter = 70d;
+                _minChangePercentFilter = 0m;
+                _requireScoreTrendUp = true;
+                _minThreeMajorNetFilter = null;
+                _maxThreeMajorNetFilter = null;
+            });
+        }
+
+        private void ApplyLowPriceHighScoreFilter()
+        {
+            ApplyFilterPreset(() =>
+            {
+                _minPrice = null;
+                _maxPrice = 100m;
+                _minLatestScoreFilter = 75;
+                _minAverageScoreFilter = 70d;
+                _minChangePercentFilter = null;
+                _maxChangePercentFilter = null;
+                _minConsecutiveDays = 2;
+                _minConsecutiveScore = 65;
+                _requireScoreTrendUp = true;
+            });
+        }
+
+        private void ApplyInstitutionalMomentumFilter()
+        {
+            ApplyFilterPreset(() =>
+            {
+                _minThreeMajorNetFilter = 1;
+                _maxThreeMajorNetFilter = null;
+                _minLatestScoreFilter = 70;
+                _minAverageScoreFilter = 65d;
+                _minConsecutiveDays = 2;
+                _minConsecutiveScore = 65;
+                _requireScoreTrendUp = false;
+            });
+        }
+
+        private void ApplyScoreReboundFilter()
+        {
+            ApplyFilterPreset(() =>
+            {
+                _minLatestScoreFilter = 65;
+                _minAverageScoreFilter = 55d;
+                _minChangePercentFilter = null;
+                _maxChangePercentFilter = null;
+                _minConsecutiveDays = 0;
+                _requireScoreTrendUp = true;
+            });
+        }
+
+        private void ApplyFilterPreset(Action applyAction)
+        {
+            applyAction?.Invoke();
+
+            OnPropertyChanged(nameof(SearchText));
+            OnPropertyChanged(nameof(MinPrice));
+            OnPropertyChanged(nameof(MaxPrice));
+            OnPropertyChanged(nameof(MinChangePercentFilter));
+            OnPropertyChanged(nameof(MaxChangePercentFilter));
+            OnPropertyChanged(nameof(MinThreeMajorNetFilter));
+            OnPropertyChanged(nameof(MaxThreeMajorNetFilter));
+            OnPropertyChanged(nameof(MinLatestScoreFilter));
+            OnPropertyChanged(nameof(MinAverageScoreFilter));
+            OnPropertyChanged(nameof(RequireScoreTrendUp));
+            OnPropertyChanged(nameof(MinConsecutiveDays));
+            OnPropertyChanged(nameof(MinConsecutiveScore));
+            _rankedStocksView.Refresh();
         }
     }
 }
