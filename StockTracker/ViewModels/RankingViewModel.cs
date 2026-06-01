@@ -513,7 +513,13 @@ namespace StockTracker.ViewModels
 
                 int totalChecked = 0;
 
-                MainWindow.BuildDateRangeForBars("日K", 300, out var startDate, out var endDate);
+                int scanBarCount;
+                if (!int.TryParse(_mainViewModel.SelectedGlobalKLineCount, out scanBarCount) || scanBarCount <= 0)
+                {
+                    scanBarCount = 300;
+                }
+
+                MainWindow.BuildDateRangeForBars("日K", scanBarCount, out var startDate, out var endDate);
                 DateTime scanHistoryStartDate;
                 DateTime.TryParseExact(startDate, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out scanHistoryStartDate);
 
@@ -593,7 +599,10 @@ namespace StockTracker.ViewModels
                         {
                             candles.Sort((a, b) => a.Time.CompareTo(b.Time));
 
-                            var dummyVm = new StockViewModel(symbol, name);
+                            var dummyVm = new StockViewModel(symbol, name)
+                            {
+                                SelectedKLineInterval = "日K"
+                            };
                             foreach (var c in candles)
                             {
                                 dummyVm.UpdateFromKLine(c);
