@@ -67,6 +67,11 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <WrapPanel Margin="0,0,0,10">
+                    <CheckBox Content="顯示型態標記" IsChecked="{Binding ShowPatternMarkers}" Margin="0,0,12,0"/>
+                    <CheckBox Content="顯示風險標記" IsChecked="{Binding ShowRiskMarkers}"/>
+                </WrapPanel>
+
                 <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="8" Background="{DynamicResource SurfaceBrush}" Margin="0,0,0,10">
                     <StackPanel>
                         <TextBlock Margin="0,0,0,6">
@@ -103,6 +108,26 @@
                                                   Stroke="Gray" StrokeDashArray="2,3" StrokeThickness="0.8"/>
                                             <TextBlock Text="{Binding Text}" FontSize="9" Foreground="{DynamicResource MutedForegroundBrush}" Margin="2,-10,0,0"/>
                                         </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding PatternMarkers}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="18" Height="18" CornerRadius="9" BorderThickness="1" BorderBrush="{Binding Brush}" Background="#AA1E1E1E">
+                                            <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

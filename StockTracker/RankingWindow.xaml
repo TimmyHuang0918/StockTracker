@@ -105,6 +105,14 @@
                                     <TextBox Text="{Binding MinLatestScoreFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="風險分數 ≥" Margin="0,0,0,4" />
+                                    <TextBox Text="{Binding MinCrashRiskScoreFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="型態標籤數 ≥" Margin="0,0,0,4" />
+                                    <TextBox Text="{Binding MinPatternTagCountFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
                                     <TextBlock Text="近5日均分 ≥" Margin="0,0,0,4" />
                                     <TextBox Text="{Binding MinAverageScoreFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
@@ -134,6 +142,8 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Header="分數" Binding="{Binding Score}" Width="80" />
+                <DataGridTextColumn Header="風險分" Binding="{Binding CrashRiskScore}" Width="70" />
+                <DataGridTextColumn Header="型態數" Binding="{Binding PatternTagCount}" Width="60" />
                 <DataGridTextColumn Header="{Binding DataContext.ScoreDay0Header, RelativeSource={RelativeSource AncestorType=DataGrid}}" Binding="{Binding ScoreDay0}" Width="55" />
                 <DataGridTextColumn Header="{Binding DataContext.ScoreDay1Header, RelativeSource={RelativeSource AncestorType=DataGrid}}" Binding="{Binding ScoreDay1}" Width="55" />
                 <DataGridTextColumn Header="{Binding DataContext.ScoreDay2Header, RelativeSource={RelativeSource AncestorType=DataGrid}}" Binding="{Binding ScoreDay2}" Width="55" />

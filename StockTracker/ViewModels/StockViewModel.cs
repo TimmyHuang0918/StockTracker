@@ -55,9 +55,14 @@ namespace StockTracker.ViewModels
         private readonly List<MarginMaintenancePointVisual> _lastDisplayMarginMaintenanceSeries = new List<MarginMaintenancePointVisual>();
         private readonly List<ThreeMajorPointData> _lastDisplayThreeMajorSeries = new List<ThreeMajorPointData>();
         private readonly Dictionary<DateTime, int> _recommendationScoreCache = new Dictionary<DateTime, int>();
+        private readonly Dictionary<DateTime, int> _crashRiskScoreCache = new Dictionary<DateTime, int>();
         private readonly Dictionary<DateTime, List<string>> _recommendationReasonsCache = new Dictionary<DateTime, List<string>>();
         private readonly Dictionary<DateTime, List<PatternTag>> _recommendationPatternTagsCache = new Dictionary<DateTime, List<PatternTag>>();
         private readonly ObservableCollection<PatternTag> _currentPatternTags = new ObservableCollection<PatternTag>();
+        private int _currentCrashRiskScore;
+        private int _currentOpportunityScore;
+        private bool _showPatternMarkers = true;
+        private bool _showRiskMarkers = true;
         private double _lastMinPrice;
         private double _lastPriceRange = 1;
         private double _crosshairX;
@@ -87,6 +92,7 @@ namespace StockTracker.ViewModels
             MarginMaintenancePoints = new PointCollection();
             MarginMaintenanceSegments = new ObservableCollection<LineSegmentVisual>();
             SignalMarkers = new ObservableCollection<SignalMarkerVisual>();
+            PatternMarkers = new ObservableCollection<SignalMarkerVisual>();
             TimeLabels = new ObservableCollection<TimeLabelVisual>();
             PriceLevels = new ObservableCollection<PriceLevelVisual>();
             MacdLevels = new ObservableCollection<PriceLevelVisual>();
@@ -123,6 +129,21 @@ namespace StockTracker.ViewModels
                 if (_latestPrice == value)
                     return;
                 _latestPrice = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int CurrentOpportunityScore
+        {
+            get => _currentOpportunityScore;
+            private set
+            {
+                if (_currentOpportunityScore == value)
+                {
+                    return;
+                }
+
+                _currentOpportunityScore = value;
                 OnPropertyChanged();
             }
         }
@@ -355,6 +376,7 @@ namespace StockTracker.ViewModels
         public ObservableCollection<HistogramBarVisual> MarginBalanceBars { get; }
         public ObservableCollection<LineSegmentVisual> MarginMaintenanceSegments { get; }
         public ObservableCollection<SignalMarkerVisual> SignalMarkers { get; }
+        public ObservableCollection<SignalMarkerVisual> PatternMarkers { get; }
         public ObservableCollection<TimeLabelVisual> TimeLabels { get; }
         public ObservableCollection<PriceLevelVisual> PriceLevels { get; }
         public ObservableCollection<PriceLevelVisual> MacdLevels { get; }
@@ -364,6 +386,53 @@ namespace StockTracker.ViewModels
         public ObservableCollection<PriceLevelVisual> MarginMaintenanceLevels { get; }
         public ObservableCollection<PriceLevelVisual> ThreeMajorLevels { get; }
         public ObservableCollection<PatternTag> CurrentPatternTags => _currentPatternTags;
+
+        public int CurrentCrashRiskScore
+        {
+            get => _currentCrashRiskScore;
+            private set
+            {
+                if (_currentCrashRiskScore == value)
+                {
+                    return;
+                }
+
+                _currentCrashRiskScore = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool ShowPatternMarkers
+        {
+            get => _showPatternMarkers;
+            set
+            {
+                if (_showPatternMarkers == value)
+                {
+                    return;
+                }
+
+                _showPatternMarkers = value;
+                OnPropertyChanged();
+                RebuildVisuals();
+            }
+        }
+
+        public bool ShowRiskMarkers
+        {
+            get => _showRiskMarkers;
+            set
+            {
+                if (_showRiskMarkers == value)
+                {
+                    return;
+                }
+
+                _showRiskMarkers = value;
+                OnPropertyChanged();
+                RebuildVisuals();
+            }
+        }
         public double MarginMaintenanceWarningLineY => GetMarginMaintenanceLineY(MaintenanceWarningRatio);
         public double MarginMaintenanceSafeLineY => GetMarginMaintenanceLineY(MaintenanceSafeRatio);
         public Visibility MarginBalanceChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
@@ -899,6 +968,8 @@ namespace StockTracker.ViewModels
                 Signal = "資料不足";
                 _latestRecommendationReasons.Clear();
                 _currentPatternTags.Clear();
+                CurrentOpportunityScore = 0;
+                CurrentCrashRiskScore = 0;
                 return;
             }
 
@@ -917,8 +988,11 @@ namespace StockTracker.ViewModels
                 _latestRecommendationReasons = recommendation.Reasons ?? new List<string>();
                 Signal = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
                 _recommendationScoreCache[latestCandle.Time] = recommendation.Score;
+                _crashRiskScoreCache[latestCandle.Time] = recommendation.CrashRiskScore;
                 _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
                 _recommendationPatternTagsCache[latestCandle.Time] = recommendation.PatternTags ?? new List<PatternTag>();
+                CurrentOpportunityScore = recommendation.Score;
+                CurrentCrashRiskScore = recommendation.CrashRiskScore;
                 UpdateCurrentPatternTags(latestCandle.Time);
 
                 var actionSignal = ResolveActionSignal(Signal);
@@ -950,12 +1024,16 @@ namespace StockTracker.ViewModels
 
                 _latestRecommendationReasons = intradayRecommendation.Reasons ?? new List<string>();
                 Signal = intradayRecommendation.Action;
+                int score = Signal.Contains("強烈") ? 100 : Signal.Contains("偏多") || Signal.Contains("偏空") ? 70 : 50;
+                _recommendationScoreCache[latestCandle.Time] = score;
                 _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
+                _crashRiskScoreCache[latestCandle.Time] = 0;
                 _recommendationPatternTagsCache[latestCandle.Time] = new List<PatternTag>();
+                CurrentOpportunityScore = score;
+                CurrentCrashRiskScore = 0;
                 UpdateCurrentPatternTags(latestCandle.Time);
 
                 var actionSignal = ResolveActionSignal(Signal);
-                int score = Signal.Contains("強烈") ? 100 : Signal.Contains("偏多") || Signal.Contains("偏空") ? 70 : 50;
                 var shouldRecord = score >= 70;
                 var signalKey = $"{actionSignal}_{score / 15}";
 
@@ -1224,6 +1302,45 @@ namespace StockTracker.ViewModels
                     Text = text,
                     Brush = brush
                 });
+            }
+
+            PatternMarkers.Clear();
+            for (var i = 0; i < candles.Count; i++)
+            {
+                var candle = candles[i];
+                List<PatternTag> tags;
+                if (!_recommendationPatternTagsCache.TryGetValue(candle.Time, out tags) || tags == null || tags.Count == 0)
+                {
+                    continue;
+                }
+
+                var bullishTop = tags.Where(x => x.IsBullish).OrderByDescending(x => x.Score).FirstOrDefault();
+                var riskTop = tags.Where(x => x.IsRisk).OrderByDescending(x => x.Score).FirstOrDefault();
+                var centerX = CalculateCenterX(i, candles.Count, _chartPaddingWidth);
+                var highY = Scale((double)candle.High, minPrice, priceRange, CandleChartHeight);
+                var lowY = Scale((double)candle.Low, minPrice, priceRange, CandleChartHeight);
+
+                if (ShowPatternMarkers && bullishTop != null)
+                {
+                    PatternMarkers.Add(new SignalMarkerVisual
+                    {
+                        X = centerX - 10,
+                        Y = highY - 34,
+                        Text = "型",
+                        Brush = Brushes.IndianRed
+                    });
+                }
+
+                if (ShowRiskMarkers && riskTop != null)
+                {
+                    PatternMarkers.Add(new SignalMarkerVisual
+                    {
+                        X = centerX - 10,
+                        Y = lowY + 10,
+                        Text = "風",
+                        Brush = Brushes.MediumSeaGreen
+                    });
+                }
             }
 
             TimeLabels.Clear();

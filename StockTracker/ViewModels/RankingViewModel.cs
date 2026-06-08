@@ -25,6 +25,8 @@ namespace StockTracker.ViewModels
         public decimal LatestPrice { get; set; }
         public decimal ChangePercent { get; set; }
         public int Score { get; set; }
+        public int CrashRiskScore { get; set; }
+        public int PatternTagCount { get; set; }
         public string Suggestion { get; set; }
         public long ThreeMajorNet { get; set; }
         public List<RankedStockScorePoint> RecentScores { get; set; } = new List<RankedStockScorePoint>();
@@ -100,6 +102,8 @@ namespace StockTracker.ViewModels
         private long? _minThreeMajorNetFilter;
         private long? _maxThreeMajorNetFilter;
         private int? _minLatestScoreFilter;
+        private int? _minCrashRiskScoreFilter;
+        private int? _minPatternTagCountFilter;
         private double? _minAverageScoreFilter;
         private bool _requireScoreTrendUp;
         private int _minConsecutiveDays;
@@ -176,6 +180,18 @@ namespace StockTracker.ViewModels
         {
             get => _minLatestScoreFilter;
             set { _minLatestScoreFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public int? MinCrashRiskScoreFilter
+        {
+            get => _minCrashRiskScoreFilter;
+            set { _minCrashRiskScoreFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public int? MinPatternTagCountFilter
+        {
+            get => _minPatternTagCountFilter;
+            set { _minPatternTagCountFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
         }
 
         public double? MinAverageScoreFilter
@@ -274,6 +290,8 @@ namespace StockTracker.ViewModels
                 if (MinThreeMajorNetFilter.HasValue && stock.ThreeMajorNet < MinThreeMajorNetFilter.Value) return false;
                 if (MaxThreeMajorNetFilter.HasValue && stock.ThreeMajorNet > MaxThreeMajorNetFilter.Value) return false;
                 if (MinLatestScoreFilter.HasValue && stock.Score < MinLatestScoreFilter.Value) return false;
+                if (MinCrashRiskScoreFilter.HasValue && stock.CrashRiskScore < MinCrashRiskScoreFilter.Value) return false;
+                if (MinPatternTagCountFilter.HasValue && stock.PatternTagCount < MinPatternTagCountFilter.Value) return false;
                 if (MinAverageScoreFilter.HasValue && stock.AverageRecentScore < MinAverageScoreFilter.Value) return false;
                 if (RequireScoreTrendUp && stock.ScoreTrend <= 0) return false;
                 if (MinConsecutiveDays > 0 && stock.GetConsecutiveScoreDays(MinConsecutiveScore) < MinConsecutiveDays) return false;
@@ -615,6 +633,13 @@ namespace StockTracker.ViewModels
 
                             var recentScores = BuildRecentScores(enrichedCandles, t86History, symbol, name);
                             var latestScore = recentScores.Count > 0 ? recentScores[0].Score : 0;
+                            var latestRecommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                                enrichedCandles,
+                                (double)dummyVm.LatestPrice,
+                                (double?)dummyVm.ChangePercent,
+                                enrichedCandles.Count > 1 ? (double)enrichedCandles[enrichedCandles.Count - 2].Close : (double)dummyVm.LatestPrice,
+                                t86History,
+                                enrichedCandles.Last().Time);
 
                             long latestNet = 0;
                             if (t86History != null && t86History.RecordsByDate.Any())
@@ -631,6 +656,8 @@ namespace StockTracker.ViewModels
                                     LatestPrice = dummyVm.LatestPrice,
                                     ChangePercent = dummyVm.ChangePercent,
                                     Score = latestScore,
+                                    CrashRiskScore = latestRecommendation.CrashRiskScore,
+                                    PatternTagCount = (latestRecommendation.PatternTags ?? new List<PatternTag>()).Count,
                                     ThreeMajorNet = latestNet,
                                     RecentScores = recentScores
                                 });
@@ -818,6 +845,8 @@ namespace StockTracker.ViewModels
                 _minThreeMajorNetFilter = null;
                 _maxThreeMajorNetFilter = null;
                 _minLatestScoreFilter = null;
+                _minCrashRiskScoreFilter = null;
+                _minPatternTagCountFilter = null;
                 _minAverageScoreFilter = null;
                 _requireScoreTrendUp = false;
                 _minConsecutiveDays = 0;
@@ -895,6 +924,8 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(MinThreeMajorNetFilter));
             OnPropertyChanged(nameof(MaxThreeMajorNetFilter));
             OnPropertyChanged(nameof(MinLatestScoreFilter));
+            OnPropertyChanged(nameof(MinCrashRiskScoreFilter));
+            OnPropertyChanged(nameof(MinPatternTagCountFilter));
             OnPropertyChanged(nameof(MinAverageScoreFilter));
             OnPropertyChanged(nameof(RequireScoreTrendUp));
             OnPropertyChanged(nameof(MinConsecutiveDays));
