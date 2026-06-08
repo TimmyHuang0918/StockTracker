@@ -5,10 +5,20 @@ using System.Linq;
 
 namespace StockManager.Library
 {
+    public class PatternTag
+    {
+        public string Key { get; set; }
+        public string Label { get; set; }
+        public double Score { get; set; }
+        public bool IsRisk { get; set; }
+        public bool IsBullish { get; set; }
+    }
+
     public class TrendRecommendationResult
     {
         public int Score { get; set; }
         public List<string> Reasons { get; set; }
+        public List<PatternTag> PatternTags { get; set; }
     }
 
     public class IntradayRecommendationResult
@@ -19,6 +29,8 @@ namespace StockManager.Library
 
     public static class TradingRecommendationLibrary
     {
+        private const double PatternTagDisplayThreshold = 70.0;
+
         public static TrendRecommendationResult CalculateAdvancedRecommendation(
             List<CandleData> data,
             double currentPriceDouble,
@@ -34,13 +46,15 @@ namespace StockManager.Library
                 return new TrendRecommendationResult
                 {
                     Score = 50,
-                    Reasons = new List<string> { "數據不足：歷史資料少於 20 筆，無法計算技術指標。" }
+                    Reasons = new List<string> { "數據不足：歷史資料少於 20 筆，無法計算技術指標。" },
+                    PatternTags = new List<PatternTag>()
                 };
             }
 
             var latest = data.Last();
             var prev = data[data.Count - 2];
             var reasons = new List<string>();
+            var patternTags = new List<PatternTag>();
 
             double trendScore = 0, momentumScore = 0, chipScore = 0, candleScore = 0, volScore = 0;
             double Clamp(double val, double min, double max) => Math.Max(min, Math.Min(max, val));
@@ -397,7 +411,7 @@ namespace StockManager.Library
             chipScore = Clamp(chipScore, -30, 30);
 
             // =====================================================================
-            // --- 4. K 線型態 ---
+            // --- 4. K 線型態 + 量價 ---
             // =====================================================================
 
             double close = (double)latest.Close;
@@ -405,52 +419,19 @@ namespace StockManager.Library
             double high = (double)latest.High;
             double low = (double)latest.Low;
             double body = Math.Abs(close - open);
-            double kRange = high - low;
-
-            if (kRange > 0)
-            {
-                double upperShadow = high - Math.Max(open, close);
-                double lowerShadow = Math.Min(open, close) - low;
-                double bodyRatio = body / kRange;
-
-                if (bodyRatio > 0.8 && close > open)
-                {
-                    candleScore += 8;
-                    reasons.Add($"[型態+8] 飽滿長紅 K 線 (實體佔{bodyRatio * 100:F0}%)，買氣強勁");
-                }
-                else if (bodyRatio > 0.8 && close < open)
-                {
-                    candleScore -= 8;
-                    reasons.Add($"[型態-8] 飽滿長黑 K 線 (實體佔{bodyRatio * 100:F0}%)，賣壓沉重");
-                }
-                else if (upperShadow > body * 2 && upperShadow > kRange * 0.4)
-                {
-                    candleScore -= 6;
-                    reasons.Add($"[型態-6] 長上引線 (上影{upperShadow:F2})，上攻受阻，賣壓出現");
-                }
-                else if (lowerShadow > body * 2 && lowerShadow > kRange * 0.4)
-                {
-                    candleScore += 6;
-                    reasons.Add($"[型態+6] 長下引線 (下影{lowerShadow:F2})，下檔承接強，買盤進場");
-                }
-                else if (bodyRatio < 0.1)
-                {
-                    reasons.Add($"[型態±0] 十字星 K 線，買賣力道相當，方向待確認");
-                }
-                else
-                {
-                    reasons.Add($"[型態±0] 普通 K 線，無特殊型態訊號");
-                }
-            }
-
-            // =====================================================================
-            // --- 5. 量價 ---
-            // =====================================================================
+            double kRange = Math.Max(0.0000001, high - low);
+            double upperShadow = Math.Max(0, high - Math.Max(open, close));
+            double lowerShadow = Math.Max(0, Math.Min(open, close) - low);
+            double upperShadowRatio = upperShadow / kRange;
+            double lowerShadowRatio = lowerShadow / kRange;
+            double prevClose = previousClose ?? (double)prev.Close;
+            double dailyReturn = prevClose != 0 ? (close - prevClose) / prevClose : 0;
+            bool isRedCandle = close > open;
+            bool isBlackCandle = close < open;
 
             double avgVol20 = data.Skip(Math.Max(0, data.Count - 20)).Average(x => (double)x.Volume);
             double curVol = (double)latest.Volume;
             double volRatio = avgVol20 > 0 ? curVol / avgVol20 : 1.0;
-            double prevClose = previousClose ?? (double)prev.Close;
 
             if (volRatio >= 2.0 && close > prevClose)
             {
@@ -508,7 +489,46 @@ namespace StockManager.Library
                 }
             }
 
-            double extraScore = Clamp(candleScore + volScore, -20, 20);
+            var scoreBullishEngulfing = CalculateBullishEngulfingScore(data, volRatio);
+            var scoreBearishEngulfing = CalculateBearishEngulfingScore(data, volRatio);
+            var scorePiercingLine = CalculatePiercingLineScore(data, volRatio);
+            var scoreDarkCloudCover = CalculateDarkCloudCoverScore(data, volRatio);
+            var scoreBullishHarami = CalculateBullishHaramiScore(data, volRatio);
+            var scoreBearishHarami = CalculateBearishHaramiScore(data, volRatio);
+            var scoreMorningStar = CalculateMorningStarScore(data, volRatio);
+            var scoreEveningStar = CalculateEveningStarScore(data, volRatio);
+            var scoreThreeWhiteSoldiers = CalculateThreeWhiteSoldiersScore(data, volRatio);
+            var scoreThreeBlackCrows = CalculateThreeBlackCrowsScore(data, volRatio);
+            var scoreRisingThreeMethods = CalculateRisingThreeMethodsScore(data, volRatio);
+            var scoreFallingThreeMethods = CalculateFallingThreeMethodsScore(data, volRatio);
+
+            AddPatternTag(patternTags, reasons, "bullish_engulfing", "多頭吞噬", scoreBullishEngulfing, false);
+            AddPatternTag(patternTags, reasons, "bearish_engulfing", "空頭吞噬", scoreBearishEngulfing, true);
+            AddPatternTag(patternTags, reasons, "piercing_line", "穿刺線", scorePiercingLine, false);
+            AddPatternTag(patternTags, reasons, "dark_cloud_cover", "烏雲蓋頂", scoreDarkCloudCover, true);
+            AddPatternTag(patternTags, reasons, "bullish_harami", "多頭孕育", scoreBullishHarami, false);
+            AddPatternTag(patternTags, reasons, "bearish_harami", "空頭孕育", scoreBearishHarami, true);
+            AddPatternTag(patternTags, reasons, "morning_star", "晨星", scoreMorningStar, false);
+            AddPatternTag(patternTags, reasons, "evening_star", "黃昏星", scoreEveningStar, true);
+            AddPatternTag(patternTags, reasons, "three_white_soldiers", "紅三兵", scoreThreeWhiteSoldiers, false);
+            AddPatternTag(patternTags, reasons, "three_black_crows", "黑三鴉", scoreThreeBlackCrows, true);
+            AddPatternTag(patternTags, reasons, "rising_three_methods", "上升三法", scoreRisingThreeMethods, false);
+            AddPatternTag(patternTags, reasons, "falling_three_methods", "下降三法", scoreFallingThreeMethods, true);
+
+            var bullishScores = new[] { scoreBullishEngulfing, scorePiercingLine, scoreBullishHarami, scoreMorningStar, scoreThreeWhiteSoldiers, scoreRisingThreeMethods }
+                .OrderByDescending(x => x)
+                .ToList();
+            var bearishScores = new[] { scoreBearishEngulfing, scoreDarkCloudCover, scoreBearishHarami, scoreEveningStar, scoreThreeBlackCrows, scoreFallingThreeMethods }
+                .OrderByDescending(x => x)
+                .ToList();
+
+            var bullishComposite = bullishScores[0] * 0.6 + bullishScores[1] * 0.4;
+            var bearishComposite = bearishScores[0] * 0.6 + bearishScores[1] * 0.4;
+
+            var patternContribution = Clamp((bullishComposite - bearishComposite) / 4.0, -20, 20);
+            reasons.Add($"[型態評分{patternContribution:+0.0;-0.0;0.0}] 多吞:{scoreBullishEngulfing:F0} 空吞:{scoreBearishEngulfing:F0} 穿刺:{scorePiercingLine:F0} 烏雲:{scoreDarkCloudCover:F0} 多孕:{scoreBullishHarami:F0} 空孕:{scoreBearishHarami:F0} 晨星:{scoreMorningStar:F0} 黃昏:{scoreEveningStar:F0} 紅三兵:{scoreThreeWhiteSoldiers:F0} 黑三鴉:{scoreThreeBlackCrows:F0} 上升三法:{scoreRisingThreeMethods:F0} 下降三法:{scoreFallingThreeMethods:F0}");
+
+            double extraScore = Clamp(candleScore + volScore + patternContribution, -20, 20);
 
             // =====================================================================
             // --- 6. 總結 ---
@@ -522,8 +542,513 @@ namespace StockManager.Library
             return new TrendRecommendationResult
             {
                 Score = (int)Math.Round(finalScore),
-                Reasons = reasons
+                Reasons = reasons,
+                PatternTags = patternTags
             };
+        }
+
+        private static void AddPatternTag(List<PatternTag> tags, List<string> reasons, string key, string label, double score, bool isRisk)
+        {
+            if (score < PatternTagDisplayThreshold)
+            {
+                return;
+            }
+
+            tags.Add(new PatternTag
+            {
+                Key = key,
+                Label = label,
+                Score = score,
+                IsRisk = isRisk,
+                IsBullish = !isRisk
+            });
+
+            reasons.Add(isRisk
+                ? $"[風險標籤] {label} ({score:F0})"
+                : $"[形態標籤] {label} ({score:F0})");
+        }
+
+        private static double CalculateBullishEngulfingScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 2) return 0;
+            var p = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var engulf = IsBlack(p) && IsRed(c) && c.Open <= p.Close && c.Close >= p.Open;
+            if (!engulf) return 0;
+            var score = 75d;
+            if (c.MA20 > 0 && (double)c.Close < c.MA20) score += 15;
+            if (volRatio >= 1.2) score += 10;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateBearishEngulfingScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 2) return 0;
+            var p = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var engulf = IsRed(p) && IsBlack(c) && c.Open >= p.Close && c.Close <= p.Open;
+            if (!engulf) return 0;
+            var score = 75d;
+            if (c.MA20 > 0 && (double)c.Close > c.MA20) score += 15;
+            if (volRatio >= 1.2) score += 10;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculatePiercingLineScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 2) return 0;
+            var p = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var pMid = ((double)p.Open + (double)p.Close) / 2.0;
+            var valid = IsLongBlack(p) && IsRed(c) && c.Open < p.Close && c.Close > (decimal)pMid;
+            if (!valid) return 0;
+            var score = 78d;
+            if (c.MA20 > 0 && (double)c.Close < c.MA20) score += 12;
+            if (volRatio >= 1.2) score += 10;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateDarkCloudCoverScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 2) return 0;
+            var p = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var pMid = ((double)p.Open + (double)p.Close) / 2.0;
+            var valid = IsLongRed(p) && IsBlack(c) && c.Open > p.Close && c.Close < (decimal)pMid;
+            if (!valid) return 0;
+            var score = 78d;
+            if (c.MA20 > 0 && (double)c.Close > c.MA20) score += 12;
+            if (volRatio >= 1.2) score += 10;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateBullishHaramiScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 2) return 0;
+            var p = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var pLowBody = Math.Min((double)p.Open, (double)p.Close);
+            var pHighBody = Math.Max((double)p.Open, (double)p.Close);
+            var cLowBody = Math.Min((double)c.Open, (double)c.Close);
+            var cHighBody = Math.Max((double)c.Open, (double)c.Close);
+            var inside = IsLongBlack(p) && IsSmallBody(c) && cLowBody >= pLowBody && cHighBody <= pHighBody;
+            if (!inside) return 0;
+            var score = 70d;
+            if (c.MA20 > 0 && (double)c.Close < c.MA20) score += 15;
+            if (volRatio >= 1.1) score += 10;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateBearishHaramiScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 2) return 0;
+            var p = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var pLowBody = Math.Min((double)p.Open, (double)p.Close);
+            var pHighBody = Math.Max((double)p.Open, (double)p.Close);
+            var cLowBody = Math.Min((double)c.Open, (double)c.Close);
+            var cHighBody = Math.Max((double)c.Open, (double)c.Close);
+            var inside = IsLongRed(p) && IsSmallBody(c) && cLowBody >= pLowBody && cHighBody <= pHighBody;
+            if (!inside) return 0;
+            var score = 70d;
+            if (c.MA20 > 0 && (double)c.Close > c.MA20) score += 15;
+            if (volRatio >= 1.1) score += 10;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateMorningStarScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 3) return 0;
+            var a = data[data.Count - 3];
+            var b = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var aMid = ((double)a.Open + (double)a.Close) / 2.0;
+            var valid = IsLongBlack(a) && IsSmallBody(b) && IsLongRed(c) && c.Close > (decimal)aMid;
+            if (!valid) return 0;
+            var score = 85d;
+            if (c.MA20 > 0 && (double)c.Close < c.MA20) score += 10;
+            if (volRatio >= 1.2) score += 5;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateEveningStarScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 3) return 0;
+            var a = data[data.Count - 3];
+            var b = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var aMid = ((double)a.Open + (double)a.Close) / 2.0;
+            var valid = IsLongRed(a) && IsSmallBody(b) && IsLongBlack(c) && c.Close < (decimal)aMid;
+            if (!valid) return 0;
+            var score = 85d;
+            if (c.MA20 > 0 && (double)c.Close > c.MA20) score += 10;
+            if (volRatio >= 1.2) score += 5;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateThreeWhiteSoldiersScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 3) return 0;
+            var a = data[data.Count - 3];
+            var b = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var valid = IsRed(a) && IsRed(b) && IsRed(c) && a.Close < b.Close && b.Close < c.Close;
+            if (!valid) return 0;
+            var score = 82d;
+            if (volRatio >= 1.2) score += 10;
+            if (c.MA20 > 0 && (double)c.Close > c.MA20) score += 8;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateThreeBlackCrowsScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 3) return 0;
+            var a = data[data.Count - 3];
+            var b = data[data.Count - 2];
+            var c = data[data.Count - 1];
+            var valid = IsBlack(a) && IsBlack(b) && IsBlack(c) && a.Close > b.Close && b.Close > c.Close;
+            if (!valid) return 0;
+            var score = 82d;
+            if (volRatio >= 1.2) score += 10;
+            if (c.MA20 > 0 && (double)c.Close < c.MA20) score += 8;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateRisingThreeMethodsScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 5) return 0;
+            var a = data[data.Count - 5];
+            var b = data[data.Count - 4];
+            var c = data[data.Count - 3];
+            var d = data[data.Count - 2];
+            var e = data[data.Count - 1];
+
+            var rangeLow = (double)Math.Min(a.Open, a.Close);
+            var rangeHigh = (double)Math.Max(a.Open, a.Close);
+            var middleInRange = new[] { b, c, d }.All(x => Math.Min((double)x.Open, (double)x.Close) >= rangeLow && Math.Max((double)x.Open, (double)x.Close) <= rangeHigh);
+            var valid = IsLongRed(a) && IsSmallBody(b) && IsSmallBody(c) && IsSmallBody(d) && IsLongRed(e) && middleInRange && e.Close > a.Close;
+            if (!valid) return 0;
+
+            var score = 84d;
+            if (volRatio >= 1.2) score += 8;
+            if (e.MA20 > 0 && (double)e.Close > e.MA20) score += 8;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateFallingThreeMethodsScore(List<CandleData> data, double volRatio)
+        {
+            if (data == null || data.Count < 5) return 0;
+            var a = data[data.Count - 5];
+            var b = data[data.Count - 4];
+            var c = data[data.Count - 3];
+            var d = data[data.Count - 2];
+            var e = data[data.Count - 1];
+
+            var rangeLow = (double)Math.Min(a.Open, a.Close);
+            var rangeHigh = (double)Math.Max(a.Open, a.Close);
+            var middleInRange = new[] { b, c, d }.All(x => Math.Min((double)x.Open, (double)x.Close) >= rangeLow && Math.Max((double)x.Open, (double)x.Close) <= rangeHigh);
+            var valid = IsLongBlack(a) && IsSmallBody(b) && IsSmallBody(c) && IsSmallBody(d) && IsLongBlack(e) && middleInRange && e.Close < a.Close;
+            if (!valid) return 0;
+
+            var score = 84d;
+            if (volRatio >= 1.2) score += 8;
+            if (e.MA20 > 0 && (double)e.Close < e.MA20) score += 8;
+            return ClampValue(score, 0, 100);
+        }
+
+        private static bool IsRed(CandleData c) => c != null && c.Close > c.Open;
+        private static bool IsBlack(CandleData c) => c != null && c.Close < c.Open;
+
+        private static double GetBodyRatio(CandleData c)
+        {
+            if (c == null)
+            {
+                return 0;
+            }
+
+            var range = Math.Max(0.0000001, (double)(c.High - c.Low));
+            return Math.Abs((double)(c.Close - c.Open)) / range;
+        }
+
+        private static bool IsLongBody(CandleData c) => GetBodyRatio(c) >= 0.6;
+        private static bool IsSmallBody(CandleData c) => GetBodyRatio(c) <= 0.35;
+        private static bool IsLongRed(CandleData c) => IsRed(c) && IsLongBody(c);
+        private static bool IsLongBlack(CandleData c) => IsBlack(c) && IsLongBody(c);
+
+        private static double CalculateWashPlateScore(double volumeRatio, double lowerShadowRatio, double dailyReturn)
+        {
+            double score = 0;
+
+            if (volumeRatio <= 0.5)
+            {
+                score += 40;
+            }
+            else if (volumeRatio <= 0.7)
+            {
+                score += 25;
+            }
+            else if (volumeRatio <= 1.0)
+            {
+                score += 10;
+            }
+
+            score += LinearScore(lowerShadowRatio, 0.2, 0.5, 40);
+
+            var absRet = Math.Abs(dailyReturn);
+            if (absRet <= 0.005)
+            {
+                score += 20;
+            }
+            else if (absRet <= 0.01)
+            {
+                score += 10;
+            }
+
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateHighTurnoverScore(double volumeRatio, double upperShadowRatio, double dailyReturn, bool isRedCandle)
+        {
+            double score = 0;
+
+            if (volumeRatio >= 2.0)
+            {
+                score += 40;
+            }
+            else if (volumeRatio >= 1.5)
+            {
+                score += 25;
+            }
+            else if (volumeRatio >= 1.2)
+            {
+                score += 10;
+            }
+
+            score += LinearScore(upperShadowRatio, 0.1, 0.4, 30);
+
+            if (isRedCandle)
+            {
+                if (dailyReturn >= 0.03)
+                {
+                    score += 30;
+                }
+                else if (dailyReturn >= 0.01)
+                {
+                    score += 15;
+                }
+            }
+
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateThreeSoldiersScore(List<CandleData> data)
+        {
+            if (data == null || data.Count < 4)
+            {
+                return 0;
+            }
+
+            var d0 = data[data.Count - 1];
+            var d1 = data[data.Count - 2];
+            var d2 = data[data.Count - 3];
+            var d3 = data[data.Count - 4];
+
+            var isContinuous =
+                d2.Close > d2.Open && d2.Close > d3.Close &&
+                d1.Close > d1.Open && d1.Close > d2.Close &&
+                d0.Close > d0.Open && d0.Close > d1.Close;
+
+            if (!isContinuous)
+            {
+                return 0;
+            }
+
+            double score = 40;
+
+            if (d2.Close < d1.Close && d1.Close < d0.Close)
+            {
+                score += 30;
+            }
+
+            var volGrow = d2.Volume < d1.Volume && d1.Volume < d0.Volume;
+            if (volGrow)
+            {
+                score += 30;
+            }
+            else
+            {
+                var i0 = data.Count - 1;
+                var i1 = data.Count - 2;
+                var i2 = data.Count - 3;
+                var d0Above = (double)d0.Volume > AverageVolume(data, i0, 5);
+                var d1Above = (double)d1.Volume > AverageVolume(data, i1, 5);
+                var d2Above = (double)d2.Volume > AverageVolume(data, i2, 5);
+                if (d0Above && d1Above && d2Above)
+                {
+                    score += 15;
+                }
+            }
+
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateBearTrapScore(List<CandleData> data, double volumeRatio)
+        {
+            if (data == null || data.Count < 21)
+            {
+                return 0;
+            }
+
+            var latest = data[data.Count - 1];
+            var lookback = data.Skip(data.Count - 21).Take(20).ToList();
+            var low20 = lookback.Min(x => (double)x.Low);
+
+            var breaksLow = (double)latest.Low < low20;
+            if (!breaksLow)
+            {
+                return 0;
+            }
+
+            double score = 40;
+            var recovers = (double)latest.Close > low20;
+            if (recovers)
+            {
+                score += 40;
+                if (volumeRatio >= 1.5)
+                {
+                    score += 20;
+                }
+                else if (volumeRatio >= 1.2)
+                {
+                    score += 10;
+                }
+            }
+
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateGappingUpScore(List<CandleData> data, double volumeRatio)
+        {
+            if (data == null || data.Count < 2)
+            {
+                return 0;
+            }
+
+            var latest = data[data.Count - 1];
+            var prev = data[data.Count - 2];
+            var prevClose = (double)prev.Close;
+            if (prevClose <= 0)
+            {
+                return 0;
+            }
+
+            var gapUp = (double)latest.Low > (double)prev.High;
+            if (!gapUp)
+            {
+                return 0;
+            }
+
+            double score = 0;
+            var gapPct = ((double)latest.Low - (double)prev.High) / prevClose;
+            score += ClampValue(Math.Floor(gapPct / 0.01) * 10, 0, 50);
+
+            var isRed = latest.Close > latest.Open;
+            var isBlack = latest.Close < latest.Open;
+            var kRange = Math.Max(0.0000001, (double)latest.High - (double)latest.Low);
+            var lowerShadow = Math.Max(0, Math.Min((double)latest.Open, (double)latest.Close) - (double)latest.Low);
+            var lowerShadowRatio = lowerShadow / kRange;
+
+            if (isRed)
+            {
+                score += 30;
+            }
+            else if (isBlack && lowerShadowRatio >= 0.4)
+            {
+                score += 15;
+            }
+
+            if (volumeRatio >= 1.5)
+            {
+                score += 20;
+            }
+            else if (volumeRatio >= 1.1)
+            {
+                score += 10;
+            }
+
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double CalculateDarkCloudScore(List<CandleData> data, double volumeRatio)
+        {
+            if (data == null || data.Count < 2)
+            {
+                return 0;
+            }
+
+            var latest = data[data.Count - 1];
+            var prev = data[data.Count - 2];
+            double score = 0;
+
+            var isBlack = latest.Close < latest.Open;
+            var prevIsRed = prev.Close > prev.Open;
+            var prevBodyMid = ((double)prev.Open + (double)prev.Close) / 2.0;
+            if (isBlack && prevIsRed && (double)latest.Close < prevBodyMid)
+            {
+                score += 40;
+            }
+
+            if (latest.MA20 > 0)
+            {
+                var bias20 = ((double)latest.Close - latest.MA20) / latest.MA20;
+                if (bias20 >= 0.08)
+                {
+                    score += 40;
+                }
+                else if (bias20 >= 0.05)
+                {
+                    score += 20;
+                }
+            }
+
+            if (isBlack && volumeRatio >= 1.8)
+            {
+                score += 20;
+            }
+
+            return ClampValue(score, 0, 100);
+        }
+
+        private static double LinearScore(double x, double start, double end, double maxScore)
+        {
+            if (x <= start)
+            {
+                return 0;
+            }
+
+            if (x >= end)
+            {
+                return maxScore;
+            }
+
+            return (x - start) / (end - start) * maxScore;
+        }
+
+        private static double ClampValue(double value, double min, double max)
+        {
+            return Math.Max(min, Math.Min(max, value));
+        }
+
+        private static double AverageVolume(IReadOnlyList<CandleData> data, int index, int period)
+        {
+            var start = Math.Max(0, index - period + 1);
+            var count = index - start + 1;
+            if (count <= 0)
+            {
+                return 0;
+            }
+
+            return data.Skip(start).Take(count).Average(x => (double)x.Volume);
         }
 
         public static IntradayRecommendationResult CalculateIntradayRecommendation(

@@ -25,6 +25,48 @@
                     <Run Text="{Binding Signal, Mode=OneWay}"/>
                 </TextBlock>
 
+                <ItemsControl ItemsSource="{Binding CurrentPatternTags}" Margin="0,0,0,10">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,6,4" Padding="6,2" CornerRadius="9" BorderThickness="1">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#223CB371"/>
+                                        <Setter Property="BorderBrush" Value="#FF66CDAA"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsBullish}" Value="True">
+                                                <Setter Property="Background" Value="#22B22222"/>
+                                                <Setter Property="BorderBrush" Value="#FFCD5C5C"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="11" FontWeight="SemiBold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#FFBFFFE0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsBullish}" Value="True">
+                                                    <Setter Property="Foreground" Value="#FFFFB3B3"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                    <Run Text="{Binding Label}"/>
+                                    <Run Text=" ("/>
+                                    <Run Text="{Binding Score, StringFormat=F0}"/>
+                                    <Run Text=")"/>
+                                </TextBlock>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="8" Background="{DynamicResource SurfaceBrush}" Margin="0,0,0,10">
                     <StackPanel>
                         <TextBlock Margin="0,0,0,6">

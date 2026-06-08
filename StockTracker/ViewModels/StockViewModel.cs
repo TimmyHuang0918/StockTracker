@@ -56,6 +56,8 @@ namespace StockTracker.ViewModels
         private readonly List<ThreeMajorPointData> _lastDisplayThreeMajorSeries = new List<ThreeMajorPointData>();
         private readonly Dictionary<DateTime, int> _recommendationScoreCache = new Dictionary<DateTime, int>();
         private readonly Dictionary<DateTime, List<string>> _recommendationReasonsCache = new Dictionary<DateTime, List<string>>();
+        private readonly Dictionary<DateTime, List<PatternTag>> _recommendationPatternTagsCache = new Dictionary<DateTime, List<PatternTag>>();
+        private readonly ObservableCollection<PatternTag> _currentPatternTags = new ObservableCollection<PatternTag>();
         private double _lastMinPrice;
         private double _lastPriceRange = 1;
         private double _crosshairX;
@@ -361,6 +363,7 @@ namespace StockTracker.ViewModels
         public ObservableCollection<PriceLevelVisual> MarginBalanceLevels { get; }
         public ObservableCollection<PriceLevelVisual> MarginMaintenanceLevels { get; }
         public ObservableCollection<PriceLevelVisual> ThreeMajorLevels { get; }
+        public ObservableCollection<PatternTag> CurrentPatternTags => _currentPatternTags;
         public double MarginMaintenanceWarningLineY => GetMarginMaintenanceLineY(MaintenanceWarningRatio);
         public double MarginMaintenanceSafeLineY => GetMarginMaintenanceLineY(MaintenanceSafeRatio);
         public Visibility MarginBalanceChartVisibility => SelectedKLineInterval == "日K" ? Visibility.Visible : Visibility.Collapsed;
@@ -678,6 +681,7 @@ namespace StockTracker.ViewModels
             DealerNetPoints.Clear();
             _recommendationScoreCache.Clear();
             _recommendationReasonsCache.Clear();
+            _recommendationPatternTagsCache.Clear();
             _lastDisplayMarginBalanceSeries.Clear();
             _lastDisplayMarginMaintenanceSeries.Clear();
             MarginCrosshairVisibility = Visibility.Collapsed;
@@ -894,6 +898,7 @@ namespace StockTracker.ViewModels
             {
                 Signal = "資料不足";
                 _latestRecommendationReasons.Clear();
+                _currentPatternTags.Clear();
                 return;
             }
 
@@ -913,6 +918,8 @@ namespace StockTracker.ViewModels
                 Signal = TradingRecommendationLibrary.GetAdvancedSuggestion(recommendation.Score);
                 _recommendationScoreCache[latestCandle.Time] = recommendation.Score;
                 _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
+                _recommendationPatternTagsCache[latestCandle.Time] = recommendation.PatternTags ?? new List<PatternTag>();
+                UpdateCurrentPatternTags(latestCandle.Time);
 
                 var actionSignal = ResolveActionSignal(Signal);
                 var shouldRecord = recommendation.Score >= 70 || recommendation.Score <= 30;
@@ -944,6 +951,8 @@ namespace StockTracker.ViewModels
                 _latestRecommendationReasons = intradayRecommendation.Reasons ?? new List<string>();
                 Signal = intradayRecommendation.Action;
                 _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
+                _recommendationPatternTagsCache[latestCandle.Time] = new List<PatternTag>();
+                UpdateCurrentPatternTags(latestCandle.Time);
 
                 var actionSignal = ResolveActionSignal(Signal);
                 int score = Signal.Contains("強烈") ? 100 : Signal.Contains("偏多") || Signal.Contains("偏空") ? 70 : 50;
@@ -989,6 +998,22 @@ namespace StockTracker.ViewModels
             return "中立";
         }
 
+        private void UpdateCurrentPatternTags(DateTime candleTime)
+        {
+            _currentPatternTags.Clear();
+
+            List<PatternTag> tags;
+            if (!_recommendationPatternTagsCache.TryGetValue(candleTime, out tags) || tags == null)
+            {
+                return;
+            }
+
+            foreach (var tag in tags)
+            {
+                _currentPatternTags.Add(tag);
+            }
+        }
+
         private string BuildRecommendationTooltip(int nearestIndex, CandleData candle)
         {
             if (_lastDisplayCandles == null || _lastDisplayCandles.Count == 0 || nearestIndex < 0 || nearestIndex >= _lastDisplayCandles.Count)
@@ -1014,10 +1039,19 @@ namespace StockTracker.ViewModels
                 reasons = new List<string>();
             }
 
+            List<PatternTag> patternTags;
+            if (!_recommendationPatternTagsCache.TryGetValue(candle.Time, out patternTags))
+            {
+                patternTags = new List<PatternTag>();
+            }
+
             var suggestion = TradingRecommendationLibrary.GetAdvancedSuggestion(score);
             var markerText = marker == null ? string.Empty : $"\n訊號標記: {marker.Signal}";
             var topReasons = reasons.Take(50).Select(r => $"- {r}");
-            return $"\n建議: {suggestion} ({score}){markerText}\n建議理由:\n" + string.Join("\n", topReasons);
+            var tagText = patternTags.Count == 0
+                ? string.Empty
+                : "\n形態標籤: " + string.Join("、", patternTags.Select(x => string.Format("{0}({1:F0})", x.Label, x.Score)));
+            return $"\n建議: {suggestion} ({score}){markerText}{tagText}\n建議理由:\n" + string.Join("\n", topReasons);
         }
 
         private void RebuildVisuals()
