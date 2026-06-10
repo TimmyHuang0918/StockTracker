@@ -34,12 +34,12 @@ namespace StockManager.Library
         private const double PatternTagDisplayThreshold = 60.0;
 
         public static TrendRecommendationResult CalculateAdvancedRecommendation(
-    List<CandleData> data,
-    double currentPriceDouble,
-    double? changePercent,
-    double? previousClose = null,
-    TwseT86History twseHistory = null,
-    DateTime? analysisDate = null)
+            List<CandleData> data,
+            double currentPriceDouble,
+            double? changePercent,
+            double? previousClose = null,
+            TwseT86History twseHistory = null,
+            DateTime? analysisDate = null)
         {
             decimal currentPrice = (decimal)currentPriceDouble;
 
