@@ -29,6 +29,15 @@ namespace StockManager.Library
         public List<string> Reasons { get; set; }
     }
 
+    internal class PatternAdjustmentResult
+    {
+        public string Name { get; set; }
+        public double BaseScore { get; set; }
+        public double AdjustedScore { get; set; }
+        public double ContributionPoints { get; set; }
+        public string FactorsText { get; set; }
+    }
+
     public static class TradingRecommendationLibrary
     {
         private const double PatternTagDisplayThreshold = 60.0;
@@ -411,18 +420,31 @@ namespace StockManager.Library
             }
 
             // 型態強度提取
-            var scoreBullishEngulfing = CalculateBullishEngulfingScore(data, volRatio);
-            var scoreBearishEngulfing = CalculateBearishEngulfingScore(data, volRatio);
-            var scorePiercingLine = CalculatePiercingLineScore(data, volRatio);
-            var scoreDarkCloudCover = CalculateDarkCloudCoverScore(data, volRatio);
-            var scoreBullishHarami = CalculateBullishHaramiScore(data, volRatio);
-            var scoreBearishHarami = CalculateBearishHaramiScore(data, volRatio);
-            var scoreMorningStar = CalculateMorningStarScore(data, volRatio);
-            var scoreEveningStar = CalculateEveningStarScore(data, volRatio);
-            var scoreThreeWhiteSoldiers = CalculateThreeWhiteSoldiersScore(data, volRatio);
-            var scoreThreeBlackCrows = CalculateThreeBlackCrowsScore(data, volRatio);
-            var scoreRisingThreeMethods = CalculateRisingThreeMethodsScore(data, volRatio);
-            var scoreFallingThreeMethods = CalculateFallingThreeMethodsScore(data, volRatio);
+            var bullishEngulfing = EvaluateAdjustedPattern("Bullish Engulfing", CalculateBullishEngulfingScore(data, volRatio), data, 2, true);
+            var bearishEngulfing = EvaluateAdjustedPattern("Bearish Engulfing", CalculateBearishEngulfingScore(data, volRatio), data, 2, false);
+            var piercingLine = EvaluateAdjustedPattern("Piercing Line", CalculatePiercingLineScore(data, volRatio), data, 2, true);
+            var darkCloudCover = EvaluateAdjustedPattern("Dark Cloud Cover", CalculateDarkCloudCoverScore(data, volRatio), data, 2, false);
+            var bullishHarami = EvaluateAdjustedPattern("Bullish Harami", CalculateBullishHaramiScore(data, volRatio), data, 2, true);
+            var bearishHarami = EvaluateAdjustedPattern("Bearish Harami", CalculateBearishHaramiScore(data, volRatio), data, 2, false);
+            var morningStar = EvaluateAdjustedPattern("Morning Star", CalculateMorningStarScore(data, volRatio), data, 3, true);
+            var eveningStar = EvaluateAdjustedPattern("Evening Star", CalculateEveningStarScore(data, volRatio), data, 3, false);
+            var threeWhiteSoldiers = EvaluateAdjustedPattern("Three White Soldiers", CalculateThreeWhiteSoldiersScore(data, volRatio), data, 3, true);
+            var threeBlackCrows = EvaluateAdjustedPattern("Three Black Crows", CalculateThreeBlackCrowsScore(data, volRatio), data, 3, false);
+            var risingThreeMethods = EvaluateAdjustedPattern("Rising Three Methods", CalculateRisingThreeMethodsScore(data, volRatio), data, 5, true);
+            var fallingThreeMethods = EvaluateAdjustedPattern("Falling Three Methods", CalculateFallingThreeMethodsScore(data, volRatio), data, 5, false);
+
+            var scoreBullishEngulfing = bullishEngulfing.AdjustedScore;
+            var scoreBearishEngulfing = bearishEngulfing.AdjustedScore;
+            var scorePiercingLine = piercingLine.AdjustedScore;
+            var scoreDarkCloudCover = darkCloudCover.AdjustedScore;
+            var scoreBullishHarami = bullishHarami.AdjustedScore;
+            var scoreBearishHarami = bearishHarami.AdjustedScore;
+            var scoreMorningStar = morningStar.AdjustedScore;
+            var scoreEveningStar = eveningStar.AdjustedScore;
+            var scoreThreeWhiteSoldiers = threeWhiteSoldiers.AdjustedScore;
+            var scoreThreeBlackCrows = threeBlackCrows.AdjustedScore;
+            var scoreRisingThreeMethods = risingThreeMethods.AdjustedScore;
+            var scoreFallingThreeMethods = fallingThreeMethods.AdjustedScore;
 
             AddPatternTag(patternTags, reasons, "bullish_engulfing", "多頭吞噬", scoreBullishEngulfing, false);
             AddPatternTag(patternTags, reasons, "bearish_engulfing", "空頭吞噬", scoreBearishEngulfing, true);
@@ -436,6 +458,19 @@ namespace StockManager.Library
             AddPatternTag(patternTags, reasons, "three_black_crows", "黑三鴉", scoreThreeBlackCrows, true);
             AddPatternTag(patternTags, reasons, "rising_three_methods", "上升三法", scoreRisingThreeMethods, false);
             AddPatternTag(patternTags, reasons, "falling_three_methods", "下降三法", scoreFallingThreeMethods, true);
+
+            AppendPatternReason(reasons, bullishEngulfing);
+            AppendPatternReason(reasons, bearishEngulfing);
+            AppendPatternReason(reasons, piercingLine);
+            AppendPatternReason(reasons, darkCloudCover);
+            AppendPatternReason(reasons, bullishHarami);
+            AppendPatternReason(reasons, bearishHarami);
+            AppendPatternReason(reasons, morningStar);
+            AppendPatternReason(reasons, eveningStar);
+            AppendPatternReason(reasons, threeWhiteSoldiers);
+            AppendPatternReason(reasons, threeBlackCrows);
+            AppendPatternReason(reasons, risingThreeMethods);
+            AppendPatternReason(reasons, fallingThreeMethods);
 
             var bullishScores = new[] { scoreBullishEngulfing, scorePiercingLine, scoreBullishHarami, scoreMorningStar, scoreThreeWhiteSoldiers, scoreRisingThreeMethods }
                 .OrderByDescending(x => x).ToList();
@@ -528,6 +563,184 @@ namespace StockManager.Library
             reasons.Add(isRisk
                 ? $"[風險標籤] {label} ({score:F0})"
                 : $"[形態標籤] {label} ({score:F0})");
+        }
+
+        private static void AppendPatternReason(List<string> reasons, PatternAdjustmentResult pattern)
+        {
+            if (pattern == null || pattern.BaseScore <= 0)
+            {
+                return;
+            }
+
+            reasons.Add($"{pattern.Name} +{pattern.ContributionPoints:F0} points ({pattern.FactorsText}) [base:{pattern.BaseScore:F0} -> adjusted:{pattern.AdjustedScore:F0}]");
+        }
+
+        private static PatternAdjustmentResult EvaluateAdjustedPattern(string patternName, double baseScore, List<CandleData> data, int lookbackBars, bool bullish)
+        {
+            var result = new PatternAdjustmentResult
+            {
+                Name = patternName,
+                BaseScore = baseScore,
+                AdjustedScore = 0,
+                ContributionPoints = 0,
+                FactorsText = "none"
+            };
+
+            if (baseScore <= 0 || data == null || data.Count == 0)
+            {
+                return result;
+            }
+
+            var factors = new List<string>();
+            var pct = 0.0;
+            var bars = data.Skip(Math.Max(0, data.Count - Math.Max(lookbackBars, 2))).ToList();
+            var latest = bars.Last();
+
+            // Volume
+            var volumeRising = bars.Zip(bars.Skip(1), (a, b) => b.Volume > a.Volume).All(x => x);
+            var volumeShrinking = bars.Zip(bars.Skip(1), (a, b) => b.Volume < a.Volume).All(x => x);
+            var priceRising = bars.Zip(bars.Skip(1), (a, b) => b.Close > a.Close).All(x => x);
+            var priceFalling = bars.Zip(bars.Skip(1), (a, b) => b.Close < a.Close).All(x => x);
+            var volumeDivergence = (priceRising && volumeShrinking) || (priceFalling && volumeRising);
+            if (volumeDivergence)
+            {
+                pct -= 15;
+                factors.Add("volume divergence -15%");
+            }
+            else if (volumeRising)
+            {
+                pct += 10;
+                factors.Add("rising volume +10%");
+            }
+            else if (volumeShrinking)
+            {
+                pct -= 10;
+                factors.Add("shrinking volume -10%");
+            }
+
+            // Position
+            var close = (double)latest.Close;
+            if (latest.MA20 > 0)
+            {
+                if (close <= latest.MA20 * 0.97)
+                {
+                    pct += 15;
+                    factors.Add("low-level +15%");
+                }
+                else if (close >= latest.MA20 * 1.05)
+                {
+                    pct -= 15;
+                    factors.Add("high-level -15%");
+                }
+            }
+
+            if (data.Count > 20)
+            {
+                if (bullish)
+                {
+                    var prevHigh = data.Skip(Math.Max(0, data.Count - 21)).Take(20).Max(x => (double)x.High);
+                    if (close > prevHigh)
+                    {
+                        pct += 10;
+                        factors.Add("breakout +10%");
+                    }
+                }
+                else
+                {
+                    var prevLow = data.Skip(Math.Max(0, data.Count - 21)).Take(20).Min(x => (double)x.Low);
+                    if (close < prevLow)
+                    {
+                        pct += 10;
+                        factors.Add("breakout +10%");
+                    }
+                }
+            }
+
+            // Shadows
+            var range = Math.Max(0.0000001, (double)(latest.High - latest.Low));
+            var upperShadow = Math.Max(0, (double)latest.High - Math.Max((double)latest.Open, (double)latest.Close));
+            var lowerShadow = Math.Max(0, Math.Min((double)latest.Open, (double)latest.Close) - (double)latest.Low);
+            var upperRatio = upperShadow / range;
+            var lowerRatio = lowerShadow / range;
+            if (lowerRatio >= 0.4)
+            {
+                pct += 10;
+                factors.Add("long lower shadow +10%");
+            }
+            if (upperRatio >= 0.4)
+            {
+                pct -= 10;
+                factors.Add("long upper shadow -10%");
+            }
+            if (upperRatio <= 0.05 && lowerRatio <= 0.05)
+            {
+                pct += 5;
+                factors.Add("no shadow +5%");
+            }
+
+            // Body size
+            var body = Math.Abs((double)latest.Close - (double)latest.Open);
+            var bodyRatio = body / range;
+            if (bodyRatio >= 0.6)
+            {
+                pct += 10;
+                factors.Add("long body +10%");
+            }
+            else if (bodyRatio <= 0.25)
+            {
+                pct -= 10;
+                factors.Add("short body -10%");
+            }
+
+            if (bars.Count >= 3)
+            {
+                var bodies = bars.Select(x => Math.Abs((double)x.Close - (double)x.Open)).ToList();
+                var shrinkingSequence = bodies.Zip(bodies.Skip(1), (a, b) => b < a).All(x => x);
+                if (shrinkingSequence)
+                {
+                    pct -= 20;
+                    factors.Add("shrinking sequence -20%");
+                }
+            }
+
+            // Structure
+            if (bars.Count >= 2)
+            {
+                var uniform = bullish
+                    ? bars.Zip(bars.Skip(1), (a, b) => b.Close > a.Close).All(x => x)
+                    : bars.Zip(bars.Skip(1), (a, b) => b.Close < a.Close).All(x => x);
+                if (uniform)
+                {
+                    pct += 5;
+                    factors.Add("uniform structure +5%");
+                }
+            }
+
+            if (bars.Count >= 3)
+            {
+                var mid = bars[bars.Count / 2];
+                var midRange = Math.Max(0.0000001, (double)(mid.High - mid.Low));
+                var midBodyRatio = Math.Abs((double)mid.Close - (double)mid.Open) / midRange;
+                if (midBodyRatio <= 0.2)
+                {
+                    pct -= 10;
+                    factors.Add("mid doji/small body -10%");
+                }
+            }
+
+            var isLatestBull = latest.Close > latest.Open;
+            var isLatestBear = latest.Close < latest.Open;
+            if ((bullish && isLatestBear) || (!bullish && isLatestBull))
+            {
+                pct -= 20;
+                factors.Add("last bar reversal -20%");
+            }
+
+            var adjusted = ClampValue(baseScore * (1 + pct / 100.0), 0, 100);
+            result.AdjustedScore = adjusted;
+            result.ContributionPoints = adjusted * 0.12;
+            result.FactorsText = factors.Count == 0 ? "none" : string.Join(" + ", factors);
+            return result;
         }
 
         private static double CalculateBullishEngulfingScore(List<CandleData> data, double volRatio)
