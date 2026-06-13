@@ -607,6 +607,7 @@ namespace StockTracker.ViewModels
 
             var marginRecords = await _twseMarginRepository.LoadByDateAsync(latestDate);
             var marginMetricRecords = await _twseMarginMetricRepository.LoadByDateAsync(latestDate);
+            var latestCloseBySymbol = await _dailyPriceRepository.LoadByDateAsync(latestDate);
             var prevMarginRecords = prevDate == DateTime.MinValue
                 ? new List<TwseMarginRecord>()
                 : (await _twseMarginRepository.LoadByDateAsync(prevDate)).ToList();
@@ -631,6 +632,10 @@ namespace StockTracker.ViewModels
                     : null;
 
                 var marginNet = marginRecord != null ? marginRecord.MarginPurchaseSales : 0;
+                var investmentTrustNet = record.InvestmentTrustNet;
+                double closePrice;
+                var hasClosePrice = latestCloseBySymbol.TryGetValue(record.Symbol, out closePrice);
+                var threeMajorNetAmount = hasClosePrice ? (double)record.ThreeMajorNet * closePrice : 0d;
                 var prevMarginBal = prevMarginRecord != null ? prevMarginRecord.MarginBalance : 0;
                 var marginBal = marginRecord != null ? marginRecord.MarginBalance : 0;
                 var marginMetric = marginMetricRecords.FirstOrDefault(x => x.Record != null && string.Equals(x.Record.Symbol, record.Symbol, StringComparison.OrdinalIgnoreCase));
@@ -652,6 +657,16 @@ namespace StockTracker.ViewModels
                     Name = record.Name,
                     Market = record.Market ?? string.Empty,
                     ThreeMajorNet = record.ThreeMajorNet,
+                    ThreeMajorNetAmount = threeMajorNetAmount,
+                    ThreeMajorNetAmountText = hasClosePrice
+                        ? (threeMajorNetAmount > 0 ? $"▲{threeMajorNetAmount:N0}" : threeMajorNetAmount < 0 ? $"▼{Math.Abs(threeMajorNetAmount):N0}" : "-")
+                        : "-",
+                    ThreeMajorNetAmountBrush = !hasClosePrice
+                        ? Brushes.Gainsboro
+                        : threeMajorNetAmount > 0 ? Brushes.IndianRed : threeMajorNetAmount < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
+                    InvestmentTrustNet = investmentTrustNet,
+                    InvestmentTrustNetText = investmentTrustNet > 0 ? $"▲{investmentTrustNet:N0}" : investmentTrustNet < 0 ? $"▼{Math.Abs(investmentTrustNet):N0}" : "-",
+                    InvestmentTrustNetBrush = investmentTrustNet > 0 ? Brushes.IndianRed : investmentTrustNet < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
                     MarginNet = marginNet,
                     MarginNetText = marginNet > 0 ? $"▲{marginNet:N0}" : marginNet < 0 ? $"▼{Math.Abs(marginNet):N0}" : "-",
                     MarginNetBrush = marginNet > 0 ? Brushes.IndianRed : marginNet < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
@@ -878,6 +893,12 @@ namespace StockTracker.ViewModels
             public string Name { get; set; }
             public string Market { get; set; }
             public long ThreeMajorNet { get; set; }
+            public double ThreeMajorNetAmount { get; set; }
+            public string ThreeMajorNetAmountText { get; set; }
+            public Brush ThreeMajorNetAmountBrush { get; set; }
+            public long InvestmentTrustNet { get; set; }
+            public string InvestmentTrustNetText { get; set; }
+            public Brush InvestmentTrustNetBrush { get; set; }
             public long MarginNet { get; set; }
             public string MarginNetText { get; set; }
             public Brush MarginNetBrush { get; set; }

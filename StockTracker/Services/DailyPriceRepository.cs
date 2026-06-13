@@ -232,5 +232,40 @@ ORDER BY Symbol, TradeDate";
                     .ToList();
             });
         }
+
+        public Task<IReadOnlyDictionary<string, double>> LoadByDateAsync(DateTime date)
+        {
+            return Task.Run<IReadOnlyDictionary<string, double>>(() =>
+            {
+                var result = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+SELECT Symbol, Close
+FROM DailyPrice
+WHERE TradeDate = @td";
+                        cmd.Parameters.AddWithValue("@td", date.ToString("yyyy-MM-dd"));
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                var symbol = rdr.GetString(0);
+                                var close = Convert.ToDouble(rdr.GetValue(1));
+                                if (!string.IsNullOrWhiteSpace(symbol))
+                                {
+                                    result[symbol] = close;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return result;
+            });
+        }
     }
 }

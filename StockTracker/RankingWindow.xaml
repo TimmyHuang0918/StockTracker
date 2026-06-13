@@ -159,6 +159,13 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
+                <DataGridTextColumn Header="三大法人買賣超金額" Binding="{Binding NetAmountDisplay}" SortMemberPath="ThreeMajorNetAmount" Width="140">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding NetAmountDisplayBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="建議" Binding="{Binding Suggestion}" Width="150" />
             </DataGrid.Columns>
             <DataGrid.Resources>

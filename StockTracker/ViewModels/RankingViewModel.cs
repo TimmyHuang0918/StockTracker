@@ -30,6 +30,7 @@ namespace StockTracker.ViewModels
         public int PatternTagCount { get; set; }
         public string Suggestion { get; set; }
         public long ThreeMajorNet { get; set; }
+        public decimal ThreeMajorNetAmount { get; set; }
         public List<RankedStockScorePoint> RecentScores { get; set; } = new List<RankedStockScorePoint>();
         public string RecentScoresText => RecentScores == null || RecentScores.Count == 0
             ? Score.ToString(CultureInfo.InvariantCulture)
@@ -53,6 +54,10 @@ namespace StockTracker.ViewModels
         public System.Windows.Media.Brush NetDisplayBrush => ThreeMajorNet > 0 ? System.Windows.Media.Brushes.IndianRed :
                                                                ThreeMajorNet < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
                                                                System.Windows.Media.Brushes.Gray;
+        public string NetAmountDisplay => ThreeMajorNetAmount > 0 ? $"+{ThreeMajorNetAmount:N0}" : ThreeMajorNetAmount.ToString("N0", CultureInfo.InvariantCulture);
+        public System.Windows.Media.Brush NetAmountDisplayBrush => ThreeMajorNetAmount > 0 ? System.Windows.Media.Brushes.IndianRed :
+                                                                     ThreeMajorNetAmount < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
+                                                                     System.Windows.Media.Brushes.Gray;
 
         public int GetConsecutiveScoreDays(int minScore)
         {
@@ -313,6 +318,8 @@ namespace StockTracker.ViewModels
                 // 檢查是否包含延伸欄位，因為這支 DB 可能是舊版建立的
                 bool hasThreeMajorNetColumn = false;
                 bool hasRecentScoresColumn = false;
+                bool hasScoreDateColumn = false;
+                bool hasThreeMajorNetAmountColumn = false;
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = "PRAGMA table_info(LatestRanking);";
@@ -330,6 +337,16 @@ namespace StockTracker.ViewModels
                             {
                                 hasRecentScoresColumn = true;
                             }
+
+                            if (colName == "ScoreDate")
+                            {
+                                hasScoreDateColumn = true;
+                            }
+
+                            if (colName == "ThreeMajorNetAmount")
+                            {
+                                hasThreeMajorNetAmountColumn = true;
+                            }
                         }
                     }
                 }
@@ -344,8 +361,10 @@ namespace StockTracker.ViewModels
                             LatestPrice REAL NOT NULL,
                             ChangePercent REAL NOT NULL,
                             Score INTEGER NOT NULL,
+                            ScoreDate TEXT NOT NULL DEFAULT '',
                             Suggestion TEXT NOT NULL,
                             ThreeMajorNet INTEGER NOT NULL DEFAULT 0,
+                            ThreeMajorNetAmount REAL NOT NULL DEFAULT 0,
                             RecentScores TEXT NOT NULL DEFAULT ''
                         );";
                     cmd.ExecuteNonQuery();
@@ -382,6 +401,36 @@ namespace StockTracker.ViewModels
                     {
                     }
                 }
+
+                if (!hasScoreDateColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN ScoreDate TEXT NOT NULL DEFAULT '';";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                if (!hasThreeMajorNetAmountColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN ThreeMajorNetAmount REAL NOT NULL DEFAULT 0;";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
         }
 
@@ -395,12 +444,19 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion, ThreeMajorNet, RecentScores FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, Suggestion, ThreeMajorNet, ThreeMajorNetAmount, RecentScores FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                var recentScoresRaw = reader.IsDBNull(8) ? string.Empty : reader.GetString(8);
+                                var recentScoresRaw = reader.IsDBNull(10) ? string.Empty : reader.GetString(10);
+                                DateTime scoreDate;
+                                var scoreDateText = reader.IsDBNull(6) ? string.Empty : reader.GetString(6);
+                                if (!DateTime.TryParse(scoreDateText, out scoreDate))
+                                {
+                                    scoreDate = DateTime.MinValue;
+                                }
+
                                 loaded.Add(new RankedStock
                                 {
                                     Rank = reader.GetInt32(0),
@@ -409,8 +465,10 @@ namespace StockTracker.ViewModels
                                     LatestPrice = reader.GetDecimal(3),
                                     ChangePercent = reader.GetDecimal(4),
                                     Score = reader.GetInt32(5),
-                                    Suggestion = reader.GetString(6),
-                                    ThreeMajorNet = reader.IsDBNull(7) ? 0 : reader.GetInt64(7),
+                                    ScoreDate = scoreDate,
+                                    Suggestion = reader.GetString(7),
+                                    ThreeMajorNet = reader.IsDBNull(8) ? 0 : reader.GetInt64(8),
+                                    ThreeMajorNetAmount = reader.IsDBNull(9) ? 0m : Convert.ToDecimal(reader.GetValue(9), CultureInfo.InvariantCulture),
                                     RecentScores = DeserializeRecentScores(recentScoresRaw, reader.GetInt32(5))
                                 });
                             }
@@ -452,8 +510,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, Suggestion, ThreeMajorNet, RecentScores)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @sugg, @net, @recentScores)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, Suggestion, ThreeMajorNet, ThreeMajorNetAmount, RecentScores)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @sugg, @net, @netAmount, @recentScores)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -463,8 +521,10 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@price", s.LatestPrice);
                                 cmd.Parameters.AddWithValue("@change", s.ChangePercent);
                                 cmd.Parameters.AddWithValue("@score", s.Score);
+                                cmd.Parameters.AddWithValue("@scoreDate", s.ScoreDate == DateTime.MinValue ? string.Empty : s.ScoreDate.ToString("yyyy-MM-dd"));
                                 cmd.Parameters.AddWithValue("@sugg", s.Suggestion);
                                 cmd.Parameters.AddWithValue("@net", s.ThreeMajorNet);
+                                cmd.Parameters.AddWithValue("@netAmount", s.ThreeMajorNetAmount);
                                 cmd.Parameters.AddWithValue("@recentScores", SerializeRecentScores(s.RecentScores));
                                 cmd.ExecuteNonQuery();
                             }
@@ -662,6 +722,7 @@ namespace StockTracker.ViewModels
                                     CrashRiskScore = latestRecommendation.CrashRiskScore,
                                     PatternTagCount = (latestRecommendation.PatternTags ?? new List<PatternTag>()).Count,
                                     ThreeMajorNet = latestNet,
+                                    ThreeMajorNetAmount = latestNet * dummyVm.LatestPrice,
                                     RecentScores = recentScores
                                 });
 
