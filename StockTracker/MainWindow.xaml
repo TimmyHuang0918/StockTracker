@@ -123,6 +123,14 @@
             </DockPanel>
         </Border>
 
+        <Border Grid.Row="2" Background="#7F111111" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4"
+                Visibility="{Binding IsInitializingMainPage, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Margin="8,6">
+                <TextBlock Text="主畫面初始化中..." Foreground="{DynamicResource AppForegroundBrush}" Margin="0,0,0,4"/>
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding MainPageProgressValue, Mode=OneWay}" Height="12"/>
+            </StackPanel>
+        </Border>
+
         <Border Grid.Row="4" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="{DynamicResource SurfaceBrush}" Padding="8">
             <Grid>
                 <Grid.ColumnDefinitions>

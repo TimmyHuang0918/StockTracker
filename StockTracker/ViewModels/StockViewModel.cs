@@ -1971,6 +1971,12 @@ namespace StockTracker.ViewModels
             return _candles.ToList();
         }
 
+        public void RebuildForLatestTwseData()
+        {
+            UpdateSignal();
+            RebuildVisuals();
+        }
+
         private static double CalculateRsiAt(int index, int period, IReadOnlyList<double> closes)
         {
             if (index < 1)

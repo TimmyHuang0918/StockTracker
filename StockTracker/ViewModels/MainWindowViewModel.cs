@@ -34,6 +34,8 @@ namespace StockTracker.ViewModels
         private DateTime _latestRankingDate;
         private DateTime _twseHistoryStartDate = DateTime.Today;
         private bool _isUpdatingTwseHistory;
+        private bool _isInitializingMainPage;
+        private double _mainPageProgressValue;
         private string _updatingTwseText;
         private string _rankingFilter = "全部顯示";
         private ICollectionView _filteredTwseRankingItems;
@@ -62,6 +64,26 @@ namespace StockTracker.ViewModels
             SubscribeCommand = new RelayCommand(async _ => await SubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbolRelativeName));
             UnsubscribeCommand = new RelayCommand(async _ => await UnsubscribeSymbolAsync(), _ => !string.IsNullOrWhiteSpace(NewSymbol));
             UpdateTwseHistoryCommand = new RelayCommand(async _ => await UpdateTwseHistoryAsync(), _ => !IsUpdatingTwseHistory);
+        }
+
+        public bool IsInitializingMainPage
+        {
+            get => _isInitializingMainPage;
+            private set
+            {
+                _isInitializingMainPage = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double MainPageProgressValue
+        {
+            get => _mainPageProgressValue;
+            private set
+            {
+                _mainPageProgressValue = value;
+                OnPropertyChanged();
+            }
         }
 
         public ICommand UpdateTwseHistoryCommand { get; }
@@ -265,23 +287,37 @@ namespace StockTracker.ViewModels
 
         public async Task InitializeAsync()
         {
-            await LoadTwseT86HistoryAsync();
+            IsInitializingMainPage = true;
+            MainPageProgressValue = 0;
+            try
+            {
+                MainPageProgressValue = 20;
+                await LoadTwseT86HistoryAsync();
+                MainPageProgressValue = 55;
 
-            var savedSymbols = LoadSavedSubscriptions();
-            if (savedSymbols.Count == 0)
-            {
-                savedSymbols.Add("2330");
-                savedSymbols.Add("2317");
-                savedSymbols.Add("0050");
+                var savedSymbols = LoadSavedSubscriptions();
+                if (savedSymbols.Count == 0)
+                {
+                    savedSymbols.Add("2330");
+                    savedSymbols.Add("2317");
+                    savedSymbols.Add("0050");
+                }
+                List<string> symbols = new List<string>();
+                List<string> names = new List<string>();
+                foreach (var symbol in savedSymbols)
+                {
+                    symbols.Add(symbol);
+                    names.Add(_apiService.GetRelativeStockMessage(symbol).bstrStockName);
+                }
+
+                MainPageProgressValue = 75;
+                await AddOrSubscribeAsync(symbols, names);
+                MainPageProgressValue = 100;
             }
-            List<string> symbols = new List<string>();
-            List<string> names = new List<string>();
-            foreach (var symbol in savedSymbols)
+            finally
             {
-                symbols.Add(symbol);
-                names.Add(_apiService.GetRelativeStockMessage(symbol).bstrStockName);
+                IsInitializingMainPage = false;
             }
-            await AddOrSubscribeAsync(symbols, names);
         }
 
         public void ApplyKLineData(string symbol, CandleData candle)
@@ -458,6 +494,11 @@ namespace StockTracker.ViewModels
                 await LoadTwseT86HistoryAsync(true);
                 foreach (var stock in Stocks)
                     ApplyTwseRecordsToStock(stock);
+
+                foreach (var stock in Stocks)
+                {
+                    stock.RebuildForLatestTwseData();
+                }
 
                 UpdatingTwseText = string.Empty;
                 SystemMessage = $"三大法人資料已更新至 {DateTime.Today:yyyy/MM/dd}";

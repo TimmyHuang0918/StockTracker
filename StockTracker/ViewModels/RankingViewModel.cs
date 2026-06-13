@@ -25,6 +25,7 @@ namespace StockTracker.ViewModels
         public decimal LatestPrice { get; set; }
         public decimal ChangePercent { get; set; }
         public int Score { get; set; }
+        public DateTime ScoreDate { get; set; }
         public int CrashRiskScore { get; set; }
         public int PatternTagCount { get; set; }
         public string Suggestion { get; set; }
@@ -42,6 +43,7 @@ namespace StockTracker.ViewModels
         public int ScoreDay2 => GetRecentScoreByOffset(2);
         public int ScoreDay3 => GetRecentScoreByOffset(3);
         public int ScoreDay4 => GetRecentScoreByOffset(4);
+        public string ScoreDateText => ScoreDate == DateTime.MinValue ? string.Empty : ScoreDate.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture);
         public double AverageRecentScore => RecentScores == null || RecentScores.Count == 0 ? Score : RecentScores.Average(x => x.Score);
         public int ScoreTrend => ScoreDay0 - ScoreDay4;
         public string NetDisplay => ThreeMajorNet > 0 ? $"+{ThreeMajorNet:N0}" : ThreeMajorNet.ToString("N0");
@@ -656,6 +658,7 @@ namespace StockTracker.ViewModels
                                     LatestPrice = dummyVm.LatestPrice,
                                     ChangePercent = dummyVm.ChangePercent,
                                     Score = latestScore,
+                                    ScoreDate = recentScores.Count > 0 ? recentScores[0].Date : DateTime.MinValue,
                                     CrashRiskScore = latestRecommendation.CrashRiskScore,
                                     PatternTagCount = (latestRecommendation.PatternTags ?? new List<PatternTag>()).Count,
                                     ThreeMajorNet = latestNet,

@@ -142,6 +142,7 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Header="分數" Binding="{Binding Score}" Width="80" />
+                <DataGridTextColumn Header="分數日期" Binding="{Binding ScoreDateText}" Width="95" />
                 <DataGridTextColumn Header="風險分" Binding="{Binding CrashRiskScore}" Width="70" />
                 <DataGridTextColumn Header="型態數" Binding="{Binding PatternTagCount}" Width="60" />
                 <DataGridTextColumn Header="{Binding DataContext.ScoreDay0Header, RelativeSource={RelativeSource AncestorType=DataGrid}}" Binding="{Binding ScoreDay0}" Width="55" />
