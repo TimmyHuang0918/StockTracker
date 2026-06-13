@@ -476,7 +476,7 @@
                                         <TextBlock Grid.Column="0" Text="{Binding Rank}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Symbol}"/>
                                         <TextBlock Grid.Column="2" Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding ThreeMajorNet, StringFormat=N0}" TextAlignment="Right"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding ThreeMajorNetDisplayText}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                                         <TextBlock Grid.Column="4" Text="{Binding ThreeMajorNetAmountText}" Foreground="{Binding ThreeMajorNetAmountBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                                         <TextBlock Grid.Column="5" Text="{Binding MarginNetText}" Foreground="{Binding MarginNetBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                                         <TextBlock Grid.Column="7" Text="{Binding RankDeltaText}" Foreground="{Binding RankDeltaBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>

@@ -47,7 +47,14 @@ namespace StockTracker.ViewModels
         public string ScoreDateText => ScoreDate == DateTime.MinValue ? string.Empty : ScoreDate.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture);
         public double AverageRecentScore => RecentScores == null || RecentScores.Count == 0 ? Score : RecentScores.Average(x => x.Score);
         public int ScoreTrend => ScoreDay0 - ScoreDay4;
-        public string NetDisplay => ThreeMajorNet > 0 ? $"+{ThreeMajorNet:N0}" : ThreeMajorNet.ToString("N0");
+        public string NetDisplay
+        {
+            get
+            {
+                var lots = ThreeMajorNet / 1000m;
+                return lots > 0 ? $"+{lots:N0}" : lots.ToString("N0", CultureInfo.InvariantCulture);
+            }
+        }
         public System.Windows.Media.Brush ChangePercentBrush => ChangePercent > 0 ? System.Windows.Media.Brushes.IndianRed :
                                                                   ChangePercent < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
                                                                   System.Windows.Media.Brushes.Gray;

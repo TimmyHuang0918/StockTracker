@@ -633,6 +633,9 @@ namespace StockTracker.ViewModels
 
                 var marginNet = marginRecord != null ? marginRecord.MarginPurchaseSales : 0;
                 var investmentTrustNet = record.InvestmentTrustNet;
+                var threeMajorNetLots = record.ThreeMajorNet / 1000d;
+                var investmentTrustNetLots = investmentTrustNet / 1000d;
+                var marginNetLots = marginNet / 1000d;
                 double closePrice;
                 var hasClosePrice = latestCloseBySymbol.TryGetValue(record.Symbol, out closePrice);
                 var threeMajorNetAmount = hasClosePrice ? (double)record.ThreeMajorNet * closePrice : 0d;
@@ -657,6 +660,7 @@ namespace StockTracker.ViewModels
                     Name = record.Name,
                     Market = record.Market ?? string.Empty,
                     ThreeMajorNet = record.ThreeMajorNet,
+                    ThreeMajorNetDisplayText = threeMajorNetLots > 0 ? $"▲{threeMajorNetLots:N0}" : threeMajorNetLots < 0 ? $"▼{Math.Abs(threeMajorNetLots):N0}" : "-",
                     ThreeMajorNetAmount = threeMajorNetAmount,
                     ThreeMajorNetAmountText = hasClosePrice
                         ? (threeMajorNetAmount > 0 ? $"▲{threeMajorNetAmount:N0}" : threeMajorNetAmount < 0 ? $"▼{Math.Abs(threeMajorNetAmount):N0}" : "-")
@@ -665,22 +669,22 @@ namespace StockTracker.ViewModels
                         ? Brushes.Gainsboro
                         : threeMajorNetAmount > 0 ? Brushes.IndianRed : threeMajorNetAmount < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
                     InvestmentTrustNet = investmentTrustNet,
-                    InvestmentTrustNetText = investmentTrustNet > 0 ? $"▲{investmentTrustNet:N0}" : investmentTrustNet < 0 ? $"▼{Math.Abs(investmentTrustNet):N0}" : "-",
+                    InvestmentTrustNetText = investmentTrustNetLots > 0 ? $"▲{investmentTrustNetLots:N0}" : investmentTrustNetLots < 0 ? $"▼{Math.Abs(investmentTrustNetLots):N0}" : "-",
                     InvestmentTrustNetBrush = investmentTrustNet > 0 ? Brushes.IndianRed : investmentTrustNet < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
                     MarginNet = marginNet,
-                    MarginNetText = marginNet > 0 ? $"▲{marginNet:N0}" : marginNet < 0 ? $"▼{Math.Abs(marginNet):N0}" : "-",
+                    MarginNetText = marginNetLots > 0 ? $"▲{marginNetLots:N0}" : marginNetLots < 0 ? $"▼{Math.Abs(marginNetLots):N0}" : "-",
                     MarginNetBrush = marginNet > 0 ? Brushes.IndianRed : marginNet < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
                     RankDeltaText = !hasPrev ? "NEW" : rankDelta > 0 ? $"▲{rankDelta}" : rankDelta < 0 ? $"▼{Math.Abs(rankDelta)}" : "-",
                     RankDeltaBrush = !hasPrev ? Brushes.SkyBlue : rankDelta > 0 ? Brushes.IndianRed : rankDelta < 0 ? Brushes.MediumSeaGreen : Brushes.Gainsboro,
                     TooltipText =
                         $"日期: {record.TradeDate:yyyy/MM/dd}" +
                         $"\n代號: {record.Symbol} {record.Name}" +
-                        $"\n外資 買:{record.ForeignBuy:N0} 賣:{record.ForeignSell:N0} 淨:{record.ForeignNet:N0}" +
-                        $"\n投信 買:{record.InvestmentTrustBuy:N0} 賣:{record.InvestmentTrustSell:N0} 淨:{record.InvestmentTrustNet:N0}" +
-                        $"\n自營商 淨:{record.DealerNet:N0} (自買:{record.DealerSelfNet:N0} / 避險:{record.DealerHedgeNet:N0})" +
-                        $"\n三大法人買賣超: {record.ThreeMajorNet:N0}" +
+                        $"\n外資 買:{record.ForeignBuy / 1000d:N0}張 賣:{record.ForeignSell / 1000d:N0}張 淨:{record.ForeignNet / 1000d:N0}張" +
+                        $"\n投信 買:{record.InvestmentTrustBuy / 1000d:N0}張 賣:{record.InvestmentTrustSell / 1000d:N0}張 淨:{record.InvestmentTrustNet / 1000d:N0}張" +
+                        $"\n自營商 淨:{record.DealerNet / 1000d:N0}張 (自買:{record.DealerSelfNet / 1000d:N0}張 / 避險:{record.DealerHedgeNet / 1000d:N0}張)" +
+                        $"\n三大法人買賣超: {record.ThreeMajorNet / 1000d:N0}張" +
                         $"\n前日融資餘額: {prevMarginBal:N0}" +
-                        $"\n今日融資變化: {marginNet:N0}" +
+                        $"\n今日融資變化: {marginNet / 1000d:N0}張" +
                         $"\n今日融資餘額: {marginBal:N0}" +
                         $"\n融資維持率: {(maintenanceRatio > 0d ? maintenanceRatio.ToString("F2") + "%" : "0.00%")}" +
                         $" ({maintenanceStatus})" +
@@ -893,6 +897,7 @@ namespace StockTracker.ViewModels
             public string Name { get; set; }
             public string Market { get; set; }
             public long ThreeMajorNet { get; set; }
+            public string ThreeMajorNetDisplayText { get; set; }
             public double ThreeMajorNetAmount { get; set; }
             public string ThreeMajorNetAmountText { get; set; }
             public Brush ThreeMajorNetAmountBrush { get; set; }
