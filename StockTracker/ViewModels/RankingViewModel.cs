@@ -695,6 +695,9 @@ namespace StockTracker.ViewModels
 
                             var recentScores = BuildRecentScores(enrichedCandles, t86History, symbol, name);
                             var latestScore = recentScores.Count > 0 ? recentScores[0].Score : 0;
+                            var scoreDate = recentScores.Count > 0
+                                ? recentScores[0].Date.Date
+                                : enrichedCandles.Last().Time.Date;
                             var latestRecommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
                                 enrichedCandles,
                                 (double)dummyVm.LatestPrice,
@@ -703,11 +706,7 @@ namespace StockTracker.ViewModels
                                 t86History,
                                 enrichedCandles.Last().Time);
 
-                            long latestNet = 0;
-                            if (t86History != null && t86History.RecordsByDate.Any())
-                            {
-                                latestNet = t86History.RecordsByDate.OrderByDescending(r => r.Key).First().Value.ThreeMajorNet;
-                            }
+                            long latestNet = ResolveThreeMajorNetByDate(t86History, scoreDate);
 
                             lock (lockObj)
                             {
@@ -718,7 +717,7 @@ namespace StockTracker.ViewModels
                                     LatestPrice = dummyVm.LatestPrice,
                                     ChangePercent = dummyVm.ChangePercent,
                                     Score = latestScore,
-                                    ScoreDate = recentScores.Count > 0 ? recentScores[0].Date : DateTime.MinValue,
+                                    ScoreDate = scoreDate,
                                     CrashRiskScore = latestRecommendation.CrashRiskScore,
                                     PatternTagCount = (latestRecommendation.PatternTags ?? new List<PatternTag>()).Count,
                                     ThreeMajorNet = latestNet,
@@ -817,6 +816,22 @@ namespace StockTracker.ViewModels
             return recentScores
                 .OrderByDescending(x => x.Date)
                 .ToList();
+        }
+
+        private static long ResolveThreeMajorNetByDate(TwseT86History t86History, DateTime targetDate)
+        {
+            if (t86History == null || t86History.RecordsByDate == null || t86History.RecordsByDate.Count == 0)
+            {
+                return 0;
+            }
+
+            TwseT86Record exactRecord;
+            if (t86History.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
+            {
+                return exactRecord.ThreeMajorNet;
+            }
+
+            return 0;
         }
 
         private static string SerializeRecentScores(IEnumerable<RankedStockScorePoint> recentScores)
