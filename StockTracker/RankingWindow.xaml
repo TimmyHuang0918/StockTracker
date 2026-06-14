@@ -113,6 +113,10 @@
                                     <TextBox Text="{Binding MinPatternTagCountFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="指定型態" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding PatternTagOptions}" SelectedItem="{Binding SelectedPatternTag, Mode=TwoWay}" Width="150" Height="28"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
                                     <TextBlock Text="近5日均分 ≥" Margin="0,0,0,4" />
                                     <TextBox Text="{Binding MinAverageScoreFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
@@ -145,6 +149,7 @@
                 <DataGridTextColumn Header="分數日期" Binding="{Binding ScoreDateText}" Width="95" />
                 <DataGridTextColumn Header="風險分" Binding="{Binding CrashRiskScore}" Width="70" />
                 <DataGridTextColumn Header="型態數" Binding="{Binding PatternTagCount}" Width="60" />
+                <DataGridTextColumn Header="型態" Binding="{Binding PatternTagsText}" Width="180" />
                 <DataGridTextColumn Header="{Binding DataContext.ScoreDay0Header, RelativeSource={RelativeSource AncestorType=DataGrid}}" Binding="{Binding ScoreDay0}" Width="55" />
                 <DataGridTextColumn Header="{Binding DataContext.ScoreDay1Header, RelativeSource={RelativeSource AncestorType=DataGrid}}" Binding="{Binding ScoreDay1}" Width="55" />
                 <DataGridTextColumn Header="{Binding DataContext.ScoreDay2Header, RelativeSource={RelativeSource AncestorType=DataGrid}}" Binding="{Binding ScoreDay2}" Width="55" />

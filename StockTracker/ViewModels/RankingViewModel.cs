@@ -28,6 +28,7 @@ namespace StockTracker.ViewModels
         public DateTime ScoreDate { get; set; }
         public int CrashRiskScore { get; set; }
         public int PatternTagCount { get; set; }
+        public string PatternTagsText { get; set; }
         public string Suggestion { get; set; }
         public long ThreeMajorNet { get; set; }
         public decimal ThreeMajorNetAmount { get; set; }
@@ -118,6 +119,7 @@ namespace StockTracker.ViewModels
         private int? _minLatestScoreFilter;
         private int? _minCrashRiskScoreFilter;
         private int? _minPatternTagCountFilter;
+        private string _selectedPatternTag = "全部";
         private double? _minAverageScoreFilter;
         private bool _requireScoreTrendUp;
         private int _minConsecutiveDays;
@@ -141,6 +143,7 @@ namespace StockTracker.ViewModels
             ApplyLowPriceHighScoreFilterCommand = new RelayCommand(_ => ApplyLowPriceHighScoreFilter());
             ApplyInstitutionalMomentumFilterCommand = new RelayCommand(_ => ApplyInstitutionalMomentumFilter());
             ApplyScoreReboundFilterCommand = new RelayCommand(_ => ApplyScoreReboundFilter());
+            PatternTagOptions = new ObservableCollection<string> { "全部" };
 
             _rankedStocksView = System.Windows.Data.CollectionViewSource.GetDefaultView(RankedStocks);
             _rankedStocksView.Filter = FilterRankedStocks;
@@ -206,6 +209,19 @@ namespace StockTracker.ViewModels
         {
             get => _minPatternTagCountFilter;
             set { _minPatternTagCountFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public ObservableCollection<string> PatternTagOptions { get; }
+
+        public string SelectedPatternTag
+        {
+            get => _selectedPatternTag;
+            set
+            {
+                _selectedPatternTag = string.IsNullOrWhiteSpace(value) ? "全部" : value;
+                OnPropertyChanged();
+                _rankedStocksView.Refresh();
+            }
         }
 
         public double? MinAverageScoreFilter
@@ -306,6 +322,13 @@ namespace StockTracker.ViewModels
                 if (MinLatestScoreFilter.HasValue && stock.Score < MinLatestScoreFilter.Value) return false;
                 if (MinCrashRiskScoreFilter.HasValue && stock.CrashRiskScore < MinCrashRiskScoreFilter.Value) return false;
                 if (MinPatternTagCountFilter.HasValue && stock.PatternTagCount < MinPatternTagCountFilter.Value) return false;
+                if (!string.IsNullOrWhiteSpace(SelectedPatternTag) && SelectedPatternTag != "全部")
+                {
+                    if (string.IsNullOrWhiteSpace(stock.PatternTagsText) || stock.PatternTagsText.IndexOf(SelectedPatternTag, StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        return false;
+                    }
+                }
                 if (MinAverageScoreFilter.HasValue && stock.AverageRecentScore < MinAverageScoreFilter.Value) return false;
                 if (RequireScoreTrendUp && stock.ScoreTrend <= 0) return false;
                 if (MinConsecutiveDays > 0 && stock.GetConsecutiveScoreDays(MinConsecutiveScore) < MinConsecutiveDays) return false;
@@ -327,6 +350,9 @@ namespace StockTracker.ViewModels
                 bool hasRecentScoresColumn = false;
                 bool hasScoreDateColumn = false;
                 bool hasThreeMajorNetAmountColumn = false;
+                bool hasCrashRiskScoreColumn = false;
+                bool hasPatternTagCountColumn = false;
+                bool hasPatternTagsColumn = false;
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = "PRAGMA table_info(LatestRanking);";
@@ -354,6 +380,21 @@ namespace StockTracker.ViewModels
                             {
                                 hasThreeMajorNetAmountColumn = true;
                             }
+
+                            if (colName == "CrashRiskScore")
+                            {
+                                hasCrashRiskScoreColumn = true;
+                            }
+
+                            if (colName == "PatternTagCount")
+                            {
+                                hasPatternTagCountColumn = true;
+                            }
+
+                            if (colName == "PatternTags")
+                            {
+                                hasPatternTagsColumn = true;
+                            }
                         }
                     }
                 }
@@ -369,6 +410,9 @@ namespace StockTracker.ViewModels
                             ChangePercent REAL NOT NULL,
                             Score INTEGER NOT NULL,
                             ScoreDate TEXT NOT NULL DEFAULT '',
+                            CrashRiskScore INTEGER NOT NULL DEFAULT 0,
+                            PatternTagCount INTEGER NOT NULL DEFAULT 0,
+                            PatternTags TEXT NOT NULL DEFAULT '',
                             Suggestion TEXT NOT NULL,
                             ThreeMajorNet INTEGER NOT NULL DEFAULT 0,
                             ThreeMajorNetAmount REAL NOT NULL DEFAULT 0,
@@ -438,6 +482,51 @@ namespace StockTracker.ViewModels
                     {
                     }
                 }
+
+                if (!hasCrashRiskScoreColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN CrashRiskScore INTEGER NOT NULL DEFAULT 0;";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                if (!hasPatternTagCountColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN PatternTagCount INTEGER NOT NULL DEFAULT 0;";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                if (!hasPatternTagsColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN PatternTags TEXT NOT NULL DEFAULT '';";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
         }
 
@@ -451,12 +540,12 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, Suggestion, ThreeMajorNet, ThreeMajorNetAmount, RecentScores FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, ThreeMajorNet, ThreeMajorNetAmount, RecentScores FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                var recentScoresRaw = reader.IsDBNull(10) ? string.Empty : reader.GetString(10);
+                                var recentScoresRaw = reader.IsDBNull(13) ? string.Empty : reader.GetString(13);
                                 DateTime scoreDate;
                                 var scoreDateText = reader.IsDBNull(6) ? string.Empty : reader.GetString(6);
                                 if (!DateTime.TryParse(scoreDateText, out scoreDate))
@@ -473,13 +562,26 @@ namespace StockTracker.ViewModels
                                     ChangePercent = reader.GetDecimal(4),
                                     Score = reader.GetInt32(5),
                                     ScoreDate = scoreDate,
-                                    Suggestion = reader.GetString(7),
-                                    ThreeMajorNet = reader.IsDBNull(8) ? 0 : reader.GetInt64(8),
-                                    ThreeMajorNetAmount = reader.IsDBNull(9) ? 0m : Convert.ToDecimal(reader.GetValue(9), CultureInfo.InvariantCulture),
+                                    CrashRiskScore = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
+                                    PatternTagCount = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
+                                    PatternTagsText = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
+                                    Suggestion = reader.GetString(10),
+                                    ThreeMajorNet = reader.IsDBNull(11) ? 0 : reader.GetInt64(11),
+                                    ThreeMajorNetAmount = reader.IsDBNull(12) ? 0m : Convert.ToDecimal(reader.GetValue(12), CultureInfo.InvariantCulture),
                                     RecentScores = DeserializeRecentScores(recentScoresRaw, reader.GetInt32(5))
                                 });
                             }
                         }
+                    }
+                }
+
+                foreach (var stock in loaded)
+                {
+                    if (stock.PatternTagCount <= 0 && !string.IsNullOrWhiteSpace(stock.PatternTagsText))
+                    {
+                        stock.PatternTagCount = stock.PatternTagsText
+                            .Split(new[] { '、' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Length;
                     }
                 }
 
@@ -488,11 +590,13 @@ namespace StockTracker.ViewModels
                     foreach (var s in loaded)
                         RankedStocks.Add(s);
                     UpdateScoreHeaders(loaded);
+                    UpdatePatternTagOptions(loaded);
                     ProgressText = $"已載入上次儲存的排行 ({loaded.Count} 筆)";
                 }
                 else
                 {
                     UpdateScoreHeaders(null);
+                    UpdatePatternTagOptions(null);
                 }
             }
             catch (Exception ex)
@@ -517,8 +621,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, Suggestion, ThreeMajorNet, ThreeMajorNetAmount, RecentScores)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @sugg, @net, @netAmount, @recentScores)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, ThreeMajorNet, ThreeMajorNetAmount, RecentScores)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @net, @netAmount, @recentScores)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -529,6 +633,9 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@change", s.ChangePercent);
                                 cmd.Parameters.AddWithValue("@score", s.Score);
                                 cmd.Parameters.AddWithValue("@scoreDate", s.ScoreDate == DateTime.MinValue ? string.Empty : s.ScoreDate.ToString("yyyy-MM-dd"));
+                                cmd.Parameters.AddWithValue("@crashRiskScore", s.CrashRiskScore);
+                                cmd.Parameters.AddWithValue("@patternTagCount", s.PatternTagCount);
+                                cmd.Parameters.AddWithValue("@patternTags", s.PatternTagsText ?? string.Empty);
                                 cmd.Parameters.AddWithValue("@sugg", s.Suggestion);
                                 cmd.Parameters.AddWithValue("@net", s.ThreeMajorNet);
                                 cmd.Parameters.AddWithValue("@netAmount", s.ThreeMajorNetAmount);
@@ -717,6 +824,7 @@ namespace StockTracker.ViewModels
 
                             lock (lockObj)
                             {
+                                var latestPatternTags = latestRecommendation.PatternTags ?? new List<PatternTag>();
                                 results.Add(new RankedStock
                                 {
                                     Symbol = symbol,
@@ -726,7 +834,8 @@ namespace StockTracker.ViewModels
                                     Score = latestScore,
                                     ScoreDate = scoreDate,
                                     CrashRiskScore = latestRecommendation.CrashRiskScore,
-                                    PatternTagCount = (latestRecommendation.PatternTags ?? new List<PatternTag>()).Count,
+                                    PatternTagCount = latestPatternTags.Count,
+                                    PatternTagsText = string.Join("、", latestPatternTags.Select(x => x.Label).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct()),
                                     ThreeMajorNet = latestNet,
                                     ThreeMajorNetAmount = latestNet * dummyVm.LatestPrice,
                                     RecentScores = recentScores
@@ -762,6 +871,7 @@ namespace StockTracker.ViewModels
                 }
 
                 UpdateScoreHeaders(results);
+                UpdatePatternTagOptions(results);
                 SaveRankingToDb(results);
 
                 ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票";
@@ -907,6 +1017,28 @@ namespace StockTracker.ViewModels
             ScoreDay4Header = FormatScoreHeader(scoreDates, 4);
         }
 
+        private void UpdatePatternTagOptions(IEnumerable<RankedStock> stocks)
+        {
+            var selected = SelectedPatternTag;
+            var tags = (stocks ?? Enumerable.Empty<RankedStock>())
+                .Where(x => x != null && !string.IsNullOrWhiteSpace(x.PatternTagsText))
+                .SelectMany(x => x.PatternTagsText.Split(new[] { '、' }, StringSplitOptions.RemoveEmptyEntries))
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x)
+                .ToList();
+
+            PatternTagOptions.Clear();
+            PatternTagOptions.Add("全部");
+            foreach (var tag in tags)
+            {
+                PatternTagOptions.Add(tag);
+            }
+
+            SelectedPatternTag = PatternTagOptions.Contains(selected) ? selected : "全部";
+        }
+
         private static string FormatScoreHeader(IReadOnlyList<DateTime> dates, int offset)
         {
             if (dates == null || offset < 0 || offset >= dates.Count)
@@ -933,6 +1065,7 @@ namespace StockTracker.ViewModels
                 _minLatestScoreFilter = null;
                 _minCrashRiskScoreFilter = null;
                 _minPatternTagCountFilter = null;
+                _selectedPatternTag = "全部";
                 _minAverageScoreFilter = null;
                 _requireScoreTrendUp = false;
                 _minConsecutiveDays = 0;
@@ -1012,6 +1145,7 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(MinLatestScoreFilter));
             OnPropertyChanged(nameof(MinCrashRiskScoreFilter));
             OnPropertyChanged(nameof(MinPatternTagCountFilter));
+            OnPropertyChanged(nameof(SelectedPatternTag));
             OnPropertyChanged(nameof(MinAverageScoreFilter));
             OnPropertyChanged(nameof(RequireScoreTrendUp));
             OnPropertyChanged(nameof(MinConsecutiveDays));

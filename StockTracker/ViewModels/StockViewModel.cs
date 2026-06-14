@@ -27,6 +27,7 @@ namespace StockTracker.ViewModels
         private readonly List<SignalMarkerData> _signalHistory = new List<SignalMarkerData>();
         private readonly Dictionary<DateTime, TwseT86Record> _twseByDate = new Dictionary<DateTime, TwseT86Record>();
         private readonly Dictionary<DateTime, TwseMarginRecord> _marginByDate = new Dictionary<DateTime, TwseMarginRecord>();
+        private string _exDividendTagText;
 
         private decimal _latestPrice;
         private decimal _changePercent;
@@ -120,6 +121,23 @@ namespace StockTracker.ViewModels
 
         public string Symbol { get; }
         public string Name { get; }
+        public string ExDividendTagText
+        {
+            get => _exDividendTagText;
+            set
+            {
+                if (_exDividendTagText == value)
+                {
+                    return;
+                }
+
+                _exDividendTagText = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(NameWithExDividendTag));
+            }
+        }
+
+        public string NameWithExDividendTag => string.IsNullOrWhiteSpace(ExDividendTagText) ? Name : $"{Name} {ExDividendTagText}";
 
         public decimal LatestPrice
         {

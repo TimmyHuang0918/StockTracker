@@ -1,11 +1,13 @@
 using StockTracker.Models;
 using StockTracker.Services;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,6 +28,7 @@ namespace StockTracker.ViewModels
         private readonly List<TwseT86History> _twseT86Histories = new List<TwseT86History>();
         private readonly List<TwseMarginHistory> _twseMarginHistories = new List<TwseMarginHistory>();
         private readonly List<TwseMarginMetricHistory> _twseMarginMetricHistories = new List<TwseMarginMetricHistory>();
+        private Dictionary<string, string> _exDividendTagBySymbol = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private string _newSymbol;
         private string _systemMessage;
         private string _selectedGlobalKLineInterval = "日K";
@@ -490,6 +493,9 @@ namespace StockTracker.ViewModels
                     await Task.Delay(2000); // 避免過快被鎖
                 }
 
+                _exDividendTagBySymbol = await LoadUpcomingExDividendTagsAsync();
+                ApplyExDividendTagsToStocks();
+
                 // 從 SQLite 全量讀取並重建排行（帶進度條）
                 await LoadTwseT86HistoryAsync(true);
                 foreach (var stock in Stocks)
@@ -831,6 +837,15 @@ namespace StockTracker.ViewModels
             _twseT86Histories.RemoveAll(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
             _twseT86Histories.AddRange(t86History.Where(x => x != null));
 
+            var stockVm = Stocks.FirstOrDefault(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
+            if (stockVm != null)
+            {
+                string exDividendTagText;
+                stockVm.ExDividendTagText = _exDividendTagBySymbol.TryGetValue(symbol, out exDividendTagText)
+                    ? exDividendTagText
+                    : null;
+            }
+
             var marginHistory = await _twseMarginRepository.LoadHistoriesBySymbolsAsync(symbols);
             _twseMarginHistories.RemoveAll(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
             _twseMarginHistories.AddRange(marginHistory.Where(x => x != null));
@@ -888,6 +903,117 @@ namespace StockTracker.ViewModels
 
             var lines = Stocks.Select(x => x.Symbol).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             File.WriteAllLines(SubscriptionFilePath, lines, Encoding.UTF8);
+        }
+
+        private static async Task<Dictionary<string, string>> LoadUpcomingExDividendTagsAsync()
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    var json = await httpClient.GetStringAsync("https://www.twse.com.tw/exchangeReport/TWT48U?response=json");
+                    var payload = JObject.Parse(json);
+                    var rows = payload["data"] as JArray;
+                    if (rows == null)
+                    {
+                        return result;
+                    }
+
+                    var today = DateTime.Today;
+                    foreach (var row in rows)
+                    {
+                        var columns = row as JArray;
+                        if (columns == null || columns.Count < 2)
+                        {
+                            continue;
+                        }
+
+                        var exDividendDateText = columns[0] == null ? string.Empty : columns[0].ToString();
+                        var symbol = (columns[1] == null ? string.Empty : columns[1].ToString()).Trim();
+                        if (string.IsNullOrWhiteSpace(symbol))
+                        {
+                            continue;
+                        }
+
+                        DateTime exDividendDate;
+                        if (!TryParseRocDate(exDividendDateText, out exDividendDate))
+                        {
+                            continue;
+                        }
+
+                        var days = (exDividendDate.Date - today).Days;
+                        if (days < 0 || days > 7)
+                        {
+                            continue;
+                        }
+
+                        result[symbol] = $"除息 {days}天 {exDividendDate:MM月dd號}";
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return result;
+        }
+
+        private void ApplyExDividendTagsToStocks()
+        {
+            foreach (var stock in Stocks)
+            {
+                string exDividendTagText;
+                stock.ExDividendTagText = _exDividendTagBySymbol.TryGetValue(stock.Symbol, out exDividendTagText)
+                    ? exDividendTagText
+                    : null;
+            }
+        }
+
+        private static bool TryParseRocDate(string input, out DateTime date)
+        {
+            date = DateTime.MinValue;
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return false;
+            }
+
+            var text = input.Trim();
+            var yearSplit = text.Split(new[] { '年' }, StringSplitOptions.RemoveEmptyEntries);
+            if (yearSplit.Length != 2)
+            {
+                return false;
+            }
+
+            int rocYear;
+            if (!int.TryParse(yearSplit[0], out rocYear))
+            {
+                return false;
+            }
+
+            var monthDay = yearSplit[1].Split(new[] { '月', '日' }, StringSplitOptions.RemoveEmptyEntries);
+            if (monthDay.Length < 2)
+            {
+                return false;
+            }
+
+            int month;
+            int day;
+            if (!int.TryParse(monthDay[0], out month) || !int.TryParse(monthDay[1], out day))
+            {
+                return false;
+            }
+
+            try
+            {
+                date = new DateTime(rocYear + 1911, month, day);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public class TwseT86RankingItem

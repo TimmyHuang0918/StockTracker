@@ -203,11 +203,14 @@
                                                 </StackPanel>
 
                                             </Border>
-                                            <TextBlock FontWeight="SemiBold" FontSize="14" DockPanel.Dock="Left">
-                                                <Run Text="{Binding Symbol, Mode=OneWay}"/>
-                                                <Run Text=" - "/>
-                                                <Run Text="{Binding Name, Mode=OneWay}"/>
-                                            </TextBlock>
+                                            <StackPanel DockPanel.Dock="Left">
+                                                <TextBlock FontWeight="SemiBold" FontSize="14">
+                                                    <Run Text="{Binding Symbol, Mode=OneWay}"/>
+                                                    <Run Text=" - "/>
+                                                    <Run Text="{Binding Name, Mode=OneWay}"/>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding ExDividendTagText, Mode=OneWay}" FontSize="11" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,1,0,0"/>
+                                            </StackPanel>
 
                                             <TextBlock DockPanel.Dock="Left" Margin="0,0,6,0" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="14" Text="☰"/>
 
@@ -448,7 +451,6 @@
                                 <ColumnDefinition Width="65"/>
                                 <ColumnDefinition Width="95"/>
                                 <ColumnDefinition Width="75"/>
-                                <ColumnDefinition Width="75"/>
                                 <ColumnDefinition Width="55"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="#"    Foreground="{DynamicResource MutedForegroundBrush}"/>
@@ -479,7 +481,7 @@
                                         <TextBlock Grid.Column="3" Text="{Binding ThreeMajorNetDisplayText}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                                         <TextBlock Grid.Column="4" Text="{Binding ThreeMajorNetAmountText}" Foreground="{Binding ThreeMajorNetAmountBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                                         <TextBlock Grid.Column="5" Text="{Binding MarginNetText}" Foreground="{Binding MarginNetBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
-                                        <TextBlock Grid.Column="7" Text="{Binding RankDeltaText}" Foreground="{Binding RankDeltaBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                        <TextBlock Grid.Column="6" Text="{Binding RankDeltaText}" Foreground="{Binding RankDeltaBrush}" TextAlignment="Right" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
