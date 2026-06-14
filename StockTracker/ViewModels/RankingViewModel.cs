@@ -30,6 +30,9 @@ namespace StockTracker.ViewModels
         public int PatternTagCount { get; set; }
         public string PatternTagsText { get; set; }
         public string Suggestion { get; set; }
+        public string StrategyDecision { get; set; }
+        public string StrategyActionText { get; set; }
+        public string StrategyStageLabel { get; set; }
         public long ThreeMajorNet { get; set; }
         public decimal ThreeMajorNetAmount { get; set; }
         public List<RankedStockScorePoint> RecentScores { get; set; } = new List<RankedStockScorePoint>();
@@ -66,6 +69,18 @@ namespace StockTracker.ViewModels
         public System.Windows.Media.Brush NetAmountDisplayBrush => ThreeMajorNetAmount > 0 ? System.Windows.Media.Brushes.IndianRed :
                                                                      ThreeMajorNetAmount < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
                                                                      System.Windows.Media.Brushes.Gray;
+        public System.Windows.Media.Brush StrategyActionBrush =>
+            string.Equals(StrategyDecision, "CLEAR", StringComparison.OrdinalIgnoreCase)
+                ? System.Windows.Media.Brushes.IndianRed
+                : string.Equals(StrategyDecision, "BUY_STAGE1", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(StrategyDecision, "BUY_STAGE2", StringComparison.OrdinalIgnoreCase) ||
+                  string.Equals(StrategyDecision, "BUY_STAGE3", StringComparison.OrdinalIgnoreCase)
+                    ? System.Windows.Media.Brushes.MediumSeaGreen
+                    : string.Equals(StrategyDecision, "EXIT_STAGE1", StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(StrategyDecision, "EXIT_STAGE2", StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(StrategyDecision, "EXIT_STAGE3", StringComparison.OrdinalIgnoreCase)
+                        ? System.Windows.Media.Brushes.Goldenrod
+                    : System.Windows.Media.Brushes.Gainsboro;
 
         public int GetConsecutiveScoreDays(int minScore)
         {
@@ -120,6 +135,7 @@ namespace StockTracker.ViewModels
         private int? _minCrashRiskScoreFilter;
         private int? _minPatternTagCountFilter;
         private string _selectedPatternTag = "全部";
+        private string _selectedStrategyAction = "全部";
         private double? _minAverageScoreFilter;
         private bool _requireScoreTrendUp;
         private int _minConsecutiveDays;
@@ -144,6 +160,7 @@ namespace StockTracker.ViewModels
             ApplyInstitutionalMomentumFilterCommand = new RelayCommand(_ => ApplyInstitutionalMomentumFilter());
             ApplyScoreReboundFilterCommand = new RelayCommand(_ => ApplyScoreReboundFilter());
             PatternTagOptions = new ObservableCollection<string> { "全部" };
+            StrategyActionOptions = new ObservableCollection<string> { "全部" };
 
             _rankedStocksView = System.Windows.Data.CollectionViewSource.GetDefaultView(RankedStocks);
             _rankedStocksView.Filter = FilterRankedStocks;
@@ -213,12 +230,25 @@ namespace StockTracker.ViewModels
 
         public ObservableCollection<string> PatternTagOptions { get; }
 
+        public ObservableCollection<string> StrategyActionOptions { get; }
+
         public string SelectedPatternTag
         {
             get => _selectedPatternTag;
             set
             {
                 _selectedPatternTag = string.IsNullOrWhiteSpace(value) ? "全部" : value;
+                OnPropertyChanged();
+                _rankedStocksView.Refresh();
+            }
+        }
+
+        public string SelectedStrategyAction
+        {
+            get => _selectedStrategyAction;
+            set
+            {
+                _selectedStrategyAction = string.IsNullOrWhiteSpace(value) ? "全部" : value;
                 OnPropertyChanged();
                 _rankedStocksView.Refresh();
             }
@@ -329,6 +359,14 @@ namespace StockTracker.ViewModels
                         return false;
                     }
                 }
+                if (!string.IsNullOrWhiteSpace(SelectedStrategyAction) && SelectedStrategyAction != "全部")
+                {
+                    if (string.IsNullOrWhiteSpace(stock.StrategyActionText) ||
+                        stock.StrategyActionText.IndexOf(SelectedStrategyAction, StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        return false;
+                    }
+                }
                 if (MinAverageScoreFilter.HasValue && stock.AverageRecentScore < MinAverageScoreFilter.Value) return false;
                 if (RequireScoreTrendUp && stock.ScoreTrend <= 0) return false;
                 if (MinConsecutiveDays > 0 && stock.GetConsecutiveScoreDays(MinConsecutiveScore) < MinConsecutiveDays) return false;
@@ -353,6 +391,8 @@ namespace StockTracker.ViewModels
                 bool hasCrashRiskScoreColumn = false;
                 bool hasPatternTagCountColumn = false;
                 bool hasPatternTagsColumn = false;
+                bool hasStrategyDecisionColumn = false;
+                bool hasStrategyActionTextColumn = false;
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = "PRAGMA table_info(LatestRanking);";
@@ -395,6 +435,16 @@ namespace StockTracker.ViewModels
                             {
                                 hasPatternTagsColumn = true;
                             }
+
+                            if (colName == "StrategyDecision")
+                            {
+                                hasStrategyDecisionColumn = true;
+                            }
+
+                            if (colName == "StrategyActionText")
+                            {
+                                hasStrategyActionTextColumn = true;
+                            }
                         }
                     }
                 }
@@ -414,6 +464,8 @@ namespace StockTracker.ViewModels
                             PatternTagCount INTEGER NOT NULL DEFAULT 0,
                             PatternTags TEXT NOT NULL DEFAULT '',
                             Suggestion TEXT NOT NULL,
+                            StrategyDecision TEXT NOT NULL DEFAULT '',
+                            StrategyActionText TEXT NOT NULL DEFAULT '',
                             ThreeMajorNet INTEGER NOT NULL DEFAULT 0,
                             ThreeMajorNetAmount REAL NOT NULL DEFAULT 0,
                             RecentScores TEXT NOT NULL DEFAULT ''
@@ -527,6 +579,36 @@ namespace StockTracker.ViewModels
                     {
                     }
                 }
+
+                if (!hasStrategyDecisionColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN StrategyDecision TEXT NOT NULL DEFAULT '';";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                if (!hasStrategyActionTextColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN StrategyActionText TEXT NOT NULL DEFAULT '';";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
         }
 
@@ -540,12 +622,12 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, ThreeMajorNet, ThreeMajorNetAmount, RecentScores FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, ThreeMajorNet, ThreeMajorNetAmount, RecentScores FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                var recentScoresRaw = reader.IsDBNull(13) ? string.Empty : reader.GetString(13);
+                                var recentScoresRaw = reader.IsDBNull(15) ? string.Empty : reader.GetString(15);
                                 DateTime scoreDate;
                                 var scoreDateText = reader.IsDBNull(6) ? string.Empty : reader.GetString(6);
                                 if (!DateTime.TryParse(scoreDateText, out scoreDate))
@@ -566,8 +648,10 @@ namespace StockTracker.ViewModels
                                     PatternTagCount = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
                                     PatternTagsText = reader.IsDBNull(9) ? string.Empty : reader.GetString(9),
                                     Suggestion = reader.GetString(10),
-                                    ThreeMajorNet = reader.IsDBNull(11) ? 0 : reader.GetInt64(11),
-                                    ThreeMajorNetAmount = reader.IsDBNull(12) ? 0m : Convert.ToDecimal(reader.GetValue(12), CultureInfo.InvariantCulture),
+                                    StrategyDecision = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+                                    StrategyActionText = reader.IsDBNull(12) ? string.Empty : reader.GetString(12),
+                                    ThreeMajorNet = reader.IsDBNull(13) ? 0 : reader.GetInt64(13),
+                                    ThreeMajorNetAmount = reader.IsDBNull(14) ? 0m : Convert.ToDecimal(reader.GetValue(14), CultureInfo.InvariantCulture),
                                     RecentScores = DeserializeRecentScores(recentScoresRaw, reader.GetInt32(5))
                                 });
                             }
@@ -591,12 +675,14 @@ namespace StockTracker.ViewModels
                         RankedStocks.Add(s);
                     UpdateScoreHeaders(loaded);
                     UpdatePatternTagOptions(loaded);
+                    UpdateStrategyActionOptions(loaded);
                     ProgressText = $"已載入上次儲存的排行 ({loaded.Count} 筆)";
                 }
                 else
                 {
                     UpdateScoreHeaders(null);
                     UpdatePatternTagOptions(null);
+                    UpdateStrategyActionOptions(null);
                 }
             }
             catch (Exception ex)
@@ -621,8 +707,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, ThreeMajorNet, ThreeMajorNetAmount, RecentScores)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @net, @netAmount, @recentScores)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, ThreeMajorNet, ThreeMajorNetAmount, RecentScores)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @net, @netAmount, @recentScores)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -637,6 +723,8 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@patternTagCount", s.PatternTagCount);
                                 cmd.Parameters.AddWithValue("@patternTags", s.PatternTagsText ?? string.Empty);
                                 cmd.Parameters.AddWithValue("@sugg", s.Suggestion);
+                                cmd.Parameters.AddWithValue("@strategyDecision", s.StrategyDecision ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@strategyActionText", s.StrategyActionText ?? string.Empty);
                                 cmd.Parameters.AddWithValue("@net", s.ThreeMajorNet);
                                 cmd.Parameters.AddWithValue("@netAmount", s.ThreeMajorNetAmount);
                                 cmd.Parameters.AddWithValue("@recentScores", SerializeRecentScores(s.RecentScores));
@@ -819,6 +907,17 @@ namespace StockTracker.ViewModels
                                 enrichedCandles.Count > 1 ? (double)enrichedCandles[enrichedCandles.Count - 2].Close : (double)dummyVm.LatestPrice,
                                 t86History,
                                 enrichedCandles.Last().Time);
+                            var recentRecommendations = BuildRecentRecommendations(enrichedCandles, t86History, symbol, name);
+                            var previousMa20 = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].MA20 : null;
+                            var strategyOutput = AdvancedTradingStrategyEngine.EvaluateStrategy(
+                                latestRecommendation,
+                                recentRecommendations,
+                                0d,
+                                (double)dummyVm.LatestPrice,
+                                dummyVm.MA5,
+                                dummyVm.MA20,
+                                previousMa20,
+                                0d);
 
                             long latestNet = ResolveThreeMajorNetByDate(t86History, scoreDate);
 
@@ -836,6 +935,9 @@ namespace StockTracker.ViewModels
                                     CrashRiskScore = latestRecommendation.CrashRiskScore,
                                     PatternTagCount = latestPatternTags.Count,
                                     PatternTagsText = string.Join("、", latestPatternTags.Select(x => x.Label).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct()),
+                                    StrategyDecision = strategyOutput.GlobalDecision,
+                                    StrategyActionText = strategyOutput.ActionText,
+                                    StrategyStageLabel = strategyOutput.StageLabel,
                                     ThreeMajorNet = latestNet,
                                     ThreeMajorNetAmount = latestNet * dummyVm.LatestPrice,
                                     RecentScores = recentScores
@@ -872,6 +974,7 @@ namespace StockTracker.ViewModels
 
                 UpdateScoreHeaders(results);
                 UpdatePatternTagOptions(results);
+                UpdateStrategyActionOptions(results);
                 SaveRankingToDb(results);
 
                 ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票";
@@ -933,6 +1036,48 @@ namespace StockTracker.ViewModels
             return recentScores
                 .OrderByDescending(x => x.Date)
                 .ToList();
+        }
+
+        private static List<TrendRecommendationResult> BuildRecentRecommendations(List<CandleData> candles, TwseT86History t86History, string symbol, string name)
+        {
+            var recent = new List<TrendRecommendationResult>();
+            if (candles == null || candles.Count == 0)
+            {
+                return recent;
+            }
+
+            var startIndex = Math.Max(0, candles.Count - 5);
+            for (var i = startIndex; i < candles.Count; i++)
+            {
+                var subset = candles.Take(i + 1).ToList();
+                if (subset.Count == 0)
+                {
+                    continue;
+                }
+
+                var latestCandle = subset[subset.Count - 1];
+                var previousClose = subset.Count > 1 ? (double)subset[subset.Count - 2].Close : (double)latestCandle.Close;
+                var filteredT86History = new TwseT86History
+                {
+                    Symbol = symbol,
+                    Name = name,
+                    RecordsByDate = (t86History?.RecordsByDate ?? new Dictionary<DateTime, TwseT86Record>())
+                        .Where(x => x.Key.Date <= latestCandle.Time.Date)
+                        .ToDictionary(x => x.Key, x => x.Value)
+                };
+
+                var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                    subset,
+                    (double)latestCandle.Close,
+                    (double?)latestCandle.PercentageChange,
+                    previousClose,
+                    filteredT86History,
+                    latestCandle.Time);
+
+                recent.Add(recommendation);
+            }
+
+            return recent;
         }
 
         private static long ResolveThreeMajorNetByDate(TwseT86History t86History, DateTime targetDate)
@@ -1039,6 +1184,27 @@ namespace StockTracker.ViewModels
             SelectedPatternTag = PatternTagOptions.Contains(selected) ? selected : "全部";
         }
 
+        private void UpdateStrategyActionOptions(IEnumerable<RankedStock> stocks)
+        {
+            var selected = SelectedStrategyAction;
+            var actions = (stocks ?? Enumerable.Empty<RankedStock>())
+                .Where(x => x != null && !string.IsNullOrWhiteSpace(x.StrategyActionText))
+                .Select(x => x.StrategyActionText.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x)
+                .ToList();
+
+            StrategyActionOptions.Clear();
+            StrategyActionOptions.Add("全部");
+            foreach (var action in actions)
+            {
+                StrategyActionOptions.Add(action);
+            }
+
+            SelectedStrategyAction = StrategyActionOptions.Contains(selected) ? selected : "全部";
+        }
+
         private static string FormatScoreHeader(IReadOnlyList<DateTime> dates, int offset)
         {
             if (dates == null || offset < 0 || offset >= dates.Count)
@@ -1066,6 +1232,7 @@ namespace StockTracker.ViewModels
                 _minCrashRiskScoreFilter = null;
                 _minPatternTagCountFilter = null;
                 _selectedPatternTag = "全部";
+                _selectedStrategyAction = "全部";
                 _minAverageScoreFilter = null;
                 _requireScoreTrendUp = false;
                 _minConsecutiveDays = 0;
@@ -1146,6 +1313,7 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(MinCrashRiskScoreFilter));
             OnPropertyChanged(nameof(MinPatternTagCountFilter));
             OnPropertyChanged(nameof(SelectedPatternTag));
+            OnPropertyChanged(nameof(SelectedStrategyAction));
             OnPropertyChanged(nameof(MinAverageScoreFilter));
             OnPropertyChanged(nameof(RequireScoreTrendUp));
             OnPropertyChanged(nameof(MinConsecutiveDays));

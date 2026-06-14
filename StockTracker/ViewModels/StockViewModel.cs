@@ -1,5 +1,6 @@
 using StockManager.Library;
 using StockTracker.Models;
+using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -25,6 +26,7 @@ namespace StockTracker.ViewModels
         private readonly List<double> _macdSeries = new List<double>();
         private readonly List<double> _signalSeries = new List<double>();
         private readonly List<SignalMarkerData> _signalHistory = new List<SignalMarkerData>();
+        private readonly List<HoldingPoint> _holdingHistory = new List<HoldingPoint>();
         private readonly Dictionary<DateTime, TwseT86Record> _twseByDate = new Dictionary<DateTime, TwseT86Record>();
         private readonly Dictionary<DateTime, TwseMarginRecord> _marginByDate = new Dictionary<DateTime, TwseMarginRecord>();
         private string _exDividendTagText;
@@ -44,6 +46,8 @@ namespace StockTracker.ViewModels
         private string _selectedKLineInterval = "1分K";
         private string _selectedKLineCount = "300";
         private string _signal = "中立";
+        private double _currentHoldingPercentage;
+        private double _holdingCost;
         private string _lastNotifiedSignal = string.Empty;
         private List<string> _latestRecommendationReasons = new List<string>();
         private int _maxDisplayPoints = 60;
@@ -98,6 +102,7 @@ namespace StockTracker.ViewModels
             PriceLevels = new ObservableCollection<PriceLevelVisual>();
             MacdLevels = new ObservableCollection<PriceLevelVisual>();
             RsiLevels = new ObservableCollection<PriceLevelVisual>();
+            HoldingLevels = new ObservableCollection<PriceLevelVisual>();
             VolumeLevels = new ObservableCollection<PriceLevelVisual>();
             MarginBalanceLevels = new ObservableCollection<PriceLevelVisual>();
             MarginMaintenanceLevels = new ObservableCollection<PriceLevelVisual>();
@@ -112,6 +117,8 @@ namespace StockTracker.ViewModels
             MacdLinePoints = new PointCollection();
             SignalLinePoints = new PointCollection();
             RsiLinePoints = new PointCollection();
+            HoldingAreaPoints = new PointCollection();
+            HoldingAreaPolygonPoints = new PointCollection();
             ThreeMajorNetPoints = new PointCollection();
             ForeignNetPoints = new PointCollection();
             InvestmentTrustNetPoints = new PointCollection();
@@ -272,6 +279,34 @@ namespace StockTracker.ViewModels
             }
         }
 
+        public StrategyOutputViewModel StrategyOutput { get; private set; } = new StrategyOutputViewModel();
+
+        public string StrategyStageLabel => StrategyOutput?.StageLabel ?? "線性倉位｜空倉 0%";
+
+        public string StrategyDescription => StrategyOutput?.Description ?? string.Empty;
+
+        public double CurrentHoldingPercentage
+        {
+            get => _currentHoldingPercentage;
+            set
+            {
+                _currentHoldingPercentage = value;
+                OnPropertyChanged();
+                RefreshStrategyOutput();
+            }
+        }
+
+        public double HoldingCost
+        {
+            get => _holdingCost;
+            set
+            {
+                _holdingCost = value;
+                OnPropertyChanged();
+                RefreshStrategyOutput();
+            }
+        }
+
         public IReadOnlyList<string> KLineIntervals { get; } = new[] { "日K", "5分K", "3分K", "1分K" };
 
         public string SelectedKLineInterval
@@ -315,7 +350,9 @@ namespace StockTracker.ViewModels
             var detailVm = new StockViewModel(Symbol, Name)
             {
                 _selectedKLineInterval = _selectedKLineInterval,
-                _maxDisplayPoints = _maxDisplayPoints
+                _maxDisplayPoints = _maxDisplayPoints,
+                _currentHoldingPercentage = _currentHoldingPercentage,
+                _holdingCost = _holdingCost
             };
 
             detailVm.OnPropertyChanged(nameof(SelectedKLineInterval));
@@ -385,6 +422,8 @@ namespace StockTracker.ViewModels
         public PointCollection SignalLinePoints { get; private set; }
 
         public PointCollection RsiLinePoints { get; private set; }
+        public PointCollection HoldingAreaPoints { get; private set; }
+        public PointCollection HoldingAreaPolygonPoints { get; private set; }
         public PointCollection MarginMaintenancePoints { get; private set; }
         public PointCollection ThreeMajorNetPoints { get; private set; }
         public PointCollection ForeignNetPoints { get; private set; }
@@ -399,6 +438,7 @@ namespace StockTracker.ViewModels
         public ObservableCollection<PriceLevelVisual> PriceLevels { get; }
         public ObservableCollection<PriceLevelVisual> MacdLevels { get; }
         public ObservableCollection<PriceLevelVisual> RsiLevels { get; }
+        public ObservableCollection<PriceLevelVisual> HoldingLevels { get; }
         public ObservableCollection<PriceLevelVisual> VolumeLevels { get; }
         public ObservableCollection<PriceLevelVisual> MarginBalanceLevels { get; }
         public ObservableCollection<PriceLevelVisual> MarginMaintenanceLevels { get; }
@@ -414,11 +454,12 @@ namespace StockTracker.ViewModels
                 {
                     return;
                 }
-
                 _currentCrashRiskScore = value;
                 OnPropertyChanged();
             }
         }
+
+        public ObservableCollection<HoldingPoint> HoldingHistory { get; } = new ObservableCollection<HoldingPoint>();
 
         public bool ShowPatternMarkers
         {
@@ -711,6 +752,8 @@ namespace StockTracker.ViewModels
             if (!appendedToTail)
             {
                 _signalHistory.Clear();
+            _holdingHistory.Clear();
+            HoldingHistory.Clear();
                 _lastNotifiedSignal = string.Empty;
             }
 
@@ -786,6 +829,15 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(LatestVolume));
             OnPropertyChanged(nameof(LatestMarginBalance));
             OnPropertyChanged(nameof(LatestMarginMaintenanceRatio));
+            StrategyOutput = new StrategyOutputViewModel();
+            OnPropertyChanged(nameof(StrategyOutput));
+            OnPropertyChanged(nameof(StrategyStageLabel));
+            OnPropertyChanged(nameof(StrategyDescription));
+            HoldingAreaPoints = new PointCollection();
+            HoldingAreaPolygonPoints = new PointCollection();
+            HoldingLevels.Clear();
+            OnPropertyChanged(nameof(HoldingAreaPoints));
+            OnPropertyChanged(nameof(HoldingAreaPolygonPoints));
 
             foreach (var detailVm in _detailViewModels.ToList())
             {
@@ -1012,10 +1064,14 @@ namespace StockTracker.ViewModels
                 CurrentOpportunityScore = recommendation.Score;
                 CurrentCrashRiskScore = recommendation.CrashRiskScore;
                 UpdateCurrentPatternTags(latestCandle.Time);
+                RefreshStrategyOutput(recommendation);
 
-                var actionSignal = ResolveActionSignal(Signal);
-                var shouldRecord = recommendation.Score >= 70 || recommendation.Score <= 30;
-                var signalKey = $"{actionSignal}_{recommendation.Score / 15}";
+                var strategyDecision = StrategyOutput?.GlobalDecision ?? "NEUTRAL";
+                var actionSignal = ResolveActionSignalByStrategyDecision(strategyDecision);
+                var shouldRecord = strategyDecision == "BUY_STAGE1" || strategyDecision == "BUY_STAGE2" || strategyDecision == "BUY_STAGE3" ||
+                                 strategyDecision == "EXIT_STAGE1" || strategyDecision == "EXIT_STAGE2" || strategyDecision == "EXIT_STAGE3" ||
+                                 strategyDecision == "CLEAR";
+                var signalKey = $"{actionSignal}_{strategyDecision}";
 
                 if (shouldRecord && signalKey != _lastNotifiedSignal)
                 {
@@ -1026,7 +1082,10 @@ namespace StockTracker.ViewModels
                         Time = latestCandle.Time,
                         Price = latestCandle.Close,
                         Signal = actionSignal,
-                        Score = recommendation.Score
+                        Score = recommendation.Score,
+                        StrategyDecision = strategyDecision,
+                        StrategyActionText = StrategyOutput?.ActionText ?? actionSignal,
+                        TargetHoldingPercentage = StrategyOutput?.ExecutedHolding ?? CurrentHoldingPercentage
                     });
                     if (actionSignal == "買進訊號" || actionSignal == "賣出訊號")
                     {
@@ -1050,6 +1109,20 @@ namespace StockTracker.ViewModels
                 CurrentOpportunityScore = score;
                 CurrentCrashRiskScore = 0;
                 UpdateCurrentPatternTags(latestCandle.Time);
+                StrategyOutput = new StrategyOutputViewModel
+                {
+                    GlobalDecision = "NEUTRAL",
+                    ActionText = "日K以外週期，策略僅供觀察",
+                    CurrentHoldingPercentage = CurrentHoldingPercentage,
+                    ExecutedHolding = CurrentHoldingPercentage,
+                    StageLabel = "Stage 0｜空手 0%",
+                    Description = "目前非日K週期，策略僅供觀察。",
+                    ActionColor = "#A0A0A0"
+                };
+                StrategyOutput.Reasons.Add("目前非日K週期，動態部位矩陣以日K決策為準。");
+                OnPropertyChanged(nameof(StrategyOutput));
+                OnPropertyChanged(nameof(StrategyStageLabel));
+                OnPropertyChanged(nameof(StrategyDescription));
 
                 var actionSignal = ResolveActionSignal(Signal);
                 var shouldRecord = score >= 70;
@@ -1064,7 +1137,10 @@ namespace StockTracker.ViewModels
                         Time = latestCandle.Time,
                         Price = latestCandle.Close,
                         Signal = actionSignal,
-                        Score = score
+                        Score = score,
+                        StrategyDecision = "NEUTRAL",
+                        StrategyActionText = "日K以外週期，策略僅供觀察",
+                        TargetHoldingPercentage = CurrentHoldingPercentage
                     });
                     if (actionSignal == "買進訊號" || actionSignal == "賣出訊號")
                     {
@@ -1087,6 +1163,31 @@ namespace StockTracker.ViewModels
             }
 
             if (suggestion.Contains("賣出") || suggestion.Contains("偏空") || suggestion.Contains("做空"))
+            {
+                return "賣出訊號";
+            }
+
+            return "中立";
+        }
+
+        private static string ResolveActionSignalByStrategyDecision(string strategyDecision)
+        {
+            if (string.IsNullOrWhiteSpace(strategyDecision))
+            {
+                return "中立";
+            }
+
+            if (strategyDecision == "BUY" || strategyDecision == "STRONG_BUY" || strategyDecision == "LATE_BUY")
+            {
+                return "買進訊號";
+            }
+
+            if (strategyDecision == "BUY_STAGE1" || strategyDecision == "BUY_STAGE2" || strategyDecision == "BUY_STAGE3")
+            {
+                return "買進訊號";
+            }
+
+            if (strategyDecision == "CRASH_WARNING" || strategyDecision == "CLEAR" || strategyDecision == "EXIT_STAGE1" || strategyDecision == "EXIT_STAGE2" || strategyDecision == "EXIT_STAGE3")
             {
                 return "賣出訊號";
             }
@@ -1233,6 +1334,8 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(BollingerLowerPoints));
             OnPropertyChanged(nameof(_chartPaddingWidth));
 
+            RebuildStrategyBacktestSignalHistory();
+
             SignalMarkers.Clear();
             var listCandles = Candles.ToList();
 
@@ -1276,40 +1379,28 @@ namespace StockTracker.ViewModels
                 Brush brush;
                 double offsetY;
 
-                if (signal.Score >= 85)
-                {
-                    text = "▲";
-                    brush = Brushes.Red;
-                    offsetY = highY - 22;
-                }
-                else if (signal.Score >= 70)
+                if (signal.StrategyDecision == "BUY")
                 {
                     text = "▲";
                     brush = Brushes.OrangeRed;
                     offsetY = highY - 20;
                 }
-                else if (signal.Score >= 55)
+                else if (signal.StrategyDecision == "STRONG_BUY")
+                {
+                    text = "▲";
+                    brush = Brushes.Red;
+                    offsetY = highY - 22;
+                }
+                else if (signal.StrategyDecision == "LATE_BUY")
                 {
                     text = "▲";
                     brush = Brushes.Orange;
                     offsetY = highY - 18;
                 }
-                else if (signal.Score <= 15)
-                {
-                    text = "▼";
-                    brush = Brushes.DarkGreen;
-                    offsetY = lowY + 8;
-                }
-                else if (signal.Score <= 30)
-                {
-                    text = "▼";
-                    brush = Brushes.MediumSeaGreen;
-                    offsetY = lowY + 8;
-                }
                 else
                 {
                     text = "▼";
-                    brush = Brushes.LightGreen;
+                    brush = Brushes.MediumSeaGreen;
                     offsetY = lowY + 8;
                 }
 
@@ -1318,7 +1409,9 @@ namespace StockTracker.ViewModels
                     X = x - 2,
                     Y = offsetY,
                     Text = text,
-                    Brush = brush
+                    Brush = brush,
+                    TooltipText = BuildSignalMarkerTooltip(signal),
+                    PercentageText = signal.TargetHoldingPercentage > 0.0001d ? $"{signal.TargetHoldingPercentage:F0}%" : "0%"
                 });
             }
 
@@ -1402,10 +1495,168 @@ namespace StockTracker.ViewModels
 
             RebuildMacdVisuals(candles);
             RebuildRsiVisuals(candles);
+            RebuildHoldingVisuals(candles);
             RebuildVolumeVisuals(candles);
             RebuildMarginBalanceVisuals(candles);
             RebuildMarginMaintenanceVisuals(candles);
             RebuildThreeMajorVisuals(candles);
+        }
+
+        private void RebuildHoldingVisuals(IReadOnlyList<CandleData> sourceCandles)
+        {
+            HoldingLevels.Clear();
+            if (sourceCandles == null || sourceCandles.Count == 0)
+            {
+                HoldingAreaPoints = new PointCollection();
+                HoldingAreaPolygonPoints = new PointCollection();
+                OnPropertyChanged(nameof(HoldingAreaPoints));
+                OnPropertyChanged(nameof(HoldingAreaPolygonPoints));
+                return;
+            }
+
+            foreach (var level in new[] { 100d, 75d, 50d, 25d, 0d })
+            {
+                var y = VolumeChartHeight - (level / 100d * VolumeChartHeight);
+                HoldingLevels.Add(new PriceLevelVisual
+                {
+                    Y = y,
+                    LabelTop = Math.Max(2, Math.Min(VolumeChartHeight - 14, y - 7)),
+                    Text = level.ToString("F0") + "%"
+                });
+            }
+
+            var points = new PointCollection();
+            for (var i = 0; i < sourceCandles.Count; i++)
+            {
+                var time = sourceCandles[i].Time.Date;
+                var holding = _holdingHistory.LastOrDefault(x => x.Time.Date == time)?.HoldingValue ?? 0d;
+                var y = VolumeChartHeight - (holding / 100d * VolumeChartHeight);
+                points.Add(new Point(CalculateCenterX(i, sourceCandles.Count, _chartPaddingWidth), y));
+            }
+
+            HoldingAreaPoints = points;
+            var polygon = new PointCollection();
+            if (points.Count > 0)
+            {
+                polygon.Add(new Point(points[0].X, VolumeChartHeight));
+                foreach (var p in points)
+                {
+                    polygon.Add(p);
+                }
+                polygon.Add(new Point(points[points.Count - 1].X, VolumeChartHeight));
+            }
+            HoldingAreaPolygonPoints = polygon;
+            OnPropertyChanged(nameof(HoldingAreaPoints));
+            OnPropertyChanged(nameof(HoldingAreaPolygonPoints));
+        }
+
+        private string BuildSignalMarkerTooltip(SignalMarkerData signal)
+        {
+            if (signal == null)
+            {
+                return string.Empty;
+            }
+
+            return $"日期: {signal.Time:yyyy/MM/dd}\n策略動作: {signal.StrategyActionText}\n策略決策: {signal.StrategyDecision}\n建議部位: {signal.TargetHoldingPercentage:F1}%\n機會分: {signal.Score}\n{signal.StrategyDescription}";
+        }
+
+        private void RebuildStrategyBacktestSignalHistory()
+        {
+            _signalHistory.Clear();
+            if (SelectedKLineInterval != "日K" || _candles.Count < 20)
+            {
+                return;
+            }
+
+            var simulatedHolding = 0d;
+            var simulatedHoldingCost = 0d;
+
+            for (var i = 19; i < _candles.Count; i++)
+            {
+                var subset = _candles.Take(i + 1).ToList();
+                var latest = subset[subset.Count - 1];
+                var previousClose = subset.Count > 1 ? (double)subset[subset.Count - 2].Close : (double)latest.Close;
+                var filteredT86History = new TwseT86History
+                {
+                    Symbol = Symbol,
+                    Name = Name,
+                    RecordsByDate = _twseByDate
+                        .Where(x => x.Key.Date <= latest.Time.Date)
+                        .ToDictionary(x => x.Key, x => x.Value)
+                };
+
+                var recommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                    subset,
+                    (double)latest.Close,
+                    (double?)latest.PercentageChange,
+                    previousClose,
+                    filteredT86History,
+                    latest.Time);
+
+                var previousMa20 = subset.Count > 1 ? (double?)subset[subset.Count - 2].MA20 : null;
+                var strategy = AdvancedTradingStrategyEngine.EvaluateStrategy(
+                    recommendation,
+                    new List<TrendRecommendationResult>(),
+                    simulatedHolding,
+                    (double)latest.Close,
+                    latest.MA5,
+                    latest.MA20,
+                    previousMa20,
+                    simulatedHoldingCost);
+
+                // 以策略真正執行後的部位為主（經過風險壓制 + 速度限制器）
+                var executedHolding = strategy == null
+                    ? 0d
+                    : strategy.ExecutedHolding;
+
+                _holdingHistory.Add(new HoldingPoint
+                {
+                    Time = latest.Time,
+                    HoldingValue = executedHolding
+                });
+
+                var decision = strategy?.GlobalDecision ?? "NEUTRAL";
+                if (decision == "BUY" || decision == "LATE_BUY" || decision == "STRONG_BUY" || decision == "REDUCE" || decision == "CRASH_WARNING")
+                {
+                    _signalHistory.Add(new SignalMarkerData
+                    {
+                        Index = i,
+                        Time = latest.Time,
+                        Price = latest.Close,
+                        Signal = ResolveActionSignalByStrategyDecision(decision),
+                        Score = recommendation.Score,
+                        StrategyDecision = decision,
+                        StrategyActionText = strategy.ActionText,
+                        TargetHoldingPercentage = executedHolding
+                    });
+                }
+
+                var nextHolding = executedHolding;
+                if (nextHolding <= 0.0001d)
+                {
+                    simulatedHoldingCost = 0d;
+                }
+                else if (nextHolding > simulatedHolding + 0.0001d)
+                {
+                    if (simulatedHolding <= 0.0001d)
+                    {
+                        simulatedHoldingCost = (double)latest.Close;
+                    }
+                    else
+                    {
+                        var added = nextHolding - simulatedHolding;
+                        simulatedHoldingCost = ((simulatedHolding * simulatedHoldingCost) + (added * (double)latest.Close)) / nextHolding;
+                    }
+                }
+
+                simulatedHolding = nextHolding;
+            }
+
+            HoldingHistory.Clear();
+            foreach (var item in _holdingHistory)
+            {
+                HoldingHistory.Add(item);
+            }
         }
 
         private void RebuildMarginBalanceVisuals(IReadOnlyList<CandleData> sourceCandles)
@@ -1824,6 +2075,56 @@ namespace StockTracker.ViewModels
             };
         }
 
+        private void RefreshStrategyOutput(TrendRecommendationResult recommendation = null)
+        {
+            if (_candles.Count < 2 || SelectedKLineInterval != "日K")
+            {
+                return;
+            }
+
+            var latestRecommendation = recommendation ?? TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                _candles,
+                (double)LatestPrice,
+                (double?)ChangePercent,
+                (double)_candles[_candles.Count - 2].Close,
+                BuildTwseHistorySnapshot(),
+                _candles[_candles.Count - 1].Time);
+
+            var recent = _candles
+                .OrderByDescending(x => x.Time)
+                .Take(5)
+                .Select(x => TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                    _candles.Where(c => c.Time <= x.Time).ToList(),
+                    (double)x.Close,
+                    (double?)x.PercentageChange,
+                    _candles.Where(c => c.Time < x.Time).LastOrDefault()?.Close is decimal prevClose ? (double)prevClose : (double)x.Close,
+                    BuildTwseHistorySnapshot(),
+                    x.Time))
+                .ToList();
+
+            var previousMa20 = _candles.Count >= 2 ? (double?)_candles[_candles.Count - 2].MA20 : null;
+            var latestVolume = _candles.Count > 0 ? (double?)_candles[_candles.Count - 1].Volume : null;
+            var avgVolume20 = _candles.Count == 0
+                ? (double?)null
+                : _candles.Skip(Math.Max(0, _candles.Count - 20)).Average(x => (double)x.Volume);
+            var result = AdvancedTradingStrategyEngine.EvaluateStrategy(
+                latestRecommendation,
+                recent,
+                CurrentHoldingPercentage,
+                (double)LatestPrice,
+                MA5,
+                MA20,
+                previousMa20,
+                HoldingCost,
+                latestVolume,
+                avgVolume20);
+
+            StrategyOutput = result;
+            OnPropertyChanged(nameof(StrategyOutput));
+            OnPropertyChanged(nameof(StrategyStageLabel));
+            OnPropertyChanged(nameof(StrategyDescription));
+        }
+
         private void RebuildMacdVisuals(IReadOnlyList<CandleData> sourceCandles)
         {
             if (sourceCandles == null || sourceCandles.Count == 0)
@@ -2088,6 +2389,10 @@ namespace StockTracker.ViewModels
             public decimal Price { get; set; }
             public string Signal { get; set; }
             public int Score { get; set; }
+            public string StrategyDecision { get; set; }
+            public string StrategyActionText { get; set; }
+            public string StrategyDescription { get; set; }
+            public double TargetHoldingPercentage { get; set; }
         }
 
         private class ThreeMajorPointData

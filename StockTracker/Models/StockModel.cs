@@ -59,6 +59,8 @@ namespace StockTracker.Models
         public double Y { get; set; }
         public string Text { get; set; }
         public Brush Brush { get; set; }
+        public string TooltipText { get; set; }
+        public string PercentageText { get; set; }
     }
 
     public class TimeLabelVisual

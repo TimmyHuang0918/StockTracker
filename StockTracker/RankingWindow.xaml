@@ -117,6 +117,10 @@
                                     <ComboBox ItemsSource="{Binding PatternTagOptions}" SelectedItem="{Binding SelectedPatternTag, Mode=TwoWay}" Width="150" Height="28"/>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="策略動作" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding StrategyActionOptions}" SelectedItem="{Binding SelectedStrategyAction, Mode=TwoWay}" Width="150" Height="28"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
                                     <TextBlock Text="近5日均分 ≥" Margin="0,0,0,4" />
                                     <TextBox Text="{Binding MinAverageScoreFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
@@ -171,6 +175,15 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
+                <DataGridTextColumn Header="策略動作" Binding="{Binding StrategyActionText}" Width="130">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding StrategyActionBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="線性倉位" Binding="{Binding StrategyStageLabel}" Width="130"/>
                 <DataGridTextColumn Header="建議" Binding="{Binding Suggestion}" Width="150" />
             </DataGrid.Columns>
             <DataGrid.Resources>

@@ -216,9 +216,12 @@
     <Compile Include="LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Models\ChartMarker.cs" />
+    <Compile Include="Models\HoldingPoint.cs" />
     <Compile Include="RankingWindow.xaml.cs">
       <DependentUpon>RankingWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Services\AdvancedTradingStrategyEngine.cs" />
     <Compile Include="Services\CapitalApiService.cs" />
     <Compile Include="Services\DailyPriceFetcher.cs" />
     <Compile Include="Services\DailyPriceRepository.cs" />
@@ -238,6 +241,7 @@
     <Compile Include="ViewModels\RankingViewModel.cs" />
     <Compile Include="ViewModels\RelayCommand.cs" />
     <Compile Include="ViewModels\StockViewModel.cs" />
+    <Compile Include="ViewModels\StrategyOutputViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Page Include="LoginWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

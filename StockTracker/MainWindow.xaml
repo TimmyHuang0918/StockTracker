@@ -221,6 +221,39 @@
                                             <Run Text="{Binding Signal, Mode=OneWay}"/>
                                         </TextBlock>
 
+                                        <Border Margin="0,4,0,6" Padding="6,5" CornerRadius="6" BorderThickness="1"
+                                                Background="#221A1A1A"
+                                                BorderBrush="{Binding StrategyOutput.ActionColor, Mode=OneWay}">
+                                            <StackPanel>
+                                                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{Binding StrategyOutput.ActionColor, Mode=OneWay}">
+                                                    <Run Text="策略動作: "/>
+                                                    <Run Text="{Binding StrategyOutput.ActionText, Mode=OneWay}"/>
+                                                </TextBlock>
+                                                <TextBlock Margin="0,2,0,0" FontSize="11" FontWeight="SemiBold" Foreground="#FFEFD58A"
+                                                           Text="{Binding StrategyStageLabel, Mode=OneWay}"/>
+                                                <TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource MutedForegroundBrush}"
+                                                           Text="{Binding StrategyOutput.ExecutedHolding, StringFormat=實際執行持股：{0:F0}%, Mode=OneWay}"/>
+                                                <TextBlock Margin="0,2,0,0" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap"
+                                                           Text="{Binding StrategyDescription, Mode=OneWay}"/>
+                                                <ItemsControl ItemsSource="{Binding StrategyOutput.Reasons, Mode=OneWay}" Margin="0,4,0,0">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Margin="0,0,6,4" Padding="6,2" CornerRadius="9" BorderThickness="1"
+                                                                    Background="#22242424"
+                                                                    BorderBrush="{Binding DataContext.StrategyOutput.ActionColor, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                                                <TextBlock Text="{Binding}" FontSize="10" Foreground="#FFF1F1F1" TextTrimming="CharacterEllipsis" MaxWidth="220"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
                                         <ItemsControl ItemsSource="{Binding CurrentPatternTags}" Margin="0,4,0,6">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -355,7 +388,10 @@
                                                     </ItemsControl.ItemContainerStyle>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                            <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="12"/>
+                                                            <StackPanel Orientation="Horizontal" ToolTip="{Binding TooltipText}">
+                                                                <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}" FontWeight="Bold" FontSize="12"/>
+                                                                <TextBlock Text="{Binding PercentageText}" Foreground="{Binding Brush}" FontSize="9" Margin="2,0,0,0"/>
+                                                            </StackPanel>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
