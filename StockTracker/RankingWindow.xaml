@@ -25,6 +25,9 @@
 
         <Border Grid.Row="1" Margin="0,0,0,10" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="6">
             <StackPanel>
+                <Button Content="{Binding ControlPanelToggleText}" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,0,0,10" Command="{Binding ToggleControlPanelCommand}"/>
+
+                <StackPanel Visibility="{Binding ControlPanelVisibility}">
                 <WrapPanel Margin="0,0,0,10">
                     <Border Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,10">
                         <StackPanel>
@@ -121,6 +124,14 @@
                                     <ComboBox ItemsSource="{Binding StrategyActionOptions}" SelectedItem="{Binding SelectedStrategyAction, Mode=TwoWay}" Width="150" Height="28"/>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="建議倉位" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding StrategyHoldingOptions}" SelectedItem="{Binding SelectedStrategyHolding, Mode=TwoWay}" Width="150" Height="28"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="建議" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding SuggestionOptions}" SelectedItem="{Binding SelectedSuggestion, Mode=TwoWay}" Width="150" Height="28"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
                                     <TextBlock Text="近5日均分 ≥" Margin="0,0,0,4" />
                                     <TextBox Text="{Binding MinAverageScoreFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
@@ -132,6 +143,7 @@
                         </StackPanel>
                     </Border>
                 </WrapPanel>
+                </StackPanel>
             </StackPanel>
         </Border>
 
