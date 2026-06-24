@@ -988,14 +988,35 @@ namespace StockTracker.ViewModels
                             TwseT86History t86History;
                             t86HistoryMap.TryGetValue(symbol, out t86History);
 
+                            // 與主頁分數邏輯一致：先把法人歷史注入，再用同一組輸入計算最新分數
+                            dummyVm.SetTwseT86Records(t86History?.RecordsByDate?.Values);
+                            var latestRecommendation = TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                                enrichedCandles,
+                                (double)dummyVm.LatestPrice,
+                                (double?)dummyVm.ChangePercent,
+                                enrichedCandles.Count > 1 ? (double)enrichedCandles[enrichedCandles.Count - 2].Close : (double)dummyVm.LatestPrice,
+                                t86History,
+                                enrichedCandles.Last().Time);
+
                             var recentAnalysis = BuildRecentAnalysis(enrichedCandles, t86History, symbol, name);
                             var recentScores = recentAnalysis.RecentScores;
                             var recentRecommendations = recentAnalysis.RecentRecommendations;
-                            var latestRecommendation = recentAnalysis.LatestRecommendation;
-                            var latestScore = recentScores.Count > 0 ? recentScores[0].Score : 0;
-                            var scoreDate = recentScores.Count > 0
-                                ? recentScores[0].Date.Date
-                                : enrichedCandles.Last().Time.Date;
+                            if (recentScores.Count > 0)
+                            {
+                                recentScores[0].Score = latestRecommendation.Score;
+                                recentScores[0].Date = enrichedCandles.Last().Time.Date;
+                            }
+                            else
+                            {
+                                recentScores.Add(new RankedStockScorePoint
+                                {
+                                    Date = enrichedCandles.Last().Time.Date,
+                                    Score = latestRecommendation.Score
+                                });
+                            }
+
+                            var latestScore = latestRecommendation.Score;
+                            var scoreDate = enrichedCandles.Last().Time.Date;
                             var previousMa20 = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].MA20 : null;
                             var strategyOutput = AdvancedTradingStrategyEngine.EvaluateStrategy(
                                 latestRecommendation,
