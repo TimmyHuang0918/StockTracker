@@ -147,7 +147,7 @@
             </StackPanel>
         </Border>
 
-        <DataGrid Grid.Row="2" ItemsSource="{Binding RankedStocksView}" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single"
+        <DataGrid Grid.Row="2" PreviewMouseDoubleClick="DataGrid_PreviewMouseDoubleClick" ItemsSource="{Binding RankedStocksView}" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single"
                   Background="{DynamicResource SurfaceBrush}" RowBackground="{DynamicResource SurfaceAltBrush}" AlternatingRowBackground="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AppForegroundBrush}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="排名" Binding="{Binding Rank}" Width="60" />
