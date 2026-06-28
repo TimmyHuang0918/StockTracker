@@ -5,15 +5,21 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net;
+using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
+using System.Xml.Linq;
 
 namespace StockTracker.ViewModels
 {
@@ -45,6 +51,9 @@ namespace StockTracker.ViewModels
         private int _trackedHistorySymbolCount;
         private int _trackedHistoryRecordCount;
         private int _rankingDisplayCount;
+        private DispatcherTimer _nightlyAutomationTimer;
+        private bool _isNightlyAutomationRunning;
+        private RankingViewModel _nightlyRankingViewModel;
         private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
         public MainWindowViewModel(CapitalApiService apiService)
         {
@@ -211,7 +220,7 @@ namespace StockTracker.ViewModels
                     return Brushes.Green;
                 else
                 {
-                    Task.Run( _apiService.ReLogin());
+                    _ = _apiService.ReLogin();
                     return Brushes.Red;
                 }
             }
@@ -330,10 +339,306 @@ namespace StockTracker.ViewModels
                 MainPageProgressValue = 75;
                 await AddOrSubscribeAsync(symbols, names);
                 MainPageProgressValue = 100;
+                EnsureNightlyAutomationTimer();
             }
             finally
             {
                 IsInitializingMainPage = false;
+            }
+        }
+
+        private void EnsureNightlyAutomationTimer()
+        {
+            if (_nightlyAutomationTimer != null)
+            {
+                return;
+            }
+
+            _nightlyAutomationTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMinutes(1)
+            };
+            _nightlyAutomationTimer.Tick += async (_, __) => await TryRunNightlyAutomationAsync();
+            _nightlyAutomationTimer.Start();
+        }
+
+        private async Task TryRunNightlyAutomationAsync()
+        {
+            if (_isNightlyAutomationRunning)
+            {
+                return;
+            }
+
+            var now = DateTime.Now;
+            if (now.Hour != 22 || now.Minute != 0)
+            {
+                return;
+            }
+
+            _isNightlyAutomationRunning = true;
+            try
+            {
+                await RunNightlyAutomationAsync();
+            }
+            catch (Exception ex)
+            {
+                SystemMessage = "排程執行失敗: " + ex.Message;
+            }
+            finally
+            {
+                _isNightlyAutomationRunning = false;
+            }
+        }
+
+        private async Task RunNightlyAutomationAsync()
+        {
+            SystemMessage = "夜間排程啟動：更新法人、刷新主頁、掃描全市場中...";
+            await UpdateTwseHistoryAsync();
+            await RefreshAllTrackedStocksAsync();
+
+            if (_nightlyRankingViewModel == null)
+            {
+                _nightlyRankingViewModel = new RankingViewModel(_apiService, this);
+            }
+
+            await _nightlyRankingViewModel.StartScanningAsync();
+            var xmlPath = _nightlyRankingViewModel.ExportLatestRankingToXml();
+            var htmlPath = _nightlyRankingViewModel.ExportLatestRankingToHtml();
+            var websiteUrl = PublishRankingWebsiteToGitHub(htmlPath);
+            var recipients = _nightlyRankingViewModel.GetNotificationEmailRecipients();
+            SendRankingReportEmail(xmlPath, websiteUrl, recipients);
+            SystemMessage = "夜間排程完成。";
+        }
+
+        public async Task PublishRankingWebsiteByHandAsync(RankingViewModel rankingViewModel)
+        {
+            if (rankingViewModel == null)
+            {
+                return;
+            }
+
+            await Task.Run(() =>
+            {
+                var xmlPath = rankingViewModel.ExportLatestRankingToXml();
+                var htmlPath = rankingViewModel.ExportLatestRankingToHtml();
+                var websiteUrl = PublishRankingWebsiteToGitHub(htmlPath);
+                var recipients = rankingViewModel.GetNotificationEmailRecipients();
+                SendRankingReportEmail(xmlPath, websiteUrl, recipients);
+            });
+        }
+
+        private async Task RefreshAllTrackedStocksAsync()
+        {
+            if (Stocks == null || Stocks.Count == 0)
+            {
+                return;
+            }
+
+            ResolveKLineRequest(SelectedGlobalKLineInterval, out var kLineType, out var minuteNumber);
+            int kLineCount;
+            if (!int.TryParse(SelectedGlobalKLineCount, out kLineCount) || kLineCount <= 0)
+            {
+                kLineCount = 300;
+            }
+
+            MainWindow.BuildDateRangeForBars(SelectedGlobalKLineInterval, kLineCount, out var startDate, out var endDate);
+
+            foreach (var stock in Stocks)
+            {
+                stock.ClearData();
+                _apiService.RequestKLineByDate(stock.Symbol, kLineType, 1, 0, startDate, endDate, minuteNumber);
+                await Task.Delay(120);
+            }
+        }
+
+        private static void ResolveKLineRequest(string interval, out short kLineType, out short minuteNumber)
+        {
+            switch (interval)
+            {
+                case "5分K":
+                    kLineType = 0;
+                    minuteNumber = 5;
+                    break;
+                case "3分K":
+                    kLineType = 0;
+                    minuteNumber = 3;
+                    break;
+                case "日K":
+                    kLineType = 4;
+                    minuteNumber = 0;
+                    break;
+                default:
+                    kLineType = 4;
+                    minuteNumber = 1;
+                    break;
+            }
+        }
+
+        private string PublishRankingWebsiteToGitHub(string htmlFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(htmlFilePath) || !File.Exists(htmlFilePath))
+            {
+                return string.Empty;
+            }
+
+            var repoRoot = FindGitRepositoryRoot(AppDomain.CurrentDomain.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(repoRoot))
+            {
+                return string.Empty;
+            }
+
+            var docsFolder = Path.Combine(repoRoot, "docs", "nightly-ranking");
+            Directory.CreateDirectory(docsFolder);
+            var targetFile = Path.Combine(docsFolder, "index.html");
+            File.Copy(htmlFilePath, targetFile, true);
+
+            if (!RunGitCommand(repoRoot, "add docs/nightly-ranking/index.html"))
+            {
+                return string.Empty;
+            }
+
+            RunGitCommand(repoRoot, $"commit -m \"chore: update nightly ranking website {DateTime.Now:yyyy-MM-dd HH:mm}\"");
+            if (!RunGitCommand(repoRoot, "push origin master"))
+            {
+                return string.Empty;
+            }
+
+            return "https://timmyhuang0918.github.io/StockTracker/nightly-ranking/";
+        }
+
+        private static string FindGitRepositoryRoot(string startPath)
+        {
+            try
+            {
+                var current = new DirectoryInfo(startPath);
+                while (current != null)
+                {
+                    if (Directory.Exists(Path.Combine(current.FullName, ".git")))
+                    {
+                        return current.FullName;
+                    }
+
+                    current = current.Parent;
+                }
+            }
+            catch
+            {
+            }
+
+            return string.Empty;
+        }
+
+        private static bool RunGitCommand(string workingDirectory, string arguments)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = arguments,
+                    WorkingDirectory = workingDirectory,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using (var process = Process.Start(psi))
+                {
+                    if (process == null)
+                    {
+                        return false;
+                    }
+
+                    process.WaitForExit(120000);
+                    return process.ExitCode == 0;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void SendRankingReportEmail(string attachmentFile, string websiteUrl, IReadOnlyList<string> recipients)
+        {
+            var from = GetAppSetting("NightlyEmailFrom");
+            var host = GetAppSetting("NightlySmtpHost");
+            var user = GetAppSetting("NightlySmtpUser");
+            var pass = GetAppSetting("NightlySmtpPass");
+            var allRecipients = (recipients ?? Array.Empty<string>()).ToList();
+            var fallbackRecipient = GetAppSetting("NightlyEmailTo");
+            if (!string.IsNullOrWhiteSpace(fallbackRecipient))
+            {
+                allRecipients.AddRange(fallbackRecipient
+                    .Split(new[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Trim()));
+            }
+
+            allRecipients = allRecipients
+                .Where(x => !string.IsNullOrWhiteSpace(x) && x.Contains("@"))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            int port;
+            if (allRecipients.Count == 0 || string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(host) ||
+                !int.TryParse(GetAppSetting("NightlySmtpPort"), out port))
+            {
+                SystemMessage = "夜間排程完成，但未設定郵件參數（已輸出 XML）。";
+                return;
+            }
+
+            using (var message = new MailMessage())
+            {
+                message.From = new MailAddress(from);
+                foreach (var recipient in allRecipients)
+                {
+                    message.To.Add(recipient);
+                }
+
+                message.Subject = $"StockTracker Nightly Ranking {DateTime.Now:yyyy/MM/dd}";
+                message.Body = string.IsNullOrWhiteSpace(websiteUrl)
+                    ? "夜間全市場掃描已完成，附件為 XML 報表。"
+                    : "夜間全市場掃描已完成。\n網站: " + websiteUrl + "\n附件為 XML 報表。";
+                if (!string.IsNullOrWhiteSpace(attachmentFile) && File.Exists(attachmentFile))
+                {
+                    message.Attachments.Add(new Attachment(attachmentFile));
+                }
+
+                using (var client = new SmtpClient(host, port))
+                {
+                    client.EnableSsl = true;
+                    if (!string.IsNullOrWhiteSpace(user))
+                    {
+                        client.Credentials = new NetworkCredential(user, pass ?? string.Empty);
+                    }
+
+                    client.Send(message);
+                }
+            }
+        }
+
+        private static string GetAppSetting(string key)
+        {
+            try
+            {
+                var configPath = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
+                if (string.IsNullOrWhiteSpace(configPath) || !File.Exists(configPath))
+                {
+                    return string.Empty;
+                }
+
+                var doc = XDocument.Load(configPath);
+                var value = doc.Descendants("add")
+                    .FirstOrDefault(x => string.Equals((string)x.Attribute("key"), key, StringComparison.OrdinalIgnoreCase))
+                    ?.Attribute("value")
+                    ?.Value;
+
+                return value ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
 

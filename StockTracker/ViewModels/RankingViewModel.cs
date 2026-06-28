@@ -1,3 +1,4 @@
+using Microsoft.Win32;
 using StockManager.Library;
 using StockTracker.Models;
 using StockTracker.Services;
@@ -5,9 +6,15 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
+using System.Security.Policy;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
+using System.Xml.Linq;
 
 namespace StockTracker.ViewModels
 {
@@ -119,8 +126,10 @@ namespace StockTracker.ViewModels
         private readonly CapitalApiService _apiService;
         private readonly MainWindowViewModel _mainViewModel;
         private readonly string _dbPath;
+        private readonly string _notificationEmailListPath;
         private double _progressValue;
         private string _progressText = "準備就緒";
+        private string _notificationEmailList;
         private ObservableCollection<RankedStock> _rankedStocks = new ObservableCollection<RankedStock>();
         private System.ComponentModel.ICollectionView _rankedStocksView;
         private bool _isScanning;
@@ -144,6 +153,7 @@ namespace StockTracker.ViewModels
         private int _minConsecutiveScore = 60;
         private int _topCount = 100;
         private bool _isControlPanelExpanded = true;
+        private bool _isPublishingWebsite;
         private string _scoreDay0Header = "D0";
         private string _scoreDay1Header = "D1";
         private string _scoreDay2Header = "D2";
@@ -155,6 +165,7 @@ namespace StockTracker.ViewModels
             _apiService = apiService;
             _mainViewModel = mainViewModel;
             _dbPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "Ranking.db");
+            _notificationEmailListPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "RankingEmailList.txt");
             EnsureDatabase();
             StartScanningCommand = new RelayCommand(async _ => await ScanAllStocksAsync(), _ => !_isScanning);
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
@@ -163,6 +174,8 @@ namespace StockTracker.ViewModels
             ApplyInstitutionalMomentumFilterCommand = new RelayCommand(_ => ApplyInstitutionalMomentumFilter());
             ApplyScoreReboundFilterCommand = new RelayCommand(_ => ApplyScoreReboundFilter());
             ToggleControlPanelCommand = new RelayCommand(_ => IsControlPanelExpanded = !IsControlPanelExpanded);
+            ToggleExportCsvCommand = new RelayCommand(_ => ExportLatestRankingToXmlSaveFile());
+            PublishWebsiteCommand = new RelayCommand(async _ => await PublishWebsiteByHandAsync(), _ => !_isPublishingWebsite);
             PatternTagOptions = new ObservableCollection<string> { "全部" };
             StrategyActionOptions = new ObservableCollection<string> { "全部" };
             StrategyHoldingOptions = new ObservableCollection<string> { "全部" };
@@ -172,12 +185,24 @@ namespace StockTracker.ViewModels
             _rankedStocksView.Filter = FilterRankedStocks;
 
             LoadSavedRanking();
+            LoadNotificationEmailList();
         }
 
         public string SearchText
         {
             get => _searchText;
             set { _searchText = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public string NotificationEmailList
+        {
+            get => _notificationEmailList;
+            set
+            {
+                _notificationEmailList = value ?? string.Empty;
+                OnPropertyChanged();
+                SaveNotificationEmailList();
+            }
         }
 
         public decimal? MinPrice
@@ -378,6 +403,8 @@ namespace StockTracker.ViewModels
         public ICommand ApplyInstitutionalMomentumFilterCommand { get; }
         public ICommand ApplyScoreReboundFilterCommand { get; }
         public ICommand ToggleControlPanelCommand { get; }
+        public ICommand ToggleExportCsvCommand { get; }
+        public ICommand PublishWebsiteCommand { get; }
 
         private bool FilterRankedStocks(object item)
         {
@@ -858,6 +885,157 @@ namespace StockTracker.ViewModels
         }
 
         public ICommand StartScanningCommand { get; }
+
+        public Task StartScanningAsync()
+        {
+            return ScanAllStocksAsync();
+        }
+
+        private async Task PublishWebsiteByHandAsync()
+        {
+            if (_isPublishingWebsite)
+            {
+                return;
+            }
+
+            _isPublishingWebsite = true;
+            CommandManager.InvalidateRequerySuggested();
+            try
+            {
+                ProgressText = "手動發佈網站中...";
+                await _mainViewModel.PublishRankingWebsiteByHandAsync(this);
+                ProgressText = "手動發佈完成。";
+            }
+            catch (Exception ex)
+            {
+                ProgressText = "手動發佈失敗: " + ex.Message;
+            }
+            finally
+            {
+                _isPublishingWebsite = false;
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        public void ExportLatestRankingToXmlSaveFile()
+        {
+            var sfg = new Microsoft.Win32.SaveFileDialog();
+            sfg.Filter = "XML file (*.xml)|*.xml";
+            sfg.DefaultExt = ".xml";
+            if (sfg.ShowDialog() == true)
+            {
+                ExportLatestRankingToXml(sfg.FileName);
+                MessageBox.Show("Save success!");
+            }
+            else
+            {
+                MessageBox.Show("Save canceled.");
+            }
+        }
+
+
+        public string ExportLatestRankingToXml(string outputDirectory = null)
+        {
+            var filePath = ResolveExportFilePath(outputDirectory, "xml");
+            var exportStocks = GetCurrentViewStocks();
+
+            var doc = new XDocument(
+                new XElement("RankingSnapshot",
+                    new XAttribute("generatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+                    exportStocks.Select(s => new XElement("Stock",
+                        new XAttribute("rank", s.Rank),
+                        new XElement("Symbol", s.Symbol ?? string.Empty),
+                        new XElement("Name", s.Name ?? string.Empty),
+                        new XElement("Score", s.Score),
+                        new XElement("ScoreDate", s.ScoreDate == DateTime.MinValue ? string.Empty : s.ScoreDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                        new XElement("CrashRiskScore", s.CrashRiskScore),
+                        new XElement("PatternTagCount", s.PatternTagCount),
+                        new XElement("PatternTags", s.PatternTagsText ?? string.Empty),
+                        new XElement("StrategyDecision", s.StrategyDecision ?? string.Empty),
+                        new XElement("StrategyActionText", s.StrategyActionText ?? string.Empty),
+                        new XElement("StrategyHolding", s.StrategyStageLabel ?? string.Empty),
+                        new XElement("Suggestion", s.Suggestion ?? string.Empty),
+                        new XElement("LatestPrice", s.LatestPrice.ToString(CultureInfo.InvariantCulture)),
+                        new XElement("ChangePercent", s.ChangePercent.ToString(CultureInfo.InvariantCulture)),
+                        new XElement("ThreeMajorNet", s.ThreeMajorNet),
+                        new XElement("ThreeMajorNetAmount", s.ThreeMajorNetAmount.ToString(CultureInfo.InvariantCulture))
+                    ))));
+
+            doc.Save(filePath);
+            return filePath;
+        }
+
+        public string ExportLatestRankingToHtml(string outputDirectory = null)
+        {
+            var filePath = ResolveExportFilePath(outputDirectory, "html");
+            File.WriteAllText(filePath, BuildRankingWebsiteHtml(), Encoding.UTF8);
+            return filePath;
+        }
+
+        public string BuildRankingWebsiteHtml()
+        {
+            var exportStocks = GetCurrentViewStocks();
+            var rows = string.Join("\n", exportStocks.Select(s =>
+                $"<tr>" +
+                $"<td>{s.Rank}</td>" +
+                $"<td>{HtmlEncode(s.Symbol)}</td>" +
+                $"<td>{HtmlEncode(s.Name)}</td>" +
+                $"<td>{s.Score}</td>" +
+                $"<td>{s.CrashRiskScore}</td>" +
+                $"<td>{HtmlEncode(s.StrategyActionText)}</td>" +
+                $"<td>{HtmlEncode(s.StrategyStageLabel)}</td>" +
+                $"<td>{HtmlEncode(s.Suggestion)}</td>" +
+                $"<td>{s.LatestPrice.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
+                $"<td>{s.ChangePercent.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
+                $"<td>{HtmlEncode(s.PatternTagsText)}</td>" +
+                $"</tr>"));
+
+            var html = new StringBuilder();
+            html.AppendLine("<!DOCTYPE html>");
+            html.AppendLine("<html lang=\"zh-Hant\">");
+            html.AppendLine("<head>");
+            html.AppendLine("<meta charset=\"utf-8\" />");
+            html.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />");
+            html.AppendLine("<title>StockTracker 全市場排名</title>");
+            html.AppendLine("<style>");
+            html.AppendLine("body{background:#121212;color:#e6e6e6;font-family:'Segoe UI',sans-serif;margin:0;padding:20px;}");
+            html.AppendLine(".panel{background:#1e1e1e;border:1px solid #303030;border-radius:8px;padding:12px;margin-bottom:12px;}");
+            html.AppendLine("input,select{background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:6px 8px;}");
+            html.AppendLine("table{width:100%;border-collapse:collapse;font-size:14px;}");
+            html.AppendLine("th,td{border:1px solid #2f2f2f;padding:6px 8px;text-align:left;}");
+            html.AppendLine("th{background:#2b2b2b;cursor:pointer;}");
+            html.AppendLine("tr:nth-child(even){background:#1a1a1a;}");
+            html.AppendLine(".muted{color:#9aa0a6;font-size:12px;}");
+            html.AppendLine("</style>");
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
+            html.AppendLine($"<h2>全市場掃描排名</h2><div class=\"muted\">更新時間：{DateTime.Now:yyyy-MM-dd HH:mm:ss}</div>");
+            html.AppendLine("<div class=\"panel\"><label>搜尋：</label><input id=\"searchInput\" placeholder=\"代號/名稱/策略/建議\" /><label style=\"margin-left:12px;\">策略動作：</label><select id=\"actionFilter\"><option value=\"\">全部</option></select></div>");
+            html.AppendLine("<div class=\"panel\"><table id=\"rankingTable\"><thead><tr>");
+            html.AppendLine("<th data-type='num'>排名</th><th data-type='text'>代號</th><th data-type='text'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險分</th><th data-type='text'>策略動作</th><th data-type='text'>建議倉位</th><th data-type='text'>建議</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th><th data-type='text'>型態</th>");
+            html.AppendLine("</tr></thead><tbody>");
+            html.AppendLine(rows);
+            html.AppendLine("</tbody></table></div>");
+            html.AppendLine("<script>");
+            html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const searchInput=document.getElementById('searchInput');const actionFilter=document.getElementById('actionFilter');");
+            html.AppendLine("const actionCol=5;const actions=[...new Set([...tbody.rows].map(r=>r.cells[actionCol].textContent.trim()).filter(x=>x))].sort();actions.forEach(a=>{const op=document.createElement('option');op.value=a;op.textContent=a;actionFilter.appendChild(op);});");
+            html.AppendLine("function applyFilter(){const kw=searchInput.value.trim().toLowerCase();const act=actionFilter.value;[...tbody.rows].forEach(r=>{const text=r.textContent.toLowerCase();const hitKw=!kw||text.includes(kw);const hitAct=!act||r.cells[actionCol].textContent.trim()===act;r.style.display=(hitKw&&hitAct)?'':'none';});}");
+            html.AppendLine("searchInput.addEventListener('input',applyFilter);actionFilter.addEventListener('change',applyFilter);");
+            html.AppendLine("let sortState={idx:0,asc:false};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=a.cells[idx].textContent.trim();let vb=b.cells[idx].textContent.trim();if(type==='num'){va=parseFloat(va)||0;vb=parseFloat(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));});});");
+            html.AppendLine("</script>");
+            html.AppendLine("</body></html>");
+            return html.ToString();
+        }
+
+        public IReadOnlyList<string> GetNotificationEmailRecipients()
+        {
+            var raw = NotificationEmailList ?? string.Empty;
+            return raw.Split(new[] { ';', ',', '\n', '\r', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => x.Contains("@"))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
 
         private async Task ScanAllStocksAsync()
         {
@@ -1443,6 +1621,78 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(MinConsecutiveDays));
             OnPropertyChanged(nameof(MinConsecutiveScore));
             _rankedStocksView.Refresh();
+        }
+
+        private void LoadNotificationEmailList()
+        {
+            try
+            {
+                if (File.Exists(_notificationEmailListPath))
+                {
+                    _notificationEmailList = File.ReadAllText(_notificationEmailListPath, Encoding.UTF8);
+                }
+                else
+                {
+                    _notificationEmailList = string.Empty;
+                }
+            }
+            catch
+            {
+                _notificationEmailList = string.Empty;
+            }
+
+            OnPropertyChanged(nameof(NotificationEmailList));
+        }
+
+        private void SaveNotificationEmailList()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_notificationEmailListPath));
+                File.WriteAllText(_notificationEmailListPath, _notificationEmailList ?? string.Empty, Encoding.UTF8);
+            }
+            catch
+            {
+            }
+        }
+
+        private static string ResolveExportFilePath(string outputPathOrDirectory, string extension)
+        {
+            var ext = "." + extension.TrimStart('.');
+            if (string.IsNullOrWhiteSpace(outputPathOrDirectory))
+            {
+                var directory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Reports");
+                Directory.CreateDirectory(directory);
+                return Path.Combine(directory, $"Ranking_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+            }
+
+            if (Path.HasExtension(outputPathOrDirectory))
+            {
+                var filePath = outputPathOrDirectory;
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                return filePath;
+            }
+
+            Directory.CreateDirectory(outputPathOrDirectory);
+            return Path.Combine(outputPathOrDirectory, $"Ranking_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+        }
+
+        private static string HtmlEncode(string value)
+        {
+            return WebUtility.HtmlEncode(value ?? string.Empty);
+        }
+
+        private IReadOnlyList<RankedStock> GetCurrentViewStocks()
+        {
+            if (RankedStocksView != null)
+            {
+                return RankedStocksView
+                    .Cast<object>()
+                    .OfType<RankedStock>()
+                    .ToList();
+            }
+
+            return RankedStocks.ToList();
         }
     }
 }

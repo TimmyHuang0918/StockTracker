@@ -25,7 +25,13 @@
 
         <Border Grid.Row="1" Margin="0,0,0,10" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="6">
             <StackPanel>
-                <Button Content="{Binding ControlPanelToggleText}" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,0,0,10" Command="{Binding ToggleControlPanelCommand}"/>
+                <WrapPanel Margin="0,0,0,10">
+                    <Button Content="{Binding ControlPanelToggleText}" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding ToggleControlPanelCommand}"/>
+                    <Button Content="手動更新網站" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding PublishWebsiteCommand}"/>
+                    <Button Content="Export CSV" Width ="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding ToggleExportCsvCommand}" />
+                    <TextBlock Text="通知 Email 清單" VerticalAlignment="Center" Margin="4,0,8,0" />
+                    <TextBox Text="{Binding NotificationEmailList, UpdateSourceTrigger=PropertyChanged}" Width="420" Height="30" VerticalContentAlignment="Center" />
+                </WrapPanel>
 
                 <StackPanel Visibility="{Binding ControlPanelVisibility}">
                 <WrapPanel Margin="0,0,0,10">
