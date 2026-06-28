@@ -151,7 +151,7 @@ namespace StockTracker.ViewModels
         private bool _requireScoreTrendUp;
         private int _minConsecutiveDays;
         private int _minConsecutiveScore = 60;
-        private int _topCount = 100;
+        private int _topCount = 10000;
         private bool _isControlPanelExpanded = true;
         private bool _isPublishingWebsite;
         private string _scoreDay0Header = "D0";
