@@ -1,10 +1,15 @@
+using Mscc.GenerativeAI.Types;
 using SKCOMLib;
 using StockManager.Services;
 using StockTracker.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
+using System.Security.Policy;
 using System.Threading.Tasks;
+using System.Windows.Interop;
+using System.Windows.Navigation;
 
 namespace StockTracker.Services
 {
@@ -16,9 +21,37 @@ namespace StockTracker.Services
         private bool _isSkQuoteConnectionReady;
         private TaskCompletionSource<bool> _quoteConnectionReadyTcs;
 
+        private string Account = string.Empty;
+        private string Password = string.Empty;
+
         public event Action<string, CandleData> KLineDataReceived;
         public event Action<string, SKSTOCKLONG> InstantDataRecevied;
         public event Action<string, CandleData> InstantCandleReceived;
+
+        public Tuple<int, string>  ServiceStatus
+        {
+            get
+            {
+                int nCode = _api.SKQuoteLib_IsConnected();
+                string msg;
+                switch (nCode)
+                {
+                    case 0:
+                        msg = "Disconnected";
+                        break;
+                    case 1:
+                        msg = "Is Connected";
+                        break;
+                    case 2:
+                        msg = "Downloading";
+                        break;
+                    default:
+                        msg = "Error";
+                        break;
+                }
+                return new Tuple<int, string>(nCode, msg);
+            }
+        }
 
         public bool IsLoggedIn { get; private set; }
 
@@ -53,7 +86,14 @@ namespace StockTracker.Services
             }
 
             IsLoggedIn = await WaitForQuoteConnectionReadyAsync(15000);
+            Account = account;
+            Password = password;
             return IsLoggedIn;
+        }
+
+        public async Task ReLogin()
+        {
+            LoginAsync(Account, Password);
         }
 
         public async Task SubscribeAsync(string symbol)

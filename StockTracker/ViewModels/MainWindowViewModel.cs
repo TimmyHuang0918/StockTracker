@@ -203,6 +203,20 @@ namespace StockTracker.ViewModels
         public IReadOnlyList<string> GlobalKLineIntervals { get; } = new[] { "日K", "5分K", "3分K", "1分K" };
         public IReadOnlyList<string> GlobalKLineCount { get; } = new[] { "30", "60", "120", "150", "240", "300" };
 
+        public Brush ConnectionBrush
+        {
+            get
+            {
+                if (_apiService.ServiceStatus.Item1 == 1)
+                    return Brushes.Green;
+                else
+                {
+                    Task.Run( _apiService.ReLogin());
+                    return Brushes.Red;
+                }
+            }
+        }
+
         public string SelectedGlobalKLineInterval
         {
             get => _selectedGlobalKLineInterval;
