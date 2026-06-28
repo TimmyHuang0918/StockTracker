@@ -982,12 +982,22 @@ namespace StockTracker.ViewModels
                 $"<td>{HtmlEncode(s.Name)}</td>" +
                 $"<td>{s.Score}</td>" +
                 $"<td>{s.CrashRiskScore}</td>" +
+                $"<td>{s.PatternTagCount}</td>" +
+                $"<td>{HtmlEncode(s.PatternTagsText)}</td>" +
+                $"<td>{s.ScoreDay0}</td>" +
+                $"<td>{s.ScoreDay1}</td>" +
+                $"<td>{s.ScoreDay2}</td>" +
+                $"<td>{s.ScoreDay3}</td>" +
+                $"<td>{s.ScoreDay4}</td>" +
+                $"<td>{s.AverageRecentScore.ToString("F1", CultureInfo.InvariantCulture)}</td>" +
+                $"<td>{s.ScoreTrend}</td>" +
+                $"<td>{s.ThreeMajorNet}</td>" +
+                $"<td>{s.ThreeMajorNetAmount.ToString(CultureInfo.InvariantCulture)}</td>" +
                 $"<td>{HtmlEncode(s.StrategyActionText)}</td>" +
                 $"<td>{HtmlEncode(s.StrategyStageLabel)}</td>" +
                 $"<td>{HtmlEncode(s.Suggestion)}</td>" +
                 $"<td>{s.LatestPrice.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
                 $"<td>{s.ChangePercent.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
-                $"<td>{HtmlEncode(s.PatternTagsText)}</td>" +
                 $"</tr>"));
 
             var html = new StringBuilder();
@@ -1000,28 +1010,40 @@ namespace StockTracker.ViewModels
             html.AppendLine("<style>");
             html.AppendLine("body{background:#121212;color:#e6e6e6;font-family:'Segoe UI',sans-serif;margin:0;padding:20px;}");
             html.AppendLine(".panel{background:#1e1e1e;border:1px solid #303030;border-radius:8px;padding:12px;margin-bottom:12px;}");
-            html.AppendLine("input,select{background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:6px 8px;}");
-            html.AppendLine("table{width:100%;border-collapse:collapse;font-size:14px;}");
+            html.AppendLine(".row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;}");
+            html.AppendLine("label{font-size:12px;color:#c8c8c8;}");
+            html.AppendLine("input,select{background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:6px 8px;min-width:78px;}");
+            html.AppendLine("input[type=checkbox]{min-width:auto;}");
+            html.AppendLine("table{width:100%;border-collapse:collapse;font-size:13px;}");
             html.AppendLine("th,td{border:1px solid #2f2f2f;padding:6px 8px;text-align:left;}");
-            html.AppendLine("th{background:#2b2b2b;cursor:pointer;}");
+            html.AppendLine("th{background:#2b2b2b;cursor:pointer;position:sticky;top:0;}");
             html.AppendLine("tr:nth-child(even){background:#1a1a1a;}");
             html.AppendLine(".muted{color:#9aa0a6;font-size:12px;}");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
             html.AppendLine($"<h2>全市場掃描排名</h2><div class=\"muted\">更新時間：{DateTime.Now:yyyy-MM-dd HH:mm:ss}</div>");
-            html.AppendLine("<div class=\"panel\"><label>搜尋：</label><input id=\"searchInput\" placeholder=\"代號/名稱/策略/建議\" /><label style=\"margin-left:12px;\">策略動作：</label><select id=\"actionFilter\"><option value=\"\">全部</option></select></div>");
+            html.AppendLine("<div class=\"panel\">");
+            html.AppendLine("<div class='row'><label>搜尋</label><input id='searchInput' placeholder='代號/名稱/策略/建議/型態' /><label>Top</label><input id='topCount' type='number' min='1' placeholder='100' /><label>價格</label><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /><label>漲跌幅%</label><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div>");
+            html.AppendLine("<div class='row'><label>三大法人買賣超</label><input id='minNet' type='number' step='1' placeholder='Min' /><input id='maxNet' type='number' step='1' placeholder='Max' /><label>買賣超金額</label><input id='minNetAmount' type='number' step='1' placeholder='Min' /><input id='maxNetAmount' type='number' step='1' placeholder='Max' /><label>最新分數≥</label><input id='minScore' type='number' step='1' placeholder='0' /><label>風險分≥</label><input id='minCrash' type='number' step='1' placeholder='0' /><label>型態數≥</label><input id='minPatternCount' type='number' step='1' placeholder='0' /></div>");
+            html.AppendLine("<div class='row'><label>指定型態</label><select id='patternFilter'><option value=''>全部</option></select><label>策略動作</label><select id='actionFilter'><option value=''>全部</option></select><label>建議倉位</label><select id='holdingFilter'><option value=''>全部</option></select><label>建議</label><select id='suggestionFilter'><option value=''>全部</option></select><label>近5日均分≥</label><input id='minAvg' type='number' step='0.1' placeholder='0' /><label><input id='trendUp' type='checkbox' /> 近5日分數趨勢上升</label></div>");
+            html.AppendLine("<div class='row'><label>連續天數</label><input id='minConDays' type='number' step='1' placeholder='0' /><label>分數≥</label><input id='minConScore' type='number' step='1' placeholder='60' value='60' /></div>");
+            html.AppendLine("</div>");
             html.AppendLine("<div class=\"panel\"><table id=\"rankingTable\"><thead><tr>");
-            html.AppendLine("<th data-type='num'>排名</th><th data-type='text'>代號</th><th data-type='text'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險分</th><th data-type='text'>策略動作</th><th data-type='text'>建議倉位</th><th data-type='text'>建議</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th><th data-type='text'>型態</th>");
+            html.AppendLine("<th data-type='num'>排名</th><th data-type='text'>代號</th><th data-type='text'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險分</th><th data-type='num'>型態數</th><th data-type='text'>型態</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>近5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>三大法人買賣超</th><th data-type='num'>三大法人買賣超金額</th><th data-type='text'>策略動作</th><th data-type='text'>建議倉位</th><th data-type='text'>建議</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
             html.AppendLine("</tr></thead><tbody>");
             html.AppendLine(rows);
             html.AppendLine("</tbody></table></div>");
             html.AppendLine("<script>");
-            html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const searchInput=document.getElementById('searchInput');const actionFilter=document.getElementById('actionFilter');");
-            html.AppendLine("const actionCol=5;const actions=[...new Set([...tbody.rows].map(r=>r.cells[actionCol].textContent.trim()).filter(x=>x))].sort();actions.forEach(a=>{const op=document.createElement('option');op.value=a;op.textContent=a;actionFilter.appendChild(op);});");
-            html.AppendLine("function applyFilter(){const kw=searchInput.value.trim().toLowerCase();const act=actionFilter.value;[...tbody.rows].forEach(r=>{const text=r.textContent.toLowerCase();const hitKw=!kw||text.includes(kw);const hitAct=!act||r.cells[actionCol].textContent.trim()===act;r.style.display=(hitKw&&hitAct)?'':'none';});}");
-            html.AppendLine("searchInput.addEventListener('input',applyFilter);actionFilter.addEventListener('change',applyFilter);");
-            html.AppendLine("let sortState={idx:0,asc:false};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=a.cells[idx].textContent.trim();let vb=b.cells[idx].textContent.trim();if(type==='num'){va=parseFloat(va)||0;vb=parseFloat(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));});});");
+            html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const $=id=>document.getElementById(id);const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
+            html.AppendLine("function num(v){const n=parseFloat(v);return Number.isFinite(n)?n:null;}function txt(cell){return (cell.textContent||'').trim();}function lower(cell){return txt(cell).toLowerCase();}");
+            html.AppendLine("function fillSelect(col,sel){const vals=[...new Set([...tbody.rows].map(r=>txt(r.cells[col])).filter(x=>x))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}");
+            html.AppendLine("fillSelect(6,f.pattern);fillSelect(16,f.action);fillSelect(17,f.holding);fillSelect(18,f.suggestion);");
+            html.AppendLine("function passRange(value,min,max){if(min!==null&&value<min)return false;if(max!==null&&value>max)return false;return true;}");
+            html.AppendLine("function consecutiveDays(row,minScore){const d=[num(txt(row.cells[7]))||0,num(txt(row.cells[8]))||0,num(txt(row.cells[9]))||0,num(txt(row.cells[10]))||0,num(txt(row.cells[11]))||0];let s=0;for(const v of d){if(v<minScore)break;s++;}return s;}");
+            html.AppendLine("function applyFilter(){const kw=(f.search.value||'').trim().toLowerCase();const top=num(f.top.value);const minPrice=num(f.minPrice.value),maxPrice=num(f.maxPrice.value),minChange=num(f.minChange.value),maxChange=num(f.maxChange.value),minNet=num(f.minNet.value),maxNet=num(f.maxNet.value),minNetAmount=num(f.minNetAmount.value),maxNetAmount=num(f.maxNetAmount.value),minScore=num(f.minScore.value),minCrash=num(f.minCrash.value),minPatternCount=num(f.minPatternCount.value),minAvg=num(f.minAvg.value),minConDays=Math.max(0,num(f.minConDays.value)||0),minConScore=num(f.minConScore.value)??60;const pattern=f.pattern.value,action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;[...tbody.rows].forEach(r=>{const rank=num(txt(r.cells[0]))||0;const score=num(txt(r.cells[3]))||0;const crash=num(txt(r.cells[4]))||0;const pcount=num(txt(r.cells[5]))||0;const avg=num(txt(r.cells[12]))||0;const trend=num(txt(r.cells[13]))||0;const net=num(txt(r.cells[14]))||0;const netAmount=num(txt(r.cells[15]))||0;const price=num(txt(r.cells[19]))||0;const chg=num(txt(r.cells[20]))||0;const text=r.textContent.toLowerCase();let ok=true;if(top!==null&&rank>top)ok=false;if(kw&&text.indexOf(kw)<0)ok=false;if(!passRange(price,minPrice,maxPrice))ok=false;if(!passRange(chg,minChange,maxChange))ok=false;if(!passRange(net,minNet,maxNet))ok=false;if(!passRange(netAmount,minNetAmount,maxNetAmount))ok=false;if(minScore!==null&&score<minScore)ok=false;if(minCrash!==null&&crash<minCrash)ok=false;if(minPatternCount!==null&&pcount<minPatternCount)ok=false;if(pattern&&lower(r.cells[6]).indexOf(pattern.toLowerCase())<0)ok=false;if(action&&txt(r.cells[16])!==action)ok=false;if(holding&&txt(r.cells[17])!==holding)ok=false;if(suggestion&&txt(r.cells[18])!==suggestion)ok=false;if(minAvg!==null&&avg<minAvg)ok=false;if(trendUp&&trend<=0)ok=false;if(minConDays>0&&consecutiveDays(r,minConScore)<minConDays)ok=false;r.style.display=ok?'':'none';});}");
+            html.AppendLine("Object.values(f).forEach(el=>{if(!el)return;const evt=(el.type==='checkbox'||el.tagName==='SELECT')?'change':'input';el.addEventListener(evt,applyFilter);});");
+            html.AppendLine("let sortState={idx:0,asc:true};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=txt(a.cells[idx]),vb=txt(b.cells[idx]);if(type==='num'){va=parseFloat(va)||0;vb=parseFloat(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));applyFilter();});});");
             html.AppendLine("</script>");
             html.AppendLine("</body></html>");
             return html.ToString();
