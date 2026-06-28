@@ -991,13 +991,13 @@ namespace StockTracker.ViewModels
                 $"<td>{s.ScoreDay4}</td>" +
                 $"<td>{s.AverageRecentScore.ToString("F1", CultureInfo.InvariantCulture)}</td>" +
                 $"<td>{s.ScoreTrend}</td>" +
-                $"<td>{s.ThreeMajorNet}</td>" +
-                $"<td>{s.ThreeMajorNetAmount.ToString(CultureInfo.InvariantCulture)}</td>" +
+                $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNet)}'>{s.ThreeMajorNet}</td>" +
+                $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNetAmount)}'>{s.ThreeMajorNetAmount.ToString(CultureInfo.InvariantCulture)}</td>" +
                 $"<td>{HtmlEncode(s.StrategyActionText)}</td>" +
                 $"<td>{HtmlEncode(s.StrategyStageLabel)}</td>" +
                 $"<td>{HtmlEncode(s.Suggestion)}</td>" +
                 $"<td>{s.LatestPrice.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
-                $"<td>{s.ChangePercent.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
+                $"<td class='{ResolveValueColorClass((double)s.ChangePercent)}'>{s.ChangePercent.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
                 $"</tr>"));
 
             var html = new StringBuilder();
@@ -1019,6 +1019,9 @@ namespace StockTracker.ViewModels
             html.AppendLine("th{background:#2b2b2b;cursor:pointer;position:sticky;top:0;}");
             html.AppendLine("tr:nth-child(even){background:#1a1a1a;}");
             html.AppendLine(".muted{color:#9aa0a6;font-size:12px;}");
+            html.AppendLine(".rise{color:#ff6b6b;font-weight:600;}");
+            html.AppendLine(".fall{color:#2ecc71;font-weight:600;}");
+            html.AppendLine(".flat{color:#d0d0d0;}");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
@@ -1702,6 +1705,21 @@ namespace StockTracker.ViewModels
         private static string HtmlEncode(string value)
         {
             return WebUtility.HtmlEncode(value ?? string.Empty);
+        }
+
+        private static string ResolveValueColorClass(double value)
+        {
+            if (value > 0)
+            {
+                return "rise";
+            }
+
+            if (value < 0)
+            {
+                return "fall";
+            }
+
+            return "flat";
         }
 
         private IReadOnlyList<RankedStock> GetCurrentViewStocks()
