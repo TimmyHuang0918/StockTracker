@@ -975,6 +975,13 @@ namespace StockTracker.ViewModels
         public string BuildRankingWebsiteHtml()
         {
             var exportStocks = GetCurrentViewStocks();
+            var latestScoreDate = exportStocks
+                .Where(s => s.ScoreDate != DateTime.MinValue)
+                .Select(s => (DateTime?)s.ScoreDate.Date)
+                .Max();
+            var updateSummary = latestScoreDate.HasValue
+                ? $"資料日期：{latestScoreDate.Value:yyyy-MM-dd} · 筆數：{exportStocks.Count}"
+                : $"筆數：{exportStocks.Count}";
             var rows = string.Join("\n", exportStocks.Select(s =>
                 $"<tr>" +
                 $"<td>{s.Rank}</td>" +
@@ -1025,7 +1032,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
-            html.AppendLine($"<h2>全市場掃描排名</h2><div class=\"muted\">更新時間：{DateTime.Now:yyyy-MM-dd HH:mm:ss}</div>");
+            html.AppendLine($"<h2>全市場掃描排名</h2><div class=\"muted\">{HtmlEncode(updateSummary)}</div>");
             html.AppendLine("<div class=\"panel\">");
             html.AppendLine("<div class='row'><label>搜尋</label><input id='searchInput' placeholder='代號/名稱/策略/建議/型態' /><label>Top</label><input id='topCount' type='number' min='1' placeholder='100' /><label>價格</label><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /><label>漲跌幅%</label><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div>");
             html.AppendLine("<div class='row'><label>三大法人買賣超</label><input id='minNet' type='number' step='1' placeholder='Min' /><input id='maxNet' type='number' step='1' placeholder='Max' /><label>買賣超金額</label><input id='minNetAmount' type='number' step='1' placeholder='Min' /><input id='maxNetAmount' type='number' step='1' placeholder='Max' /><label>最新分數≥</label><input id='minScore' type='number' step='1' placeholder='0' /><label>風險分≥</label><input id='minCrash' type='number' step='1' placeholder='0' /><label>型態數≥</label><input id='minPatternCount' type='number' step='1' placeholder='0' /></div>");

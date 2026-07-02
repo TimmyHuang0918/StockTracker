@@ -490,6 +490,14 @@ namespace StockTracker.ViewModels
             var docsFolder = Path.Combine(repoRoot, "docs", "nightly-ranking");
             Directory.CreateDirectory(docsFolder);
             var targetFile = Path.Combine(docsFolder, "index.html");
+            const string websiteUrl = "https://timmyhuang0918.github.io/StockTracker/nightly-ranking/";
+
+            if (File.Exists(targetFile) &&
+                string.Equals(File.ReadAllText(htmlFilePath), File.ReadAllText(targetFile), StringComparison.Ordinal))
+            {
+                return websiteUrl;
+            }
+
             File.Copy(htmlFilePath, targetFile, true);
 
             if (!RunGitCommand(repoRoot, "add docs/nightly-ranking/index.html"))
@@ -503,7 +511,7 @@ namespace StockTracker.ViewModels
                 return string.Empty;
             }
 
-            return "https://timmyhuang0918.github.io/StockTracker/nightly-ranking/";
+            return websiteUrl;
         }
 
         private static string FindGitRepositoryRoot(string startPath)
