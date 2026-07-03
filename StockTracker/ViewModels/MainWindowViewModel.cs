@@ -20,6 +20,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Xml.Linq;
+using Microsoft.Win32;
 
 namespace StockTracker.ViewModels
 {
@@ -54,6 +55,7 @@ namespace StockTracker.ViewModels
         private DispatcherTimer _nightlyAutomationTimer;
         private bool _isNightlyAutomationRunning;
         private RankingViewModel _nightlyRankingViewModel;
+        private bool _nightlyCompletedToday;
         private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
         public MainWindowViewModel(CapitalApiService apiService)
         {
@@ -370,7 +372,16 @@ namespace StockTracker.ViewModels
             }
 
             var now = DateTime.Now;
+            if (now.Hour == 0 && now.Minute < 5)
+            {
+                _nightlyCompletedToday = false;
+            }
             if (now.Hour != 22 || now.Minute != 0)
+            {
+                return;
+            }
+
+            if (_nightlyCompletedToday)
             {
                 return;
             }
@@ -379,6 +390,7 @@ namespace StockTracker.ViewModels
             try
             {
                 await RunNightlyAutomationAsync();
+                _nightlyCompletedToday = true;
             }
             catch (Exception ex)
             {
@@ -392,8 +404,18 @@ namespace StockTracker.ViewModels
 
         private async Task RunNightlyAutomationAsync()
         {
-            SystemMessage = "夜間排程啟動：更新法人、刷新主頁、掃描全市場中...";
+            IsInitializingMainPage = true;
+            MainPageProgressValue = 0;
+            SystemMessage = "夜間排程啟動：準備重新登入...";
+
+            await EnsureConnectedBeforeNightlyAsync();
+
+            MainPageProgressValue = 10;
+            SystemMessage = "夜間排程：更新法人資料中...";
             await UpdateTwseHistoryAsync();
+
+            MainPageProgressValue = 35;
+            SystemMessage = "夜間排程：刷新主頁股票中...";
             await RefreshAllTrackedStocksAsync();
 
             if (_nightlyRankingViewModel == null)
@@ -401,13 +423,26 @@ namespace StockTracker.ViewModels
                 _nightlyRankingViewModel = new RankingViewModel(_apiService, this);
             }
 
+            MainPageProgressValue = 55;
+            SystemMessage = "夜間排程：掃描全市場中...";
             await _nightlyRankingViewModel.StartScanningAsync();
+
+            MainPageProgressValue = 75;
+            SystemMessage = "夜間排程：匯出報表中...";
             var xmlPath = _nightlyRankingViewModel.ExportLatestRankingToXml();
             var htmlPath = _nightlyRankingViewModel.ExportLatestRankingToHtml();
+
+            MainPageProgressValue = 85;
+            SystemMessage = "夜間排程：發佈網站中...";
             var websiteUrl = PublishRankingWebsiteToGitHub(htmlPath);
+
+            MainPageProgressValue = 95;
+            SystemMessage = "夜間排程：寄送通知中...";
             var recipients = _nightlyRankingViewModel.GetNotificationEmailRecipients();
             SendRankingReportEmail(xmlPath, websiteUrl, recipients);
+            MainPageProgressValue = 100;
             SystemMessage = "夜間排程完成。";
+            IsInitializingMainPage = false;
         }
 
         public async Task PublishRankingWebsiteByHandAsync(RankingViewModel rankingViewModel)
@@ -451,6 +486,46 @@ namespace StockTracker.ViewModels
             }
         }
 
+        private async Task EnsureConnectedBeforeNightlyAsync()
+        {
+            if (_apiService.ServiceStatus.Item1 == 1)
+            {
+                return;
+            }
+
+            try
+            {
+                var credentialFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "login.dat");
+                if (!File.Exists(credentialFilePath))
+                {
+                    SystemMessage = "夜間排程：未找到登入資訊，略過自動重連。";
+                    return;
+                }
+
+                var base64 = File.ReadAllText(credentialFilePath, Encoding.UTF8);
+                var rawBytes = Convert.FromBase64String(base64);
+                var rawText = Encoding.UTF8.GetString(rawBytes);
+                var parts = rawText.Split(new[] { '\n' }, 2);
+                if (parts.Length < 2)
+                {
+                    return;
+                }
+
+                var account = parts[0].Trim();
+                var password = parts[1] ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(password))
+                {
+                    return;
+                }
+
+                await _apiService.LoginAsync(account, password);
+            }
+            catch (Exception ex)
+            {
+                SystemMessage = "夜間排程：自動重連失敗 - " + ex.Message;
+            }
+        }
+
         private static void ResolveKLineRequest(string interval, out short kLineType, out short minuteNumber)
         {
             switch (interval)
@@ -478,32 +553,112 @@ namespace StockTracker.ViewModels
         {
             if (string.IsNullOrWhiteSpace(htmlFilePath) || !File.Exists(htmlFilePath))
             {
+                SystemMessage = "網站發佈失敗：找不到匯出的 HTML 檔案。";
                 return string.Empty;
             }
 
             var repoRoot = FindGitRepositoryRoot(AppDomain.CurrentDomain.BaseDirectory);
             if (string.IsNullOrWhiteSpace(repoRoot))
             {
+                SystemMessage = "網站發佈失敗：找不到 Git 倉庫根目錄。";
+                return string.Empty;
+            }
+
+            var branch = GetCurrentGitBranch(repoRoot);
+            string gitOutput;
+            if (!RunGitCommand(repoRoot, "fetch origin", out gitOutput))
+            {
+                SystemMessage = "網站發佈失敗（fetch）: " + gitOutput;
+                return string.Empty;
+            }
+
+            if (!RunGitCommand(repoRoot, $"pull --rebase origin {branch}", out gitOutput))
+            {
+                SystemMessage = "網站發佈失敗（pull --rebase）: " + gitOutput;
                 return string.Empty;
             }
 
             var docsFolder = Path.Combine(repoRoot, "docs", "nightly-ranking");
             Directory.CreateDirectory(docsFolder);
             var targetFile = Path.Combine(docsFolder, "index.html");
-            File.Copy(htmlFilePath, targetFile, true);
-
-            if (!RunGitCommand(repoRoot, "add docs/nightly-ranking/index.html"))
+            var newContent = File.ReadAllText(htmlFilePath, Encoding.UTF8);
+            var oldContent = File.Exists(targetFile) ? File.ReadAllText(targetFile, Encoding.UTF8) : string.Empty;
+            if (string.Equals(newContent, oldContent, StringComparison.Ordinal))
             {
+                return "https://timmyhuang0918.github.io/StockTracker/nightly-ranking/";
+            }
+
+            File.WriteAllText(targetFile, newContent, Encoding.UTF8);
+
+            if (!RunGitCommand(repoRoot, "add docs/nightly-ranking/index.html", out gitOutput))
+            {
+                SystemMessage = "網站發佈失敗（git add）: " + gitOutput;
                 return string.Empty;
             }
 
-            RunGitCommand(repoRoot, $"commit -m \"chore: update nightly ranking website {DateTime.Now:yyyy-MM-dd HH:mm}\"");
-            if (!RunGitCommand(repoRoot, "push origin master"))
+            if (!RunGitCommand(repoRoot, $"commit -m \"chore: update nightly ranking website {DateTime.Now:yyyy-MM-dd HH:mm}\"", out gitOutput))
             {
+                if (gitOutput.IndexOf("nothing to commit", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    SystemMessage = "網站發佈失敗（git commit）: " + gitOutput;
+                    return string.Empty;
+                }
+            }
+
+            var pushSucceeded = false;
+            var retryDelays = new[] { 1500, 3500, 7000 };
+            for (var i = 0; i < retryDelays.Length && !pushSucceeded; i++)
+            {
+                pushSucceeded = RunGitCommand(repoRoot, $"push origin {branch}", out gitOutput);
+                if (!pushSucceeded)
+                {
+                    RunGitCommand(repoRoot, "fetch origin", out _);
+                    RunGitCommand(repoRoot, $"pull --rebase origin {branch}", out _);
+                    Task.Delay(retryDelays[i]).Wait();
+                }
+            }
+
+            if (!pushSucceeded)
+            {
+                SystemMessage = "網站發佈失敗（git push）: " + gitOutput;
                 return string.Empty;
             }
 
             return "https://timmyhuang0918.github.io/StockTracker/nightly-ranking/";
+        }
+
+        private static string GetCurrentGitBranch(string workingDirectory)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = "rev-parse --abbrev-ref HEAD",
+                    WorkingDirectory = workingDirectory,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using (var process = Process.Start(psi))
+                {
+                    if (process == null)
+                    {
+                        return "master";
+                    }
+
+                    var output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit(15000);
+                    var branch = (output ?? string.Empty).Trim();
+                    return string.IsNullOrWhiteSpace(branch) ? "master" : branch;
+                }
+            }
+            catch
+            {
+                return "master";
+            }
         }
 
         private static string FindGitRepositoryRoot(string startPath)
@@ -530,6 +685,12 @@ namespace StockTracker.ViewModels
 
         private static bool RunGitCommand(string workingDirectory, string arguments)
         {
+            return RunGitCommand(workingDirectory, arguments, out _);
+        }
+
+        private static bool RunGitCommand(string workingDirectory, string arguments, out string output)
+        {
+            output = string.Empty;
             try
             {
                 var psi = new ProcessStartInfo
@@ -547,15 +708,20 @@ namespace StockTracker.ViewModels
                 {
                     if (process == null)
                     {
+                        output = "process is null";
                         return false;
                     }
 
+                    var stdOut = process.StandardOutput.ReadToEnd();
+                    var stdErr = process.StandardError.ReadToEnd();
                     process.WaitForExit(120000);
+                    output = (stdOut + "\n" + stdErr).Trim();
                     return process.ExitCode == 0;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                output = ex.Message;
                 return false;
             }
         }

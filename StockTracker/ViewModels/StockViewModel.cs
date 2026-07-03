@@ -55,6 +55,7 @@ namespace StockTracker.ViewModels
         private readonly List<double> _lastDisplayMacdSeries = new List<double>();
         private readonly List<double> _lastDisplaySignalSeries = new List<double>();
         private readonly List<double> _lastDisplayRsiSeries = new List<double>();
+        private DateTime _lastInstantFullUpdateAt = DateTime.MinValue;
         private readonly List<MarginBalancePointVisual> _lastDisplayMarginBalanceSeries = new List<MarginBalancePointVisual>();
         private readonly Dictionary<DateTime, TwseMarginMetricResult> _marginMetricByDate = new Dictionary<DateTime, TwseMarginMetricResult>();
         private readonly List<MarginMaintenancePointVisual> _lastDisplayMarginMaintenanceSeries = new List<MarginMaintenancePointVisual>();
@@ -715,10 +716,16 @@ namespace StockTracker.ViewModels
                 incoming.Volume = existing.Volume + incoming.Volume;
             }
 
-            UpdateFromKLine(incoming);
+            var now = DateTime.Now;
+            var useLightweight = (now - _lastInstantFullUpdateAt).TotalMilliseconds < 1200;
+            UpdateFromKLine(incoming, lightweightMode: useLightweight, propagateToDetailViews: false);
+            if (!useLightweight)
+            {
+                _lastInstantFullUpdateAt = now;
+            }
         }
 
-        public void UpdateFromKLine(CandleData candle)
+        public void UpdateFromKLine(CandleData candle, bool lightweightMode = false, bool propagateToDetailViews = true)
         {
             if (candle == null)
             {
@@ -761,13 +768,21 @@ namespace StockTracker.ViewModels
             LatestPrice = latest?.Close ?? normalized.Close;
             RecalculateIndicatorsOnCandles();
             ChangePercent = latest.PercentageChange;
-            UpdateSignal();
-            RebuildVisuals();
+            if (!lightweightMode)
+            {
+                UpdateSignal();
+                RebuildVisuals();
+            }
             OnPropertyChanged(nameof(LatestVolume));
+
+            if (!propagateToDetailViews)
+            {
+                return;
+            }
 
             foreach (var detailVm in _detailViewModels.ToList())
             {
-                detailVm.UpdateFromKLine(normalized);
+                detailVm.UpdateFromKLine(normalized, lightweightMode, true);
             }
         }
 
@@ -2294,6 +2309,42 @@ namespace StockTracker.ViewModels
         {
             UpdateSignal();
             RebuildVisuals();
+        }
+
+        public void LoadCandlesForAnalysis(IEnumerable<CandleData> sourceCandles)
+        {
+            _candles.Clear();
+            if (sourceCandles != null)
+            {
+                foreach (var candle in sourceCandles)
+                {
+                    if (candle == null)
+                    {
+                        continue;
+                    }
+
+                    _candles.Add(new CandleData
+                    {
+                        Time = candle.Time,
+                        Open = Math.Round(candle.Open, 2),
+                        High = Math.Round(candle.High, 2),
+                        Low = Math.Round(Math.Max(0.1m, candle.Low), 2),
+                        Close = Math.Round(candle.Close, 2),
+                        Volume = candle.Volume
+                    });
+                }
+            }
+
+            _candles.Sort((a, b) => a.Time.CompareTo(b.Time));
+            if (_candles.Count == 0)
+            {
+                return;
+            }
+
+            RecalculateIndicatorsOnCandles();
+            var latest = _candles[_candles.Count - 1];
+            LatestPrice = latest.Close;
+            ChangePercent = latest.PercentageChange;
         }
 
         private static double CalculateRsiAt(int index, int period, IReadOnlyList<double> closes)

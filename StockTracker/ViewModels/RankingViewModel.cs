@@ -1151,10 +1151,12 @@ namespace StockTracker.ViewModels
                     }
 
                     totalChecked++;
-                    ProgressValue = ((double)totalChecked / distinctSymbols.Count) * 50; // 下載佔 50%
-                    ProgressText = $"下載K線資料至第 {totalChecked} 檔股票，共 {distinctSymbols.Count} 檔 4 碼股票";
-
-                    await System.Windows.Threading.Dispatcher.Yield();
+                    if (totalChecked % 25 == 0 || totalChecked == distinctSymbols.Count)
+                    {
+                        ProgressValue = ((double)totalChecked / distinctSymbols.Count) * 50; // 下載佔 50%
+                        ProgressText = $"下載K線資料至第 {totalChecked} 檔股票，共 {distinctSymbols.Count} 檔 4 碼股票";
+                        await System.Windows.Threading.Dispatcher.Yield();
+                    }
                 }
 
                 // 第二階段：多執行緒計算推薦指標
@@ -1165,9 +1167,14 @@ namespace StockTracker.ViewModels
                 var lockObj = new object();
                 var t86HistoryMap = await _mainViewModel.LoadAllTwseT86HistoriesForScanAsync(scanHistoryStartDate);
 
+                var parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount - 1)
+                };
+
                 await Task.Run(() =>
                 {
-                    Parallel.ForEach(symbolDataMap, kvp =>
+                    Parallel.ForEach(symbolDataMap, parallelOptions, kvp =>
                     {
                         var symbol = kvp.Key;
                         var name = kvp.Value.Name;
@@ -1181,10 +1188,7 @@ namespace StockTracker.ViewModels
                             {
                                 SelectedKLineInterval = "日K"
                             };
-                            foreach (var c in candles)
-                            {
-                                dummyVm.UpdateFromKLine(c);
-                            }
+                            dummyVm.LoadCandlesForAnalysis(candles);
 
                             var enrichedCandles = dummyVm.GetPublicCandles().ToList();
 

@@ -4,12 +4,14 @@ using StockTracker.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Concurrent;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Threading;
 
 namespace StockTracker
 {
@@ -20,6 +22,8 @@ namespace StockTracker
         private StockViewModel _pendingDragStock;
         private ListBoxItem _draggedItemContainer;
         private ListBoxItem _dragTargetItemContainer;
+        private readonly ConcurrentDictionary<string, CandleData> _pendingInstantCandles = new ConcurrentDictionary<string, CandleData>(StringComparer.OrdinalIgnoreCase);
+        private readonly DispatcherTimer _instantCandleFlushTimer;
         public MainWindow()
         {
             InitializeComponent();
@@ -29,6 +33,13 @@ namespace StockTracker
             StockListBox.DragOver += StockList_OnDragOver;
             StockListBox.Drop += StockList_OnDrop;
             StockListBox.DragLeave += StockList_OnDragLeave;
+
+            _instantCandleFlushTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(350)
+            };
+            _instantCandleFlushTimer.Tick += InstantCandleFlushTimer_Tick;
+            _instantCandleFlushTimer.Start();
         }
 
         private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -177,19 +188,36 @@ namespace StockTracker
 
         private void ApiService_OnInstantCandleReceived(string symbol, CandleData candle)
         {
-            Dispatcher.BeginInvoke(new Action(() =>
+            if (candle == null || candle.Close == 0)
             {
-                if (!(DataContext is MainWindowViewModel vm) || candle.Close == 0)
-                {
-                    return;
-                }
+                return;
+            }
 
-                var normalized = symbol?.Trim() ?? string.Empty;
+            var normalized = symbol?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return;
+            }
+
+            _pendingInstantCandles[normalized] = candle;
+        }
+
+        private void InstantCandleFlushTimer_Tick(object sender, EventArgs e)
+        {
+            if (!(DataContext is MainWindowViewModel vm) || _pendingInstantCandles.Count == 0)
+            {
+                return;
+            }
+
+            var snapshot = _pendingInstantCandles.ToArray();
+            foreach (var each in snapshot)
+            {
+                _pendingInstantCandles.TryRemove(each.Key, out _);
                 var stock = vm.Stocks.FirstOrDefault(x =>
-                    string.Equals(x.Symbol, normalized, StringComparison.OrdinalIgnoreCase) ||
-                    normalized.EndsWith(x.Symbol, StringComparison.OrdinalIgnoreCase));
-                stock?.ApplyInstantCandle(candle, stock.SelectedKLineInterval);
-            }));
+                    string.Equals(x.Symbol, each.Key, StringComparison.OrdinalIgnoreCase) ||
+                    each.Key.EndsWith(x.Symbol, StringComparison.OrdinalIgnoreCase));
+                stock?.ApplyInstantCandle(each.Value, stock.SelectedKLineInterval);
+            }
         }
 
         private static void ResolveKLineRequest(string interval, out short kLineType, out short minuteNumber)
