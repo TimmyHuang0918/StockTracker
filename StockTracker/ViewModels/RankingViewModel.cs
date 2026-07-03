@@ -979,6 +979,9 @@ namespace StockTracker.ViewModels
                 .Where(s => s.ScoreDate != DateTime.MinValue)
                 .Select(s => (DateTime?)s.ScoreDate.Date)
                 .Max();
+            var latestKLineDateText = latestScoreDate.HasValue
+                ? latestScoreDate.Value.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture)
+                : "無資料";
             var updateSummary = latestScoreDate.HasValue
                 ? $"資料日期：{latestScoreDate.Value:yyyy-MM-dd} · 筆數：{exportStocks.Count}"
                 : $"筆數：{exportStocks.Count}";
@@ -1013,7 +1016,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("<head>");
             html.AppendLine("<meta charset=\"utf-8\" />");
             html.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />");
-            html.AppendLine("<title>StockTracker 全市場排名</title>");
+            html.AppendLine($"<title>StockTracker 全市場排名（最新K線日: {latestKLineDateText}）</title>");
             html.AppendLine("<style>");
             html.AppendLine("body{background:#121212;color:#e6e6e6;font-family:'Segoe UI',sans-serif;margin:0;padding:20px;}");
             html.AppendLine(".panel{background:#1e1e1e;border:1px solid #303030;border-radius:8px;padding:12px;margin-bottom:12px;}");

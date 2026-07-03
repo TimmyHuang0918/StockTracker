@@ -617,7 +617,7 @@ namespace StockTracker.ViewModels
                 return string.Empty;
             }
 
-            return websiteUrl;
+            return "https://timmyhuang0918.github.io/StockTracker/nightly-ranking/";
         }
 
         private static string GetCurrentGitBranch(string workingDirectory)
