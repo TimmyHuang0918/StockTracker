@@ -987,13 +987,13 @@ namespace StockTracker.ViewModels
                 : $"筆數：{exportStocks.Count}";
             var rows = string.Join("\n", exportStocks.Select(s =>
                 $"<tr>" +
-                $"<td>{s.Rank}</td>" +
-                $"<td>{HtmlEncode(s.Symbol)}</td>" +
-                $"<td>{HtmlEncode(s.Name)}</td>" +
-                $"<td>{s.Score}</td>" +
+                $"<td class='sticky-col'>{s.Rank}</td>" +
+                $"<td class='sticky-col'>{HtmlEncode(s.Symbol)}</td>" +
+                $"<td class='sticky-col'>{HtmlEncode(s.Name)}</td>" +
+                $"<td><span class='badge score-badge'>{s.Score}</span></td>" +
                 $"<td>{s.CrashRiskScore}</td>" +
                 $"<td>{s.PatternTagCount}</td>" +
-                $"<td>{HtmlEncode(s.PatternTagsText)}</td>" +
+                $"<td class='text-left'>{HtmlEncode(s.PatternTagsText)}</td>" +
                 $"<td>{s.ScoreDay0}</td>" +
                 $"<td>{s.ScoreDay1}</td>" +
                 $"<td>{s.ScoreDay2}</td>" +
@@ -1005,9 +1005,9 @@ namespace StockTracker.ViewModels
                 $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNetAmount)}'>{s.ThreeMajorNetAmount.ToString(CultureInfo.InvariantCulture)}</td>" +
                 $"<td>{HtmlEncode(s.StrategyActionText)}</td>" +
                 $"<td>{HtmlEncode(s.StrategyStageLabel)}</td>" +
-                $"<td>{HtmlEncode(s.Suggestion)}</td>" +
-                $"<td>{s.LatestPrice.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
-                $"<td class='{ResolveValueColorClass((double)s.ChangePercent)}'>{s.ChangePercent.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
+                $"<td class='text-left'>{HtmlEncode(s.Suggestion)}</td>" +
+                $"<td class='font-mono'>{s.LatestPrice.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
+                $"<td class='font-mono {ResolveValueColorClass((double)s.ChangePercent)}'>{s.ChangePercent.ToString("F2", CultureInfo.InvariantCulture)}%</td>" +
                 $"</tr>"));
 
             var html = new StringBuilder();
@@ -1016,37 +1016,90 @@ namespace StockTracker.ViewModels
             html.AppendLine("<head>");
             html.AppendLine("<meta charset=\"utf-8\" />");
             html.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />");
-            html.AppendLine($"<title>StockTracker 全市場排名（最新K線日: {latestKLineDateText}）</title>");
+            html.AppendLine($"<title>StockTracker 全市場排名 ({latestKLineDateText})</title>");
             html.AppendLine("<style>");
-            html.AppendLine("body{background:#121212;color:#e6e6e6;font-family:'Segoe UI',sans-serif;margin:0;padding:20px;}");
-            html.AppendLine(".panel{background:#1e1e1e;border:1px solid #303030;border-radius:8px;padding:12px;margin-bottom:12px;}");
-            html.AppendLine(".row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;}");
-            html.AppendLine("label{font-size:12px;color:#c8c8c8;}");
-            html.AppendLine("input,select{background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:6px 8px;min-width:78px;}");
-            html.AppendLine("input[type=checkbox]{min-width:auto;}");
-            html.AppendLine("table{width:100%;border-collapse:collapse;font-size:13px;}");
-            html.AppendLine("th,td{border:1px solid #2f2f2f;padding:6px 8px;text-align:left;}");
-            html.AppendLine("th{background:#2b2b2b;cursor:pointer;position:sticky;top:0;}");
-            html.AppendLine("tr:nth-child(even){background:#1a1a1a;}");
-            html.AppendLine(".muted{color:#9aa0a6;font-size:12px;}");
-            html.AppendLine(".rise{color:#ff6b6b;font-weight:600;}");
-            html.AppendLine(".fall{color:#2ecc71;font-weight:600;}");
-            html.AppendLine(".flat{color:#d0d0d0;}");
+            // 全域與主題變數
+            html.AppendLine(":root{--bg:#0d1117;--panel-bg:#161b22;--border:#30363d;--text:#c9d1d9;--text-muted:#8b949e;--primary:#1f6feb;--rise:#ff453a;--fall:#32d74b;--flat:#8e8e93;}");
+            html.AppendLine("*{box-sizing:border-box;}");
+            html.AppendLine("body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;margin:0;padding:16px;line-height:1.5;}");
+            html.AppendLine("h2{margin:0 0 4px 0;font-size:22px;font-weight:600;color:#fff;}");
+            html.AppendLine(".muted{color:var(--text-muted);font-size:13px;margin-bottom:16px;}");
+
+            // 現代化 Grid 篩選面板
+            html.AppendLine(".panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
+            html.AppendLine(".filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px; transition: all 0.3s;}");
+            html.AppendLine(".filter-group{display:flex;flex-direction:column;gap:4px;}");
+            html.AppendLine(".filter-group.row-inputs{flex-direction:row;align-items:center;gap:8px;}");
+            html.AppendLine(".filter-group.row-inputs input{width:100%;}");
+            html.AppendLine(".checkbox-group{flex-direction:row;align-items:center;gap:8px;padding-top:20px;}");
+            html.AppendLine("label{font-size:12px;font-weight:500;color:var(--text-muted); text-transform:uppercase;}");
+            html.AppendLine("input,select{background:#21262d;color:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;width:100%;transition:border-color 0.2s;}");
+            html.AppendLine("input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(31,111,235,0.2);}");
+            html.AppendLine("input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--primary);}");
+
+            // 表格 RWD 滾動容器
+            html.AppendLine(".table-container{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;overflow-x:auto;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
+            html.AppendLine("table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}");
+            html.AppendLine("th,td{border-bottom:1px solid var(--border);padding:10px 12px;text-align:center;}");
+            html.AppendLine(".text-left{text-align:left;}");
+            html.AppendLine("th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;top:0;z-index:2;user-select:none;transition:background 0.2s;}");
+            html.AppendLine("th:hover{background:#282e38;}");
+            html.AppendLine("tr{transition:background 0.15s;}");
+            html.AppendLine("tr:hover{background:#21262d;}");
+
+            // 手機版凍結前三欄 (排名、代號、名稱)，體驗大幅提升
+            html.AppendLine("@media(max-width:768px){");
+            html.AppendLine("  .filter-grid{grid-template-columns:1fr 1fr;}");
+            html.AppendLine("  .checkbox-group{padding-top:0;}");
+            html.AppendLine("  .sticky-col{position:sticky;left:0;background:var(--panel-bg);z-index:1;box-shadow:2px 0 5px rgba(0,0,0,0.2);}");
+            html.AppendLine("  th.sticky-col{z-index:3;background:#1f242c;}");
+            html.AppendLine("  tr:hover .sticky-col{background:#21262d;}");
+            html.AppendLine("}");
+
+            // 視覺優化
+            html.AppendLine(".font-mono{font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,monospace;}");
+            html.AppendLine(".badge{display:inline-block;padding:2px 6px;border-radius:4px;font-weight:600;font-size:12px;}");
+            html.AppendLine(".score-badge{background:rgba(31,111,235,0.15);color:#58a6ff;}");
+            html.AppendLine(".rise{color:var(--rise);font-weight:600;}");
+            html.AppendLine(".fall{color:var(--fall);font-weight:600;}");
+            html.AppendLine(".flat{color:var(--flat);}");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
+
+            // 網頁標頭
             html.AppendLine($"<h2>全市場掃描排名</h2><div class=\"muted\">{HtmlEncode(updateSummary)}</div>");
+
+            // 篩選面板
             html.AppendLine("<div class=\"panel\">");
-            html.AppendLine("<div class='row'><label>搜尋</label><input id='searchInput' placeholder='代號/名稱/策略/建議/型態' /><label>Top</label><input id='topCount' type='number' min='1' placeholder='100' /><label>價格</label><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /><label>漲跌幅%</label><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div>");
-            html.AppendLine("<div class='row'><label>三大法人買賣超</label><input id='minNet' type='number' step='1' placeholder='Min' /><input id='maxNet' type='number' step='1' placeholder='Max' /><label>買賣超金額</label><input id='minNetAmount' type='number' step='1' placeholder='Min' /><input id='maxNetAmount' type='number' step='1' placeholder='Max' /><label>最新分數≥</label><input id='minScore' type='number' step='1' placeholder='0' /><label>風險分≦</label><input id='minCrash' type='number' step='1' placeholder='0' /><label>型態數≥</label><input id='minPatternCount' type='number' step='1' placeholder='0' /></div>");
-            html.AppendLine("<div class='row'><label>指定型態</label><select id='patternFilter'><option value=''>全部</option></select><label>策略動作</label><select id='actionFilter'><option value=''>全部</option></select><label>建議倉位</label><select id='holdingFilter'><option value=''>全部</option></select><label>建議</label><select id='suggestionFilter'><option value=''>全部</option></select><label>近5日均分≥</label><input id='minAvg' type='number' step='0.1' placeholder='0' /><label><input id='trendUp' type='checkbox' /> 近5日分數趨勢上升</label></div>");
-            html.AppendLine("<div class='row'><label>連續天數</label><input id='minConDays' type='number' step='1' placeholder='0' /><label>分數≥</label><input id='minConScore' type='number' step='1' placeholder='60' value='60' /></div>");
-            html.AppendLine("</div>");
-            html.AppendLine("<div class=\"panel\"><table id=\"rankingTable\"><thead><tr>");
-            html.AppendLine("<th data-type='num'>排名</th><th data-type='text'>代號</th><th data-type='text'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險分</th><th data-type='num'>型態數</th><th data-type='text'>型態</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>近5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>三大法人買賣超</th><th data-type='num'>三大法人買賣超金額</th><th data-type='text'>策略動作</th><th data-type='text'>建議倉位</th><th data-type='text'>建議</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
+            html.AppendLine("<div class='filter-grid'>");
+            html.AppendLine("<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/策略' /></div>");
+            html.AppendLine("<div class='filter-group'><label>Top 數量</label><input id='topCount' type='number' min='1' placeholder='100' /></div>");
+            html.AppendLine("<div class='filter-group'><label>價格區間</label><div class='row-inputs'><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /></div></div>");
+            html.AppendLine("<div class='filter-group'><label>漲跌幅%</label><div class='row-inputs'><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div></div>");
+            html.AppendLine("<div class='filter-group'><label>法人買賣超</label><div class='row-inputs'><input id='minNet' type='number' step='1' placeholder='Min' /><input id='maxNet' type='number' step='1' placeholder='Max' /></div></div>");
+            html.AppendLine("<div class='filter-group'><label>買賣超金額</label><div class='row-inputs'><input id='minNetAmount' type='number' step='1' placeholder='Min' /><input id='maxNetAmount' type='number' step='1' placeholder='Max' /></div></div>");
+            html.AppendLine("<div class='filter-group'><label>最新分數 ≥</label><input id='minScore' type='number' step='1' placeholder='0' /></div>");
+            html.AppendLine("<div class='filter-group'><label>風險分數 ≦</label><input id='minCrash' type='number' step='1' placeholder='0' /></div>");
+            html.AppendLine("<div class='filter-group'><label>型態數量 ≥</label><input id='minPatternCount' type='number' step='1' placeholder='0' /></div>");
+            html.AppendLine("<div class='filter-group'><label>指定型態</label><select id='patternFilter'><option value=''>全部</option></select></div>");
+            html.AppendLine("<div class='filter-group'><label>策略動作</label><select id='actionFilter'><option value=''>全部</option></select></div>");
+            html.AppendLine("<div class='filter-group'><label>建議倉位</label><select id='holdingFilter'><option value=''>全部</option></select></div>");
+            html.AppendLine("<div class='filter-group'><label>綜合建議</label><select id='suggestionFilter'><option value=''>全部</option></select></div>");
+            html.AppendLine("<div class='filter-group'><label>5日均分 ≥</label><input id='minAvg' type='number' step='0.1' placeholder='0' /></div>");
+            html.AppendLine("<div class='filter-group'><label>連續天數條件</label><div class='row-inputs'><input id='minConDays' type='number' step='1' placeholder='天數' /><input id='minConScore' type='number' step='1' placeholder='分數' value='60' /></div></div>");
+            html.AppendLine("<div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>");
+            html.AppendLine("</div>"); // filter-grid
+            html.AppendLine("</div>"); // panel
+
+            // 資料表格
+            html.AppendLine("<div class=\"table-container\"><table id=\"rankingTable\"><thead><tr>");
+            html.AppendLine("<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣</th><th data-type='num'>買賣金額</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
             html.AppendLine("</tr></thead><tbody>");
             html.AppendLine(rows);
             html.AppendLine("</tbody></table></div>");
+
+            // JavaScript 邏輯 (保持原有篩選效能，僅微調與優化)
             html.AppendLine("<script>");
             html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const $=id=>document.getElementById(id);const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
             html.AppendLine("function num(v){const n=parseFloat(v);return Number.isFinite(n)?n:null;}function txt(cell){return (cell.textContent||'').trim();}function lower(cell){return txt(cell).toLowerCase();}");
