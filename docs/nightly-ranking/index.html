@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="format-detection" content="telephone=no" />
 <title>StockTracker 全市場排名 (2026/07/06)</title>
 <style>
 :root{--bg:#0d1117;--panel-bg:#161b22;--border:#30363d;--text:#c9d1d9;--text-muted:#8b949e;--primary:#1f6feb;--rise:#ff453a;--fall:#32d74b;--flat:#8e8e93;}
@@ -11,12 +12,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 h2{margin:0 0 4px 0;font-size:22px;font-weight:600;color:#fff;}
 .muted{color:var(--text-muted);font-size:13px;margin-bottom:16px;}
 .panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}
-.filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px; transition: all 0.3s;}
+.filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px;}
 .filter-group{display:flex;flex-direction:column;gap:4px;}
 .filter-group.row-inputs{flex-direction:row;align-items:center;gap:8px;}
 .filter-group.row-inputs input{width:100%;}
 .checkbox-group{flex-direction:row;align-items:center;gap:8px;padding-top:20px;}
-label{font-size:12px;font-weight:500;color:var(--text-muted); text-transform:uppercase;}
+label{font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;}
 input,select{background:#21262d;color:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;width:100%;transition:border-color 0.2s;}
 input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(31,111,235,0.2);}
 input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--primary);}
@@ -47,7 +48,7 @@ tr:hover{background:#21262d;}
 <h2>全市場掃描排名</h2><div class="muted">資料日期：2026-07-06 &#183; 筆數：2334</div>
 <div class="panel">
 <div class='filter-grid'>
-<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/策略' /></div>
+<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/建議/策略' /></div>
 <div class='filter-group'><label>Top 數量</label><input id='topCount' type='number' min='1' placeholder='100' /></div>
 <div class='filter-group'><label>價格區間</label><div class='row-inputs'><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /></div></div>
 <div class='filter-group'><label>漲跌幅%</label><div class='row-inputs'><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div></div>
@@ -2410,7 +2411,13 @@ function fillSelect(col,sel){const vals=[...new Set([...tbody.rows].map(r=>txt(r
 fillSelect(6,f.pattern);fillSelect(16,f.action);fillSelect(17,f.holding);fillSelect(18,f.suggestion);
 function passRange(value,min,max){if(min!==null&&value<min)return false;if(max!==null&&value>max)return false;return true;}
 function consecutiveDays(row,minScore){const d=[num(txt(row.cells[7]))||0,num(txt(row.cells[8]))||0,num(txt(row.cells[9]))||0,num(txt(row.cells[10]))||0,num(txt(row.cells[11]))||0];let s=0;for(const v of d){if(v<minScore)break;s++;}return s;}
-function applyFilter(){const kw=(f.search.value||'').trim().toLowerCase();const top=num(f.top.value);const minPrice=num(f.minPrice.value),maxPrice=num(f.maxPrice.value),minChange=num(f.minChange.value),maxChange=num(f.maxChange.value),minNet=num(f.minNet.value),maxNet=num(f.maxNet.value),minNetAmount=num(f.minNetAmount.value),maxNetAmount=num(f.maxNetAmount.value),minScore=num(f.minScore.value),minCrash=num(f.minCrash.value),minPatternCount=num(f.minPatternCount.value),minAvg=num(f.minAvg.value),minConDays=Math.max(0,num(f.minConDays.value)||0),minConScore=num(f.minConScore.value)??60;const pattern=f.pattern.value,action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;[...tbody.rows].forEach(r=>{const rank=num(txt(r.cells[0]))||0;const score=num(txt(r.cells[3]))||0;const crash=num(txt(r.cells[4]))||0;const pcount=num(txt(r.cells[5]))||0;const avg=num(txt(r.cells[12]))||0;const trend=num(txt(r.cells[13]))||0;const net=num(txt(r.cells[14]))||0;const netAmount=num(txt(r.cells[15]))||0;const price=num(txt(r.cells[19]))||0;const chg=num(txt(r.cells[20]))||0;const text=r.textContent.toLowerCase();let ok=true;if(top!==null&&rank>top)ok=false;if(kw&&text.indexOf(kw)<0)ok=false;if(!passRange(price,minPrice,maxPrice))ok=false;if(!passRange(chg,minChange,maxChange))ok=false;if(!passRange(net,minNet,maxNet))ok=false;if(!passRange(netAmount,minNetAmount,maxNetAmount))ok=false;if(minScore!==null&&score<minScore)ok=false;if(minCrash!==null&&crash>minCrash)ok=false;if(minPatternCount!==null&&pcount<minPatternCount)ok=false;if(pattern&&lower(r.cells[6]).indexOf(pattern.toLowerCase())<0)ok=false;if(action&&txt(r.cells[16])!==action)ok=false;if(holding&&txt(r.cells[17])!==holding)ok=false;if(suggestion&&txt(r.cells[18])!==suggestion)ok=false;if(minAvg!==null&&avg<minAvg)ok=false;if(trendUp&&trend<=0)ok=false;if(minConDays>0&&consecutiveDays(r,minConScore)<minConDays)ok=false;r.style.display=ok?'':'none';});}
+function applyFilter(){const kw=(f.search.value||'').trim().toLowerCase();const top=num(f.top.value);const minPrice=num(f.minPrice.value),maxPrice=num(f.maxPrice.value),minChange=num(f.minChange.value),maxChange=num(f.maxChange.value),minNet=num(f.minNet.value),maxNet=num(f.maxNet.value),minNetAmount=num(f.minNetAmount.value),maxNetAmount=num(f.maxNetAmount.value),minScore=num(f.minScore.value),minCrash=num(f.minCrash.value),minPatternCount=num(f.minPatternCount.value),minAvg=num(f.minAvg.value),minConDays=Math.max(0,num(f.minConDays.value)||0),minConScore=num(f.minConScore.value)??60;const pattern=f.pattern.value,action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;[...tbody.rows].forEach(r=>{const rank=num(txt(r.cells[0]))||0;const score=num(txt(r.cells[3]))||0;const crash=num(txt(r.cells[4]))||0;const pcount=num(txt(r.cells[5]))||0;const avg=num(txt(r.cells[12]))||0;const trend=num(txt(r.cells[13]))||0;const net=num(txt(r.cells[14]))||0;const netAmount=num(txt(r.cells[15]))||0;const price=num(txt(r.cells[19]))||0;const chg=num(txt(r.cells[20]))||0;let ok=true;
+if(top!==null&&rank>top)ok=false;
+if(kw){
+  const s_symbol=lower(r.cells[1]), s_name=lower(r.cells[2]), s_pat=lower(r.cells[6]), s_act=lower(r.cells[16]), s_sug=lower(r.cells[18]);
+  if(s_symbol.indexOf(kw)<0 && s_name.indexOf(kw)<0 && s_pat.indexOf(kw)<0 && s_act.indexOf(kw)<0 && s_sug.indexOf(kw)<0) ok=false;
+}
+if(!passRange(price,minPrice,maxPrice))ok=false;if(!passRange(chg,minChange,maxChange))ok=false;if(!passRange(net,minNet,maxNet))ok=false;if(!passRange(netAmount,minNetAmount,maxNetAmount))ok=false;if(minScore!==null&&score<minScore)ok=false;if(minCrash!==null&&crash>minCrash)ok=false;if(minPatternCount!==null&&pcount<minPatternCount)ok=false;if(pattern&&lower(r.cells[6]).indexOf(pattern.toLowerCase())<0)ok=false;if(action&&txt(r.cells[16])!==action)ok=false;if(holding&&txt(r.cells[17])!==holding)ok=false;if(suggestion&&txt(r.cells[18])!==suggestion)ok=false;if(minAvg!==null&&avg<minAvg)ok=false;if(trendUp&&trend<=0)ok=false;if(minConDays>0&&consecutiveDays(r,minConScore)<minConDays)ok=false;r.style.display=ok?'':'none';});}
 Object.values(f).forEach(el=>{if(!el)return;const evt=(el.type==='checkbox'||el.tagName==='SELECT')?'change':'input';el.addEventListener(evt,applyFilter);});
 let sortState={idx:0,asc:true};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=txt(a.cells[idx]),vb=txt(b.cells[idx]);if(type==='num'){va=parseFloat(va)||0;vb=parseFloat(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));applyFilter();});});
 </script>
