@@ -1016,8 +1016,8 @@ namespace StockTracker.ViewModels
             html.AppendLine("<head>");
             html.AppendLine("<meta charset=\"utf-8\" />");
             html.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />");
-            // 【修正點 1】禁止 iOS 裝置將數字自動識別為電話號碼與連結
-            html.AppendLine("<meta name=\"format-detection\" content=\"telephone=no\" />");
+            // 【解決數字變超連結】禁止行動裝置將數字自動識別為電話號碼與地圖連結
+            html.AppendLine("<meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\" />");
             html.AppendLine($"<title>StockTracker 全市場排名 ({latestKLineDateText})</title>");
             html.AppendLine("<style>");
             html.AppendLine(":root{--bg:#0d1117;--panel-bg:#161b22;--border:#30363d;--text:#c9d1d9;--text-muted:#8b949e;--primary:#1f6feb;--rise:#ff453a;--fall:#32d74b;--flat:#8e8e93;}");
@@ -1093,7 +1093,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("function passRange(value,min,max){if(min!==null&&value<min)return false;if(max!==null&&value>max)return false;return true;}");
             html.AppendLine("function consecutiveDays(row,minScore){const d=[num(txt(row.cells[7]))||0,num(txt(row.cells[8]))||0,num(txt(row.cells[9]))||0,num(txt(row.cells[10]))||0,num(txt(row.cells[11]))||0];let s=0;for(const v of d){if(v<minScore)break;s++;}return s;}");
 
-            // 【修正點 2】針對特定文字欄位精準比對，大幅提升搜尋效能，不卡頓
+            // 【效能優化點】精準抽取特定文字欄位比對，避開對整列 textContent 的沉重遍歷
             html.AppendLine("function applyFilter(){const kw=(f.search.value||'').trim().toLowerCase();const top=num(f.top.value);const minPrice=num(f.minPrice.value),maxPrice=num(f.maxPrice.value),minChange=num(f.minChange.value),maxChange=num(f.maxChange.value),minNet=num(f.minNet.value),maxNet=num(f.maxNet.value),minNetAmount=num(f.minNetAmount.value),maxNetAmount=num(f.maxNetAmount.value),minScore=num(f.minScore.value),minCrash=num(f.minCrash.value),minPatternCount=num(f.minPatternCount.value),minAvg=num(f.minAvg.value),minConDays=Math.max(0,num(f.minConDays.value)||0),minConScore=num(f.minConScore.value)??60;const pattern=f.pattern.value,action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;[...tbody.rows].forEach(r=>{const rank=num(txt(r.cells[0]))||0;const score=num(txt(r.cells[3]))||0;const crash=num(txt(r.cells[4]))||0;const pcount=num(txt(r.cells[5]))||0;const avg=num(txt(r.cells[12]))||0;const trend=num(txt(r.cells[13]))||0;const net=num(txt(r.cells[14]))||0;const netAmount=num(txt(r.cells[15]))||0;const price=num(txt(r.cells[19]))||0;const chg=num(txt(r.cells[20]))||0;let ok=true;");
             html.AppendLine("if(top!==null&&rank>top)ok=false;");
             html.AppendLine("if(kw){");
