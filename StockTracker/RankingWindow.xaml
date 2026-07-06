@@ -114,7 +114,7 @@
                                     <TextBox Text="{Binding MinLatestScoreFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
-                                    <TextBlock Text="風險分數 ≥" Margin="0,0,0,4" />
+                                    <TextBlock Text="風險分數 ≦" Margin="0,0,0,4" />
                                     <TextBox Text="{Binding MinCrashRiskScoreFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
