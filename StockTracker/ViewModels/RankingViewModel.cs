@@ -1016,28 +1016,25 @@ namespace StockTracker.ViewModels
             html.AppendLine("<head>");
             html.AppendLine("<meta charset=\"utf-8\" />");
             html.AppendLine("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />");
+            // 【修正點 1】禁止 iOS 裝置將數字自動識別為電話號碼與連結
+            html.AppendLine("<meta name=\"format-detection\" content=\"telephone=no\" />");
             html.AppendLine($"<title>StockTracker 全市場排名 ({latestKLineDateText})</title>");
             html.AppendLine("<style>");
-            // 全域與主題變數
             html.AppendLine(":root{--bg:#0d1117;--panel-bg:#161b22;--border:#30363d;--text:#c9d1d9;--text-muted:#8b949e;--primary:#1f6feb;--rise:#ff453a;--fall:#32d74b;--flat:#8e8e93;}");
             html.AppendLine("*{box-sizing:border-box;}");
             html.AppendLine("body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;margin:0;padding:16px;line-height:1.5;}");
             html.AppendLine("h2{margin:0 0 4px 0;font-size:22px;font-weight:600;color:#fff;}");
             html.AppendLine(".muted{color:var(--text-muted);font-size:13px;margin-bottom:16px;}");
-
-            // 現代化 Grid 篩選面板
             html.AppendLine(".panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
-            html.AppendLine(".filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px; transition: all 0.3s;}");
+            html.AppendLine(".filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px;}");
             html.AppendLine(".filter-group{display:flex;flex-direction:column;gap:4px;}");
             html.AppendLine(".filter-group.row-inputs{flex-direction:row;align-items:center;gap:8px;}");
             html.AppendLine(".filter-group.row-inputs input{width:100%;}");
             html.AppendLine(".checkbox-group{flex-direction:row;align-items:center;gap:8px;padding-top:20px;}");
-            html.AppendLine("label{font-size:12px;font-weight:500;color:var(--text-muted); text-transform:uppercase;}");
+            html.AppendLine("label{font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;}");
             html.AppendLine("input,select{background:#21262d;color:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;width:100%;transition:border-color 0.2s;}");
             html.AppendLine("input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(31,111,235,0.2);}");
             html.AppendLine("input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--primary);}");
-
-            // 表格 RWD 滾動容器
             html.AppendLine(".table-container{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;overflow-x:auto;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
             html.AppendLine("table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}");
             html.AppendLine("th,td{border-bottom:1px solid var(--border);padding:10px 12px;text-align:center;}");
@@ -1046,8 +1043,6 @@ namespace StockTracker.ViewModels
             html.AppendLine("th:hover{background:#282e38;}");
             html.AppendLine("tr{transition:background 0.15s;}");
             html.AppendLine("tr:hover{background:#21262d;}");
-
-            // 手機版凍結前三欄 (排名、代號、名稱)，體驗大幅提升
             html.AppendLine("@media(max-width:768px){");
             html.AppendLine("  .filter-grid{grid-template-columns:1fr 1fr;}");
             html.AppendLine("  .checkbox-group{padding-top:0;}");
@@ -1055,8 +1050,6 @@ namespace StockTracker.ViewModels
             html.AppendLine("  th.sticky-col{z-index:3;background:#1f242c;}");
             html.AppendLine("  tr:hover .sticky-col{background:#21262d;}");
             html.AppendLine("}");
-
-            // 視覺優化
             html.AppendLine(".font-mono{font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,monospace;}");
             html.AppendLine(".badge{display:inline-block;padding:2px 6px;border-radius:4px;font-weight:600;font-size:12px;}");
             html.AppendLine(".score-badge{background:rgba(31,111,235,0.15);color:#58a6ff;}");
@@ -1066,14 +1059,10 @@ namespace StockTracker.ViewModels
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
-
-            // 網頁標頭
             html.AppendLine($"<h2>全市場掃描排名</h2><div class=\"muted\">{HtmlEncode(updateSummary)}</div>");
-
-            // 篩選面板
             html.AppendLine("<div class=\"panel\">");
             html.AppendLine("<div class='filter-grid'>");
-            html.AppendLine("<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/策略' /></div>");
+            html.AppendLine("<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/建議/策略' /></div>");
             html.AppendLine("<div class='filter-group'><label>Top 數量</label><input id='topCount' type='number' min='1' placeholder='100' /></div>");
             html.AppendLine("<div class='filter-group'><label>價格區間</label><div class='row-inputs'><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>漲跌幅%</label><div class='row-inputs'><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div></div>");
@@ -1089,17 +1078,13 @@ namespace StockTracker.ViewModels
             html.AppendLine("<div class='filter-group'><label>5日均分 ≥</label><input id='minAvg' type='number' step='0.1' placeholder='0' /></div>");
             html.AppendLine("<div class='filter-group'><label>連續天數條件</label><div class='row-inputs'><input id='minConDays' type='number' step='1' placeholder='天數' /><input id='minConScore' type='number' step='1' placeholder='分數' value='60' /></div></div>");
             html.AppendLine("<div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>");
-            html.AppendLine("</div>"); // filter-grid
-            html.AppendLine("</div>"); // panel
-
-            // 資料表格
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
             html.AppendLine("<div class=\"table-container\"><table id=\"rankingTable\"><thead><tr>");
             html.AppendLine("<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣</th><th data-type='num'>買賣金額</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
             html.AppendLine("</tr></thead><tbody>");
             html.AppendLine(rows);
             html.AppendLine("</tbody></table></div>");
-
-            // JavaScript 邏輯 (保持原有篩選效能，僅微調與優化)
             html.AppendLine("<script>");
             html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const $=id=>document.getElementById(id);const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
             html.AppendLine("function num(v){const n=parseFloat(v);return Number.isFinite(n)?n:null;}function txt(cell){return (cell.textContent||'').trim();}function lower(cell){return txt(cell).toLowerCase();}");
@@ -1107,7 +1092,16 @@ namespace StockTracker.ViewModels
             html.AppendLine("fillSelect(6,f.pattern);fillSelect(16,f.action);fillSelect(17,f.holding);fillSelect(18,f.suggestion);");
             html.AppendLine("function passRange(value,min,max){if(min!==null&&value<min)return false;if(max!==null&&value>max)return false;return true;}");
             html.AppendLine("function consecutiveDays(row,minScore){const d=[num(txt(row.cells[7]))||0,num(txt(row.cells[8]))||0,num(txt(row.cells[9]))||0,num(txt(row.cells[10]))||0,num(txt(row.cells[11]))||0];let s=0;for(const v of d){if(v<minScore)break;s++;}return s;}");
-            html.AppendLine("function applyFilter(){const kw=(f.search.value||'').trim().toLowerCase();const top=num(f.top.value);const minPrice=num(f.minPrice.value),maxPrice=num(f.maxPrice.value),minChange=num(f.minChange.value),maxChange=num(f.maxChange.value),minNet=num(f.minNet.value),maxNet=num(f.maxNet.value),minNetAmount=num(f.minNetAmount.value),maxNetAmount=num(f.maxNetAmount.value),minScore=num(f.minScore.value),minCrash=num(f.minCrash.value),minPatternCount=num(f.minPatternCount.value),minAvg=num(f.minAvg.value),minConDays=Math.max(0,num(f.minConDays.value)||0),minConScore=num(f.minConScore.value)??60;const pattern=f.pattern.value,action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;[...tbody.rows].forEach(r=>{const rank=num(txt(r.cells[0]))||0;const score=num(txt(r.cells[3]))||0;const crash=num(txt(r.cells[4]))||0;const pcount=num(txt(r.cells[5]))||0;const avg=num(txt(r.cells[12]))||0;const trend=num(txt(r.cells[13]))||0;const net=num(txt(r.cells[14]))||0;const netAmount=num(txt(r.cells[15]))||0;const price=num(txt(r.cells[19]))||0;const chg=num(txt(r.cells[20]))||0;const text=r.textContent.toLowerCase();let ok=true;if(top!==null&&rank>top)ok=false;if(kw&&text.indexOf(kw)<0)ok=false;if(!passRange(price,minPrice,maxPrice))ok=false;if(!passRange(chg,minChange,maxChange))ok=false;if(!passRange(net,minNet,maxNet))ok=false;if(!passRange(netAmount,minNetAmount,maxNetAmount))ok=false;if(minScore!==null&&score<minScore)ok=false;if(minCrash!==null&&crash>minCrash)ok=false;if(minPatternCount!==null&&pcount<minPatternCount)ok=false;if(pattern&&lower(r.cells[6]).indexOf(pattern.toLowerCase())<0)ok=false;if(action&&txt(r.cells[16])!==action)ok=false;if(holding&&txt(r.cells[17])!==holding)ok=false;if(suggestion&&txt(r.cells[18])!==suggestion)ok=false;if(minAvg!==null&&avg<minAvg)ok=false;if(trendUp&&trend<=0)ok=false;if(minConDays>0&&consecutiveDays(r,minConScore)<minConDays)ok=false;r.style.display=ok?'':'none';});}");
+
+            // 【修正點 2】針對特定文字欄位精準比對，大幅提升搜尋效能，不卡頓
+            html.AppendLine("function applyFilter(){const kw=(f.search.value||'').trim().toLowerCase();const top=num(f.top.value);const minPrice=num(f.minPrice.value),maxPrice=num(f.maxPrice.value),minChange=num(f.minChange.value),maxChange=num(f.maxChange.value),minNet=num(f.minNet.value),maxNet=num(f.maxNet.value),minNetAmount=num(f.minNetAmount.value),maxNetAmount=num(f.maxNetAmount.value),minScore=num(f.minScore.value),minCrash=num(f.minCrash.value),minPatternCount=num(f.minPatternCount.value),minAvg=num(f.minAvg.value),minConDays=Math.max(0,num(f.minConDays.value)||0),minConScore=num(f.minConScore.value)??60;const pattern=f.pattern.value,action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;[...tbody.rows].forEach(r=>{const rank=num(txt(r.cells[0]))||0;const score=num(txt(r.cells[3]))||0;const crash=num(txt(r.cells[4]))||0;const pcount=num(txt(r.cells[5]))||0;const avg=num(txt(r.cells[12]))||0;const trend=num(txt(r.cells[13]))||0;const net=num(txt(r.cells[14]))||0;const netAmount=num(txt(r.cells[15]))||0;const price=num(txt(r.cells[19]))||0;const chg=num(txt(r.cells[20]))||0;let ok=true;");
+            html.AppendLine("if(top!==null&&rank>top)ok=false;");
+            html.AppendLine("if(kw){");
+            html.AppendLine("  const s_symbol=lower(r.cells[1]), s_name=lower(r.cells[2]), s_pat=lower(r.cells[6]), s_act=lower(r.cells[16]), s_sug=lower(r.cells[18]);");
+            html.AppendLine("  if(s_symbol.indexOf(kw)<0 && s_name.indexOf(kw)<0 && s_pat.indexOf(kw)<0 && s_act.indexOf(kw)<0 && s_sug.indexOf(kw)<0) ok=false;");
+            html.AppendLine("}");
+            html.AppendLine("if(!passRange(price,minPrice,maxPrice))ok=false;if(!passRange(chg,minChange,maxChange))ok=false;if(!passRange(net,minNet,maxNet))ok=false;if(!passRange(netAmount,minNetAmount,maxNetAmount))ok=false;if(minScore!==null&&score<minScore)ok=false;if(minCrash!==null&&crash>minCrash)ok=false;if(minPatternCount!==null&&pcount<minPatternCount)ok=false;if(pattern&&lower(r.cells[6]).indexOf(pattern.toLowerCase())<0)ok=false;if(action&&txt(r.cells[16])!==action)ok=false;if(holding&&txt(r.cells[17])!==holding)ok=false;if(suggestion&&txt(r.cells[18])!==suggestion)ok=false;if(minAvg!==null&&avg<minAvg)ok=false;if(trendUp&&trend<=0)ok=false;if(minConDays>0&&consecutiveDays(r,minConScore)<minConDays)ok=false;r.style.display=ok?'':'none';});}");
+
             html.AppendLine("Object.values(f).forEach(el=>{if(!el)return;const evt=(el.type==='checkbox'||el.tagName==='SELECT')?'change':'input';el.addEventListener(evt,applyFilter);});");
             html.AppendLine("let sortState={idx:0,asc:true};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=txt(a.cells[idx]),vb=txt(b.cells[idx]);if(type==='num'){va=parseFloat(va)||0;vb=parseFloat(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));applyFilter();});});");
             html.AppendLine("</script>");
