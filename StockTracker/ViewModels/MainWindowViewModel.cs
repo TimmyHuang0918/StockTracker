@@ -488,11 +488,6 @@ namespace StockTracker.ViewModels
 
         private async Task EnsureConnectedBeforeNightlyAsync()
         {
-            if (_apiService.ServiceStatus.Item1 == 1)
-            {
-                return;
-            }
-
             try
             {
                 var credentialFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "login.dat");
