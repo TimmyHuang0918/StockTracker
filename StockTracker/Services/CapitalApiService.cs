@@ -16,7 +16,7 @@ namespace StockTracker.Services
     public class CapitalApiService
     {
         private readonly HashSet<string> _subscribedSymbols = new HashSet<string>();
-        private readonly SKAPI _api = App.Api;
+        private SKAPI _api = App.Api;
         private bool _isSkEventsRegistered;
         private bool _isSkQuoteConnectionReady;
         private TaskCompletionSource<bool> _quoteConnectionReadyTcs;
@@ -62,10 +62,7 @@ namespace StockTracker.Services
 
         public async Task<bool> LoginAsync(string account, string password)
         {
-            if (IsLoggedIn)
-            {
-                return true;
-            }
+            IsLoggedIn = false;
 
             if (string.IsNullOrWhiteSpace(account) || string.IsNullOrWhiteSpace(password))
             {
@@ -73,6 +70,10 @@ namespace StockTracker.Services
             }
 
             RegisterSkEventsIfNeeded();
+
+            _isSkQuoteConnectionReady = false;
+            _quoteConnectionReadyTcs = null;
+
             var resultCode = _api.SKCenterLib_Login(account.Trim(), password);
             if (resultCode != 0)
             {
@@ -93,7 +94,7 @@ namespace StockTracker.Services
 
         public async Task ReLogin()
         {
-            LoginAsync(Account, Password);
+            await LoginAsync(Account, Password);
         }
 
         public async Task SubscribeAsync(string symbol)

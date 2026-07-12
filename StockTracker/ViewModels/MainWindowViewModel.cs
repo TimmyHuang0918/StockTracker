@@ -512,7 +512,6 @@ namespace StockTracker.ViewModels
                 {
                     return;
                 }
-
                 await _apiService.LoginAsync(account, password);
             }
             catch (Exception ex)
