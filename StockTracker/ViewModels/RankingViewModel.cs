@@ -972,6 +972,33 @@ namespace StockTracker.ViewModels
             return filePath;
         }
 
+        // 輔助方法：格式化法人買賣超張數（加入正負號與千分位）
+        private static string FormatNetShares(double value)
+        {
+            if (value == 0) return "0";
+            string sign = value > 0 ? "+" : "";
+            return $"{sign}{value:N0}"; // N0 會格式化為 +1,234 或 -567
+        }
+
+        // 輔助方法：格式化買賣金額（轉為億、萬單位，並加上正負號）
+        private static string FormatMoney(double value)
+        {
+            if (value == 0) return "0";
+            string sign = value > 0 ? "+" : "";
+            double absVal = Math.Abs(value);
+
+            // 假設原本欄位數值單位是「元」
+            if (absVal >= 100000000) // 大於等於 1 億
+            {
+                return $"{sign}{(value / 100000000).ToString("F2", CultureInfo.InvariantCulture)}億";
+            }
+            if (absVal >= 10000) // 大於等於 1 萬
+            {
+                return $"{sign}{(value / 10000).ToString("F0", CultureInfo.InvariantCulture)}萬";
+            }
+            return $"{sign}{value:N0}";
+        }
+
         public string BuildRankingWebsiteHtml()
         {
             var exportStocks = GetCurrentViewStocks();
@@ -1001,8 +1028,8 @@ namespace StockTracker.ViewModels
                 $"<td>{s.ScoreDay4}</td>" +
                 $"<td>{s.AverageRecentScore.ToString("F1", CultureInfo.InvariantCulture)}</td>" +
                 $"<td>{s.ScoreTrend}</td>" +
-                $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNet)}'>{s.ThreeMajorNet}</td>" +
-                $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNetAmount)}'>{s.ThreeMajorNetAmount.ToString(CultureInfo.InvariantCulture)}</td>" +
+                $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNet)}'>{FormatNetShares((double)s.ThreeMajorNet)}</td>" +
+                $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNetAmount)}'>{FormatMoney((double)s.ThreeMajorNetAmount)}</td>" +
                 $"<td>{HtmlEncode(s.StrategyActionText)}</td>" +
                 $"<td>{HtmlEncode(s.StrategyStageLabel)}</td>" +
                 $"<td class='text-left'>{HtmlEncode(s.Suggestion)}</td>" +
@@ -1019,11 +1046,20 @@ namespace StockTracker.ViewModels
             html.AppendLine("<meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\" />");
             html.AppendLine($"<title>StockTracker 全市場排名 ({latestKLineDateText})</title>");
             html.AppendLine("<style>");
-            html.AppendLine(":root{--bg:#0d1117;--panel-bg:#161b22;--border:#30363d;--text:#c9d1d9;--text-muted:#8b949e;--primary:#1f6feb;--rise:#ff453a;--fall:#32d74b;--flat:#8e8e93;}");
+            html.AppendLine(":root{--bg:#0d1117;--panel-bg:#161b22;--border:#30363d;--text:#c9d1d9;--text-muted:#8b949e;--primary:#1f6feb;--primary-hover:#388bfd;--rise:#ff453a;--fall:#32d74b;--flat:#8e8e93;}");
             html.AppendLine("*{box-sizing:border-box;}");
             html.AppendLine("body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;margin:0;padding:16px;line-height:1.5;}");
+
+            // 頂部列排版樣式
+            html.AppendLine(".header-bar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px;}");
+            html.AppendLine(".header-title{flex:1;}");
             html.AppendLine("h2{margin:0 0 4px 0;font-size:22px;font-weight:600;color:#fff;}");
-            html.AppendLine(".muted{color:var(--text-muted);font-size:13px;margin-bottom:16px;}");
+            html.AppendLine(".muted{color:var(--text-muted);font-size:13px;margin:0;}");
+
+            // 下載按鈕排版與微調樣式
+            html.AppendLine(".btn-csv{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:background 0.2s;display:inline-flex;align-items:center;gap:6px;height:38px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);}");
+            html.AppendLine(".btn-csv:hover{background:var(--primary-hover);}");
+
             html.AppendLine(".panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
             html.AppendLine(".filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px;}");
             html.AppendLine(".filter-group{display:flex;flex-direction:column;gap:4px;}");
@@ -1042,13 +1078,18 @@ namespace StockTracker.ViewModels
             html.AppendLine("th:hover{background:#282e38;}");
             html.AppendLine("tr{transition:background 0.15s;}");
             html.AppendLine("tr:hover{background:#21262d;}");
+
+            // 響應式排版調整
             html.AppendLine("@media(max-width:768px){");
+            html.AppendLine("  .header-bar{flex-direction:column;align-items:stretch;gap:12px;}");
+            html.AppendLine("  .btn-csv{justify-content:center;width:100%;}");
             html.AppendLine("  .filter-grid{grid-template-columns:1fr 1fr;}");
             html.AppendLine("  .checkbox-group{padding-top:0;}");
             html.AppendLine("  .sticky-col{position:sticky;left:0;background:var(--panel-bg);z-index:1;box-shadow:2px 0 5px rgba(0,0,0,0.2);}");
             html.AppendLine("  th.sticky-col{z-index:3;background:#1f242c;}");
             html.AppendLine("  tr:hover .sticky-col{background:#21262d;}");
             html.AppendLine("}");
+
             html.AppendLine(".font-mono{font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,monospace;}");
             html.AppendLine(".badge{display:inline-block;padding:2px 6px;border-radius:4px;font-weight:600;font-size:12px;}");
             html.AppendLine(".score-badge{background:rgba(31,111,235,0.15);color:#58a6ff;}");
@@ -1058,7 +1099,18 @@ namespace StockTracker.ViewModels
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
-            html.AppendLine($"<h2>全市場掃描排名</h2><div class=\"muted\">{HtmlEncode(updateSummary)}</div>");
+
+            // 下載 CSV 按鈕放至網頁頂部（與標題並排）
+            html.AppendLine("<div class='header-bar'>");
+            html.AppendLine("  <div class='header-title'>");
+            html.AppendLine("    <h2>全市場掃描排名</h2>");
+            html.AppendLine($"    <div class=\"muted\">{HtmlEncode(updateSummary)}</div>");
+            html.AppendLine("  </div>");
+            html.AppendLine("  <div>");
+            html.AppendLine("    <button id='btnDownloadCsv' class='btn-csv'>💾 下載 CSV 檔</button>");
+            html.AppendLine("  </div>");
+            html.AppendLine("</div>");
+
             html.AppendLine("<div class=\"panel\">");
             html.AppendLine("<div class='filter-grid'>");
             html.AppendLine("<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/建議/策略' /></div>");
@@ -1086,7 +1138,24 @@ namespace StockTracker.ViewModels
             html.AppendLine("</tbody></table></div>");
             html.AppendLine("<script>");
             html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const $=id=>document.getElementById(id);const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
-            html.AppendLine("function num(v){const n=parseFloat(v);return Number.isFinite(n)?n:null;}function txt(cell){return (cell.textContent||'').trim();}function lower(cell){return txt(cell).toLowerCase();}");
+
+            // JS 數值解析函數
+            html.AppendLine("function num(v){");
+            html.AppendLine("  if(!v) return null;");
+            html.AppendLine("  let s = v.toString().replace(/,/g, '').replace(/^\\+/, '').trim();");
+            html.AppendLine("  let multiplier = 1;");
+            html.AppendLine("  if (s.includes('億')) {");
+            html.AppendLine("    multiplier = 100000000;");
+            html.AppendLine("    s = s.replace('億', '');");
+            html.AppendLine("  } else if (s.includes('萬')) {");
+            html.AppendLine("    multiplier = 10000;");
+            html.AppendLine("    s = s.replace('萬', '');");
+            html.AppendLine("  }");
+            html.AppendLine("  const n = parseFloat(s) * multiplier;");
+            html.AppendLine("  return Number.isFinite(n) ? n : null;");
+            html.AppendLine("}");
+
+            html.AppendLine("function txt(cell){return (cell.textContent||'').trim();}function lower(cell){return txt(cell).toLowerCase();}");
             html.AppendLine("function fillSelect(col,sel){const vals=[...new Set([...tbody.rows].map(r=>txt(r.cells[col])).filter(x=>x))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}");
             html.AppendLine("fillSelect(6,f.pattern);fillSelect(16,f.action);fillSelect(17,f.holding);fillSelect(18,f.suggestion);");
             html.AppendLine("function passRange(value,min,max){if(min!==null&&value<min)return false;if(max!==null&&value>max)return false;return true;}");
@@ -1101,7 +1170,29 @@ namespace StockTracker.ViewModels
             html.AppendLine("if(!passRange(price,minPrice,maxPrice))ok=false;if(!passRange(chg,minChange,maxChange))ok=false;if(!passRange(net,minNet,maxNet))ok=false;if(!passRange(netAmount,minNetAmount,maxNetAmount))ok=false;if(minScore!==null&&score<minScore)ok=false;if(minCrash!==null&&crash>minCrash)ok=false;if(minPatternCount!==null&&pcount<minPatternCount)ok=false;if(pattern&&lower(r.cells[6]).indexOf(pattern.toLowerCase())<0)ok=false;if(action&&txt(r.cells[16])!==action)ok=false;if(holding&&txt(r.cells[17])!==holding)ok=false;if(suggestion&&txt(r.cells[18])!==suggestion)ok=false;if(minAvg!==null&&avg<minAvg)ok=false;if(trendUp&&trend<=0)ok=false;if(minConDays>0&&consecutiveDays(r,minConScore)<minConDays)ok=false;r.style.display=ok?'':'none';});}");
 
             html.AppendLine("Object.values(f).forEach(el=>{if(!el)return;const evt=(el.type==='checkbox'||el.tagName==='SELECT')?'change':'input';el.addEventListener(evt,applyFilter);});");
-            html.AppendLine("let sortState={idx:0,asc:true};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=txt(a.cells[idx]),vb=txt(b.cells[idx]);if(type==='num'){va=parseFloat(va)||0;vb=parseFloat(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));applyFilter();});});");
+            html.AppendLine("let sortState={idx:0,asc:true};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=txt(a.cells[idx]),vb=txt(b.cells[idx]);if(type==='num'){va=num(va)||0;vb=num(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));applyFilter();});});");
+
+            // CSV 匯出功能
+            html.AppendLine("document.getElementById('btnDownloadCsv').addEventListener('click', () => {");
+            html.AppendLine("  const csvRows = [];");
+            html.AppendLine("  const headers = [...table.tHead.rows[0].cells].map(th => `\"${txt(th).replace(/\"/g, '\"\"')}\"`);");
+            html.AppendLine("  csvRows.push(headers.join(','));");
+            html.AppendLine("  [...tbody.rows].forEach(row => {");
+            html.AppendLine("    if (row.style.display !== 'none') {");
+            html.AppendLine("      const cols = [...row.cells].map(td => `\"${txt(td).replace(/\"/g, '\"\"')}\"`);");
+            html.AppendLine("      csvRows.push(cols.join(','));");
+            html.AppendLine("    }");
+            html.AppendLine("  });");
+            html.AppendLine("  const csvString = csvRows.join('\\r\\n');");
+            html.AppendLine("  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvString], { type: 'text/csv;charset=utf-8;' });");
+            html.AppendLine("  const link = document.createElement('a');");
+            html.AppendLine("  const dateText = '" + latestKLineDateText.Replace("/", "-") + "';");
+            html.AppendLine("  link.href = URL.createObjectURL(blob);");
+            html.AppendLine("  link.download = `StockTracker_Ranking_${dateText}.csv`;");
+            html.AppendLine("  link.click();");
+            html.AppendLine("  URL.revokeObjectURL(link.href);");
+            html.AppendLine("});");
+
             html.AppendLine("</script>");
             html.AppendLine("</body></html>");
             return html.ToString();
