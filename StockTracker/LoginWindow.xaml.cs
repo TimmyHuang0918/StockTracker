@@ -22,6 +22,11 @@ namespace StockTracker
             vm.LoginSucceeded += OnLoginSucceeded;
             DataContext = vm;
             LoadSavedCredentials();
+
+            if (App.IsNightlyAutomationRestart)
+            {
+                Loaded += async (s, e) => await TryAutoLoginForNightlyAutomation();
+            }
         }
         private void PasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
         {
@@ -171,6 +176,28 @@ namespace StockTracker
                     kLineType = 4;
                     minuteNumber = 1;
                     break;
+            }
+        }
+
+        private async System.Threading.Tasks.Task TryAutoLoginForNightlyAutomation()
+        {
+            if (!(DataContext is LoginViewModel vm))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(vm.Account) || string.IsNullOrWhiteSpace(vm.Password))
+            {
+                vm.StatusMessage = "無法自動登入：未儲存帳號密碼";
+                return;
+            }
+
+            vm.StatusMessage = "夜間排程：自動登入中...";
+            await System.Threading.Tasks.Task.Delay(500);
+
+            if (vm.LoginCommand.CanExecute(null))
+            {
+                vm.LoginCommand.Execute(null);
             }
         }
 

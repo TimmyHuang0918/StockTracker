@@ -341,7 +341,17 @@ namespace StockTracker.ViewModels
                 MainPageProgressValue = 75;
                 await AddOrSubscribeAsync(symbols, names);
                 MainPageProgressValue = 100;
-                EnsureNightlyAutomationTimer();
+
+                if (App.IsNightlyAutomationRestart)
+                {
+                    SystemMessage = "夜間排程：程式重啟完成，準備執行排程...";
+                    await Task.Delay(2000);
+                    _ = RunNightlyAutomationAfterRestartAsync();
+                }
+                else
+                {
+                    EnsureNightlyAutomationTimer();
+                }
             }
             finally
             {
@@ -386,11 +396,48 @@ namespace StockTracker.ViewModels
                 return;
             }
 
+            SystemMessage = "夜間排程觸發：準備重啟程式以確保穩定狀態...";
+            await Task.Delay(2000);
+
+            RestartApplicationForNightlyAutomation();
+        }
+
+        private void RestartApplicationForNightlyAutomation()
+        {
+            try
+            {
+                var currentProcess = System.Diagnostics.Process.GetCurrentProcess();
+                var exePath = currentProcess.MainModule.FileName;
+
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = exePath,
+                    Arguments = "--nightly-automation",
+                    UseShellExecute = true
+                };
+
+                System.Diagnostics.Process.Start(startInfo);
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Application.Current.Shutdown();
+                });
+            }
+            catch (Exception ex)
+            {
+                SystemMessage = $"重啟失敗：{ex.Message}";
+            }
+        }
+
+        private async Task RunNightlyAutomationAfterRestartAsync()
+        {
             _isNightlyAutomationRunning = true;
             try
             {
                 await RunNightlyAutomationAsync();
                 _nightlyCompletedToday = true;
+                SystemMessage = "夜間排程完成。程式將繼續執行並等待明天排程...";
+                EnsureNightlyAutomationTimer();
             }
             catch (Exception ex)
             {
@@ -406,9 +453,7 @@ namespace StockTracker.ViewModels
         {
             IsInitializingMainPage = true;
             MainPageProgressValue = 0;
-            SystemMessage = "夜間排程啟動：準備重新登入...";
-
-            await EnsureConnectedBeforeNightlyAsync();
+            SystemMessage = "夜間排程執行中...";
 
             MainPageProgressValue = 10;
             SystemMessage = "夜間排程：更新法人資料中...";
