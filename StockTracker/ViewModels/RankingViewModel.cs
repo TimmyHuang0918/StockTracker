@@ -1012,6 +1012,7 @@ namespace StockTracker.ViewModels
             var updateSummary = latestScoreDate.HasValue
                 ? $"資料日期：{latestScoreDate.Value:yyyy-MM-dd} · 筆數：{exportStocks.Count}"
                 : $"筆數：{exportStocks.Count}";
+
             var rows = string.Join("\n", exportStocks.Select(s =>
                 $"<tr>" +
                 $"<td class='sticky-col'>{s.Rank}</td>" +
@@ -1136,50 +1137,82 @@ namespace StockTracker.ViewModels
             html.AppendLine("</tr></thead><tbody>");
             html.AppendLine(rows);
             html.AppendLine("</tbody></table></div>");
+
+            // 高效 JavaScript 控制邏輯
             html.AppendLine("<script>");
-            html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const $=id=>document.getElementById(id);const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
+            html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const $=id=>document.getElementById(id);");
+            html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
 
-            // JS 數值解析函數
-            html.AppendLine("function num(v){");
-            html.AppendLine("  if(!v) return null;");
-            html.AppendLine("  let s = v.toString().replace(/,/g, '').replace(/^\\+/, '').trim();");
-            html.AppendLine("  let multiplier = 1;");
-            html.AppendLine("  if (s.includes('億')) {");
-            html.AppendLine("    multiplier = 100000000;");
-            html.AppendLine("    s = s.replace('億', '');");
-            html.AppendLine("  } else if (s.includes('萬')) {");
-            html.AppendLine("    multiplier = 10000;");
-            html.AppendLine("    s = s.replace('萬', '');");
-            html.AppendLine("  }");
-            html.AppendLine("  const n = parseFloat(s) * multiplier;");
-            html.AppendLine("  return Number.isFinite(n) ? n : null;");
+            // 高效數值解析
+            html.AppendLine("function parseNum(v){if(!v)return null;let s=v.toString().replace(/,/g,'').replace(/^\\+/,'').trim();let m=1;if(s.includes('億')){m=100000000;s=s.replace('億','');}else if(s.includes('萬')){m=10000;s=s.replace('萬','');}const n=parseFloat(s)*m;return Number.isFinite(n)?n:null;}");
+
+            // 1. 初始化記憶體快取：網頁載入時僅讀取一次 DOM，將屬性轉儲為 JS 物件
+            html.AppendLine("const rowCache=[...tbody.rows].map(r=>{");
+            html.AppendLine("  const c=r.cells;const t=i=>(c[i].textContent||'').trim();");
+            html.AppendLine("  return {");
+            html.AppendLine("    row:r,rank:parseNum(t(0))||0,symbol:t(1).toLowerCase(),name:t(2).toLowerCase(),score:parseNum(t(3))||0,crash:parseNum(t(4))||0,pcount:parseNum(t(5))||0,");
+            html.AppendLine("    pattern:t(6),patternLower:t(6).toLowerCase(),scores:[parseNum(t(7))||0,parseNum(t(8))||0,parseNum(t(9))||0,parseNum(t(10))||0,parseNum(t(11))||0],");
+            html.AppendLine("    avg:parseNum(t(12))||0,trend:parseNum(t(13))||0,net:parseNum(t(14))||0,netAmount:parseNum(t(15))||0,action:t(16),actionLower:t(16).toLowerCase(),");
+            html.AppendLine("    holding:t(17),suggestion:t(18),suggestionLower:t(18).toLowerCase(),price:parseNum(t(19))||0,chg:parseNum(t(20))||0,");
+            html.AppendLine("    searchText:`${t(1)} ${t(2)} ${t(6)} ${t(16)} ${t(18)}`.toLowerCase()");
+            html.AppendLine("  };");
+            html.AppendLine("});");
+
+            // 選單填充邏輯 (基於記憶體資料)
+            html.AppendLine("function fillSelect(key,sel){const vals=[...new Set(rowCache.map(x=>x[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}");
+            html.AppendLine("fillSelect('pattern',f.pattern);fillSelect('action',f.action);fillSelect('holding',f.holding);fillSelect('suggestion',f.suggestion);");
+
+            html.AppendLine("function passRange(v,min,max){if(min!==null&&v<min)return false;if(max!==null&&v>max)return false;return true;}");
+            html.AppendLine("function getConsecutive(scores,minScore){let c=0;for(const s of scores){if(s<minScore)break;c++;}return c;}");
+
+            // 2. 超高速純記憶體過濾計算
+            html.AppendLine("function applyFilter(){");
+            html.AppendLine("  const kw=(f.search.value||'').trim().toLowerCase();const top=parseNum(f.top.value);");
+            html.AppendLine("  const minPrice=parseNum(f.minPrice.value),maxPrice=parseNum(f.maxPrice.value),minChange=parseNum(f.minChange.value),maxChange=parseNum(f.maxChange.value);");
+            html.AppendLine("  const minNet=parseNum(f.minNet.value),maxNet=parseNum(f.maxNet.value),minNetAmount=parseNum(f.minNetAmount.value),maxNetAmount=parseNum(f.maxNetAmount.value);");
+            html.AppendLine("  const minScore=parseNum(f.minScore.value),minCrash=parseNum(f.minCrash.value),minPatternCount=parseNum(f.minPatternCount.value);");
+            html.AppendLine("  const minAvg=parseNum(f.minAvg.value),minConDays=Math.max(0,parseNum(f.minConDays.value)||0),minConScore=parseNum(f.minConScore.value)??60;");
+            html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;");
+            html.AppendLine("  requestAnimationFrame(()=>{");
+            html.AppendLine("    rowCache.forEach(item=>{");
+            html.AppendLine("      let ok=true;");
+            html.AppendLine("      if(top!==null&&item.rank>top)ok=false;");
+            html.AppendLine("      if(ok&&kw&&!item.searchText.includes(kw))ok=false;");
+            html.AppendLine("      if(ok&&!passRange(item.price,minPrice,maxPrice))ok=false;");
+            html.AppendLine("      if(ok&&!passRange(item.chg,minChange,maxChange))ok=false;");
+            html.AppendLine("      if(ok&&!passRange(item.net,minNet,maxNet))ok=false;");
+            html.AppendLine("      if(ok&&!passRange(item.netAmount,minNetAmount,maxNetAmount))ok=false;");
+            html.AppendLine("      if(ok&&minScore!==null&&item.score<minScore)ok=false;");
+            html.AppendLine("      if(ok&&minCrash!==null&&item.crash>minCrash)ok=false;");
+            html.AppendLine("      if(ok&&minPatternCount!==null&&item.pcount<minPatternCount)ok=false;");
+            html.AppendLine("      if(ok&&pattern&&!item.patternLower.includes(pattern))ok=false;");
+            html.AppendLine("      if(ok&&action&&item.action!==action)ok=false;");
+            html.AppendLine("      if(ok&&holding&&item.holding!==holding)ok=false;");
+            html.AppendLine("      if(ok&&suggestion&&item.suggestion!==suggestion)ok=false;");
+            html.AppendLine("      if(ok&&minAvg!==null&&item.avg<minAvg)ok=false;");
+            html.AppendLine("      if(ok&&trendUp&&item.trend<=0)ok=false;");
+            html.AppendLine("      if(ok&&minConDays>0&&getConsecutive(item.scores,minConScore)<minConDays)ok=false;");
+            html.AppendLine("      item.row.style.display=ok?'':'none';");
+            html.AppendLine("    });");
+            html.AppendLine("  });");
             html.AppendLine("}");
 
-            html.AppendLine("function txt(cell){return (cell.textContent||'').trim();}function lower(cell){return txt(cell).toLowerCase();}");
-            html.AppendLine("function fillSelect(col,sel){const vals=[...new Set([...tbody.rows].map(r=>txt(r.cells[col])).filter(x=>x))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}");
-            html.AppendLine("fillSelect(6,f.pattern);fillSelect(16,f.action);fillSelect(17,f.holding);fillSelect(18,f.suggestion);");
-            html.AppendLine("function passRange(value,min,max){if(min!==null&&value<min)return false;if(max!==null&&value>max)return false;return true;}");
-            html.AppendLine("function consecutiveDays(row,minScore){const d=[num(txt(row.cells[7]))||0,num(txt(row.cells[8]))||0,num(txt(row.cells[9]))||0,num(txt(row.cells[10]))||0,num(txt(row.cells[11]))||0];let s=0;for(const v of d){if(v<minScore)break;s++;}return s;}");
+            // 3. 防抖處理 (Debounce)：避免手機打字時每按一個字就重新繪圖導致輸入卡死
+            html.AppendLine("function debounce(fn,d=200){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),d);};}");
+            html.AppendLine("const debouncedFilter=debounce(applyFilter,200);");
+            html.AppendLine("Object.values(f).forEach(el=>{if(!el)return;const isSel=el.type==='checkbox'||el.tagName==='SELECT';el.addEventListener(isSel?'change':'input',isSel?applyFilter:debouncedFilter);});");
 
-            html.AppendLine("function applyFilter(){const kw=(f.search.value||'').trim().toLowerCase();const top=num(f.top.value);const minPrice=num(f.minPrice.value),maxPrice=num(f.maxPrice.value),minChange=num(f.minChange.value),maxChange=num(f.maxChange.value),minNet=num(f.minNet.value),maxNet=num(f.maxNet.value),minNetAmount=num(f.minNetAmount.value),maxNetAmount=num(f.maxNetAmount.value),minScore=num(f.minScore.value),minCrash=num(f.minCrash.value),minPatternCount=num(f.minPatternCount.value),minAvg=num(f.minAvg.value),minConDays=Math.max(0,num(f.minConDays.value)||0),minConScore=num(f.minConScore.value)??60;const pattern=f.pattern.value,action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;[...tbody.rows].forEach(r=>{const rank=num(txt(r.cells[0]))||0;const score=num(txt(r.cells[3]))||0;const crash=num(txt(r.cells[4]))||0;const pcount=num(txt(r.cells[5]))||0;const avg=num(txt(r.cells[12]))||0;const trend=num(txt(r.cells[13]))||0;const net=num(txt(r.cells[14]))||0;const netAmount=num(txt(r.cells[15]))||0;const price=num(txt(r.cells[19]))||0;const chg=num(txt(r.cells[20]))||0;let ok=true;");
-            html.AppendLine("if(top!==null&&rank>top)ok=false;");
-            html.AppendLine("if(kw){");
-            html.AppendLine("  const s_symbol=lower(r.cells[1]), s_name=lower(r.cells[2]), s_pat=lower(r.cells[6]), s_act=lower(r.cells[16]), s_sug=lower(r.cells[18]);");
-            html.AppendLine("  if(s_symbol.indexOf(kw)<0 && s_name.indexOf(kw)<0 && s_pat.indexOf(kw)<0 && s_act.indexOf(kw)<0 && s_sug.indexOf(kw)<0) ok=false;");
-            html.AppendLine("}");
-            html.AppendLine("if(!passRange(price,minPrice,maxPrice))ok=false;if(!passRange(chg,minChange,maxChange))ok=false;if(!passRange(net,minNet,maxNet))ok=false;if(!passRange(netAmount,minNetAmount,maxNetAmount))ok=false;if(minScore!==null&&score<minScore)ok=false;if(minCrash!==null&&crash>minCrash)ok=false;if(minPatternCount!==null&&pcount<minPatternCount)ok=false;if(pattern&&lower(r.cells[6]).indexOf(pattern.toLowerCase())<0)ok=false;if(action&&txt(r.cells[16])!==action)ok=false;if(holding&&txt(r.cells[17])!==holding)ok=false;if(suggestion&&txt(r.cells[18])!==suggestion)ok=false;if(minAvg!==null&&avg<minAvg)ok=false;if(trendUp&&trend<=0)ok=false;if(minConDays>0&&consecutiveDays(r,minConScore)<minConDays)ok=false;r.style.display=ok?'':'none';});}");
+            // 點擊表頭排序
+            html.AppendLine("let sortState={idx:0,asc:true};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=(a.cells[idx].textContent||'').trim(),vb=(b.cells[idx].textContent||'').trim();if(type==='num'){va=parseNum(va)||0;vb=parseNum(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));applyFilter();});});");
 
-            html.AppendLine("Object.values(f).forEach(el=>{if(!el)return;const evt=(el.type==='checkbox'||el.tagName==='SELECT')?'change':'input';el.addEventListener(evt,applyFilter);});");
-            html.AppendLine("let sortState={idx:0,asc:true};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=txt(a.cells[idx]),vb=txt(b.cells[idx]);if(type==='num'){va=num(va)||0;vb=num(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));applyFilter();});});");
-
-            // CSV 匯出功能
+            // CSV 匯出邏輯 (僅導出目前畫面上符合過濾條件的資料)
             html.AppendLine("document.getElementById('btnDownloadCsv').addEventListener('click', () => {");
             html.AppendLine("  const csvRows = [];");
-            html.AppendLine("  const headers = [...table.tHead.rows[0].cells].map(th => `\"${txt(th).replace(/\"/g, '\"\"')}\"`);");
+            html.AppendLine("  const headers = [...table.tHead.rows[0].cells].map(th => `\"${(th.textContent||'').trim().replace(/\"/g, '\"\"')}\"`);");
             html.AppendLine("  csvRows.push(headers.join(','));");
             html.AppendLine("  [...tbody.rows].forEach(row => {");
             html.AppendLine("    if (row.style.display !== 'none') {");
-            html.AppendLine("      const cols = [...row.cells].map(td => `\"${txt(td).replace(/\"/g, '\"\"')}\"`);");
+            html.AppendLine("      const cols = [...row.cells].map(td => `\"${(td.textContent||'').trim().replace(/\"/g, '\"\"')}\"`);");
             html.AppendLine("      csvRows.push(cols.join(','));");
             html.AppendLine("    }");
             html.AppendLine("  });");
