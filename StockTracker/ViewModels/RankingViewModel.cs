@@ -1013,30 +1013,37 @@ namespace StockTracker.ViewModels
                 ? $"資料日期：{latestScoreDate.Value:yyyy-MM-dd} · 筆數：{exportStocks.Count}"
                 : $"筆數：{exportStocks.Count}";
 
-            var rows = string.Join("\n", exportStocks.Select(s =>
-                $"<tr>" +
-                $"<td class='sticky-col'>{s.Rank}</td>" +
-                $"<td class='sticky-col'>{HtmlEncode(s.Symbol)}</td>" +
-                $"<td class='sticky-col'>{HtmlEncode(s.Name)}</td>" +
-                $"<td><span class='badge score-badge'>{s.Score}</span></td>" +
-                $"<td>{s.CrashRiskScore}</td>" +
-                $"<td>{s.PatternTagCount}</td>" +
-                $"<td class='text-left'>{HtmlEncode(s.PatternTagsText)}</td>" +
-                $"<td>{s.ScoreDay0}</td>" +
-                $"<td>{s.ScoreDay1}</td>" +
-                $"<td>{s.ScoreDay2}</td>" +
-                $"<td>{s.ScoreDay3}</td>" +
-                $"<td>{s.ScoreDay4}</td>" +
-                $"<td>{s.AverageRecentScore.ToString("F1", CultureInfo.InvariantCulture)}</td>" +
-                $"<td>{s.ScoreTrend}</td>" +
-                $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNet)}'>{FormatNetShares((double)s.ThreeMajorNet)}</td>" +
-                $"<td class='{ResolveValueColorClass((double)s.ThreeMajorNetAmount)}'>{FormatMoney((double)s.ThreeMajorNetAmount)}</td>" +
-                $"<td>{HtmlEncode(s.StrategyActionText)}</td>" +
-                $"<td>{HtmlEncode(s.StrategyStageLabel)}</td>" +
-                $"<td class='text-left'>{HtmlEncode(s.Suggestion)}</td>" +
-                $"<td class='font-mono'>{s.LatestPrice.ToString("F2", CultureInfo.InvariantCulture)}</td>" +
-                $"<td class='font-mono {ResolveValueColorClass((double)s.ChangePercent)}'>{s.ChangePercent.ToString("F2", CultureInfo.InvariantCulture)}%</td>" +
-                $"</tr>"));
+            // 將所有股票資料序列化為 JSON，讓前端 JS 操作原生 Data Array，避免建立數萬個初始 DOM 節點
+            var stockDataJson = System.Text.Json.JsonSerializer.Serialize(exportStocks.Select(s => new
+            {
+                rank = s.Rank,
+                symbol = HtmlEncode(s.Symbol),
+                name = HtmlEncode(s.Name),
+                score = s.Score,
+                crash = s.CrashRiskScore,
+                pcount = s.PatternTagCount,
+                pattern = HtmlEncode(s.PatternTagsText),
+                d0 = s.ScoreDay0,
+                d1 = s.ScoreDay1,
+                d2 = s.ScoreDay2,
+                d3 = s.ScoreDay3,
+                d4 = s.ScoreDay4,
+                avg = Math.Round((double)s.AverageRecentScore, 1),
+                trend = s.ScoreTrend,
+                net = (double)s.ThreeMajorNet,
+                netStr = FormatNetShares((double)s.ThreeMajorNet),
+                netClass = ResolveValueColorClass((double)s.ThreeMajorNet),
+                netAmount = (double)s.ThreeMajorNetAmount,
+                netAmountStr = FormatMoney((double)s.ThreeMajorNetAmount),
+                netAmountClass = ResolveValueColorClass((double)s.ThreeMajorNetAmount),
+                action = HtmlEncode(s.StrategyActionText),
+                stage = HtmlEncode(s.StrategyStageLabel),
+                suggestion = HtmlEncode(s.Suggestion),
+                price = Math.Round((double)s.LatestPrice, 2),
+                chg = Math.Round((double)s.ChangePercent, 2),
+                chgClass = ResolveValueColorClass((double)s.ChangePercent),
+                searchKey = $"{s.Symbol} {s.Name} {s.PatternTagsText} {s.StrategyActionText} {s.Suggestion}".ToLower()
+            }));
 
             var html = new StringBuilder();
             html.AppendLine("<!DOCTYPE html>");
@@ -1051,13 +1058,11 @@ namespace StockTracker.ViewModels
             html.AppendLine("*{box-sizing:border-box;}");
             html.AppendLine("body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;margin:0;padding:16px;line-height:1.5;}");
 
-            // 頂部列排版樣式
             html.AppendLine(".header-bar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px;}");
             html.AppendLine(".header-title{flex:1;}");
             html.AppendLine("h2{margin:0 0 4px 0;font-size:22px;font-weight:600;color:#fff;}");
             html.AppendLine(".muted{color:var(--text-muted);font-size:13px;margin:0;}");
 
-            // 下載按鈕排版與微調樣式
             html.AppendLine(".btn-csv{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:background 0.2s;display:inline-flex;align-items:center;gap:6px;height:38px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);}");
             html.AppendLine(".btn-csv:hover{background:var(--primary-hover);}");
 
@@ -1071,24 +1076,24 @@ namespace StockTracker.ViewModels
             html.AppendLine("input,select{background:#21262d;color:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;width:100%;transition:border-color 0.2s;}");
             html.AppendLine("input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(31,111,235,0.2);}");
             html.AppendLine("input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:var(--primary);}");
-            html.AppendLine(".table-container{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;overflow-x:auto;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
-            html.AppendLine("table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}");
-            html.AppendLine("th,td{border-bottom:1px solid var(--border);padding:10px 12px;text-align:center;}");
-            html.AppendLine(".text-left{text-align:left;}");
-            html.AppendLine("th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;top:0;z-index:2;user-select:none;transition:background 0.2s;}");
-            html.AppendLine("th:hover{background:#282e38;}");
-            html.AppendLine("tr{transition:background 0.15s;}");
-            html.AppendLine("tr:hover{background:#21262d;}");
 
-            // 響應式排版調整
+            // 開啟 GPU 圖層獨立優化與垂直高度固定
+            html.AppendLine(".table-container{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;overflow:auto;max-height:75vh;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.15);will-change:transform;}");
+            html.AppendLine("table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}");
+            html.AppendLine("th,td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:center;height:38px;box-sizing:border-box;}");
+
+            // 渲染層次優化：隱藏螢幕外渲染
+            html.AppendLine("tr{content-visibility:auto;contain-intrinsic-size:38px;}");
+            html.AppendLine(".text-left{text-align:left;}");
+            html.AppendLine("th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;top:0;z-index:2;user-select:none;}");
+
             html.AppendLine("@media(max-width:768px){");
             html.AppendLine("  .header-bar{flex-direction:column;align-items:stretch;gap:12px;}");
             html.AppendLine("  .btn-csv{justify-content:center;width:100%;}");
             html.AppendLine("  .filter-grid{grid-template-columns:1fr 1fr;}");
             html.AppendLine("  .checkbox-group{padding-top:0;}");
-            html.AppendLine("  .sticky-col{position:sticky;left:0;background:var(--panel-bg);z-index:1;box-shadow:2px 0 5px rgba(0,0,0,0.2);}");
+            html.AppendLine("  .sticky-col{position:sticky;left:0;background:var(--panel-bg);z-index:1;}");
             html.AppendLine("  th.sticky-col{z-index:3;background:#1f242c;}");
-            html.AppendLine("  tr:hover .sticky-col{background:#21262d;}");
             html.AppendLine("}");
 
             html.AppendLine(".font-mono{font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,monospace;}");
@@ -1101,11 +1106,10 @@ namespace StockTracker.ViewModels
             html.AppendLine("</head>");
             html.AppendLine("<body>");
 
-            // 下載 CSV 按鈕放至網頁頂部（與標題並排）
             html.AppendLine("<div class='header-bar'>");
             html.AppendLine("  <div class='header-title'>");
             html.AppendLine("    <h2>全市場掃描排名</h2>");
-            html.AppendLine($"    <div class=\"muted\">{HtmlEncode(updateSummary)}</div>");
+            html.AppendLine($"    <div class=\"muted\" id=\"summaryText\">{HtmlEncode(updateSummary)}</div>");
             html.AppendLine("  </div>");
             html.AppendLine("  <div>");
             html.AppendLine("    <button id='btnDownloadCsv' class='btn-csv'>💾 下載 CSV 檔</button>");
@@ -1132,40 +1136,63 @@ namespace StockTracker.ViewModels
             html.AppendLine("<div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-            html.AppendLine("<div class=\"table-container\"><table id=\"rankingTable\"><thead><tr>");
-            html.AppendLine("<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
-            html.AppendLine("</tr></thead><tbody>");
-            html.AppendLine(rows);
-            html.AppendLine("</tbody></table></div>");
 
-            // 高效 JavaScript 控制邏輯
+            html.AppendLine("<div class=\"table-container\" id=\"tableContainer\"><table id=\"rankingTable\"><thead><tr>");
+            html.AppendLine("<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
+            html.AppendLine("</tr></thead><tbody id=\"tbody\"></tbody></table></div>");
+
+            // 將原生 Stock JSON 埋在 JS 變數中
             html.AppendLine("<script>");
-            html.AppendLine("const table=document.getElementById('rankingTable');const tbody=table.tBodies[0];const $=id=>document.getElementById(id);");
+            html.AppendLine($"const rawData = {stockDataJson};");
+            html.AppendLine("const table=document.getElementById('rankingTable');const tbody=document.getElementById('tbody');const container=document.getElementById('tableContainer');const $=id=>document.getElementById(id);");
             html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
 
-            // 高效數值解析
-            html.AppendLine("function parseNum(v){if(!v)return null;let s=v.toString().replace(/,/g,'').replace(/^\\+/,'').trim();let m=1;if(s.includes('億')){m=100000000;s=s.replace('億','');}else if(s.includes('萬')){m=10000;s=s.replace('萬','');}const n=parseFloat(s)*m;return Number.isFinite(n)?n:null;}");
+            html.AppendLine("let filteredData = [...rawData];");
+            html.AppendLine("let renderedCount = 0;");
+            html.AppendLine("const PAGE_SIZE = 60;"); // 每次僅載入 60 筆，滑動到底部時自動追加
 
-            // 1. 初始化記憶體快取：網頁載入時僅讀取一次 DOM，將屬性轉儲為 JS 物件
-            html.AppendLine("const rowCache=[...tbody.rows].map(r=>{");
-            html.AppendLine("  const c=r.cells;const t=i=>(c[i].textContent||'').trim();");
-            html.AppendLine("  return {");
-            html.AppendLine("    row:r,rank:parseNum(t(0))||0,symbol:t(1).toLowerCase(),name:t(2).toLowerCase(),score:parseNum(t(3))||0,crash:parseNum(t(4))||0,pcount:parseNum(t(5))||0,");
-            html.AppendLine("    pattern:t(6),patternLower:t(6).toLowerCase(),scores:[parseNum(t(7))||0,parseNum(t(8))||0,parseNum(t(9))||0,parseNum(t(10))||0,parseNum(t(11))||0],");
-            html.AppendLine("    avg:parseNum(t(12))||0,trend:parseNum(t(13))||0,net:parseNum(t(14))||0,netAmount:parseNum(t(15))||0,action:t(16),actionLower:t(16).toLowerCase(),");
-            html.AppendLine("    holding:t(17),suggestion:t(18),suggestionLower:t(18).toLowerCase(),price:parseNum(t(19))||0,chg:parseNum(t(20))||0,");
-            html.AppendLine("    searchText:`${t(1)} ${t(2)} ${t(6)} ${t(16)} ${t(18)}`.toLowerCase()");
-            html.AppendLine("  };");
-            html.AppendLine("});");
+            // 下拉選單填充
+            html.AppendLine("function fillSelect(prop, sel){");
+            html.AppendLine("  const vals=[...new Set(rawData.map(x=>x[prop]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));");
+            html.AppendLine("  vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});");
+            html.AppendLine("}");
+            html.AppendLine("fillSelect('pattern',f.pattern);fillSelect('action',f.action);fillSelect('stage',f.holding);fillSelect('suggestion',f.suggestion);");
 
-            // 選單填充邏輯 (基於記憶體資料)
-            html.AppendLine("function fillSelect(key,sel){const vals=[...new Set(rowCache.map(x=>x[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}");
-            html.AppendLine("fillSelect('pattern',f.pattern);fillSelect('action',f.action);fillSelect('holding',f.holding);fillSelect('suggestion',f.suggestion);");
-
+            html.AppendLine("function parseNum(v){if(v===null||v==='')return null;const n=parseFloat(v);return Number.isFinite(n)?n:null;}");
             html.AppendLine("function passRange(v,min,max){if(min!==null&&v<min)return false;if(max!==null&&v>max)return false;return true;}");
             html.AppendLine("function getConsecutive(scores,minScore){let c=0;for(const s of scores){if(s<minScore)break;c++;}return c;}");
 
-            // 2. 超高速純記憶體過濾計算
+            // 高效 DOM 節點生成
+            html.AppendLine("function renderBatch(){");
+            html.AppendLine("  const nextBatch = filteredData.slice(renderedCount, renderedCount + PAGE_SIZE);");
+            html.AppendLine("  if(nextBatch.length === 0) return;");
+            html.AppendLine("  const frag = document.createDocumentFragment();");
+            html.AppendLine("  nextBatch.forEach(s => {");
+            html.AppendLine("    const tr = document.createElement('tr');");
+            html.AppendLine("    tr.innerHTML = `<td class='sticky-col'>${s.rank}</td>`+");
+            html.AppendLine("      `<td class='sticky-col'>${s.symbol}</td>`+");
+            html.AppendLine("      `<td class='sticky-col'>${s.name}</td>`+");
+            html.AppendLine("      `<td><span class='badge score-badge'>${s.score}</span></td>`+");
+            html.AppendLine("      `<td>${s.crash}</td>`+");
+            html.AppendLine("      `<td>${s.pcount}</td>`+");
+            html.AppendLine("      `<td class='text-left'>${s.pattern}</td>`+");
+            html.AppendLine("      `<td>${s.d0}</td><td>${s.d1}</td><td>${s.d2}</td><td>${s.d3}</td><td>${s.d4}</td>`+");
+            html.AppendLine("      `<td>${s.avg.toFixed(1)}</td>`+");
+            html.AppendLine("      `<td>${s.trend}</td>`+");
+            html.AppendLine("      `<td class='${s.netClass}'>${s.netStr}</td>`+");
+            html.AppendLine("      `<td class='${s.netAmountClass}'>${s.netAmountStr}</td>`+");
+            html.AppendLine("      `<td>${s.action}</td>`+");
+            html.AppendLine("      `<td>${s.stage}</td>`+");
+            html.AppendLine("      `<td class='text-left'>${s.suggestion}</td>`+");
+            html.AppendLine("      `<td class='font-mono'>${s.price.toFixed(2)}</td>`+");
+            html.AppendLine("      `<td class='font-mono ${s.chgClass}'>${s.chg.toFixed(2)}%</td>`;");
+            html.AppendLine("    frag.appendChild(tr);");
+            html.AppendLine("  });");
+            html.AppendLine("  tbody.appendChild(frag);");
+            html.AppendLine("  renderedCount += nextBatch.length;");
+            html.AppendLine("}");
+
+            // 純記憶體快速 Array 篩選與 Chunk 渲染
             html.AppendLine("function applyFilter(){");
             html.AppendLine("  const kw=(f.search.value||'').trim().toLowerCase();const top=parseNum(f.top.value);");
             html.AppendLine("  const minPrice=parseNum(f.minPrice.value),maxPrice=parseNum(f.maxPrice.value),minChange=parseNum(f.minChange.value),maxChange=parseNum(f.maxChange.value);");
@@ -1173,48 +1200,72 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const minScore=parseNum(f.minScore.value),minCrash=parseNum(f.minCrash.value),minPatternCount=parseNum(f.minPatternCount.value);");
             html.AppendLine("  const minAvg=parseNum(f.minAvg.value),minConDays=Math.max(0,parseNum(f.minConDays.value)||0),minConScore=parseNum(f.minConScore.value)??60;");
             html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;");
-            html.AppendLine("  requestAnimationFrame(()=>{");
-            html.AppendLine("    rowCache.forEach(item=>{");
-            html.AppendLine("      let ok=true;");
-            html.AppendLine("      if(top!==null&&item.rank>top)ok=false;");
-            html.AppendLine("      if(ok&&kw&&!item.searchText.includes(kw))ok=false;");
-            html.AppendLine("      if(ok&&!passRange(item.price,minPrice,maxPrice))ok=false;");
-            html.AppendLine("      if(ok&&!passRange(item.chg,minChange,maxChange))ok=false;");
-            html.AppendLine("      if(ok&&!passRange(item.net,minNet,maxNet))ok=false;");
-            html.AppendLine("      if(ok&&!passRange(item.netAmount,minNetAmount,maxNetAmount))ok=false;");
-            html.AppendLine("      if(ok&&minScore!==null&&item.score<minScore)ok=false;");
-            html.AppendLine("      if(ok&&minCrash!==null&&item.crash>minCrash)ok=false;");
-            html.AppendLine("      if(ok&&minPatternCount!==null&&item.pcount<minPatternCount)ok=false;");
-            html.AppendLine("      if(ok&&pattern&&!item.patternLower.includes(pattern))ok=false;");
-            html.AppendLine("      if(ok&&action&&item.action!==action)ok=false;");
-            html.AppendLine("      if(ok&&holding&&item.holding!==holding)ok=false;");
-            html.AppendLine("      if(ok&&suggestion&&item.suggestion!==suggestion)ok=false;");
-            html.AppendLine("      if(ok&&minAvg!==null&&item.avg<minAvg)ok=false;");
-            html.AppendLine("      if(ok&&trendUp&&item.trend<=0)ok=false;");
-            html.AppendLine("      if(ok&&minConDays>0&&getConsecutive(item.scores,minConScore)<minConDays)ok=false;");
-            html.AppendLine("      item.row.style.display=ok?'':'none';");
-            html.AppendLine("    });");
+
+            html.AppendLine("  filteredData = rawData.filter(item => {");
+            html.AppendLine("    if(top!==null&&item.rank>top) return false;");
+            html.AppendLine("    if(kw&&!item.searchKey.includes(kw)) return false;");
+            html.AppendLine("    if(!passRange(item.price,minPrice,maxPrice)) return false;");
+            html.AppendLine("    if(!passRange(item.chg,minChange,maxChange)) return false;");
+            html.AppendLine("    if(!passRange(item.net,minNet,maxNet)) return false;");
+            html.AppendLine("    if(!passRange(item.netAmount,minNetAmount,maxNetAmount)) return false;");
+            html.AppendLine("    if(minScore!==null&&item.score<minScore) return false;");
+            html.AppendLine("    if(minCrash!==null&&item.crash>minCrash) return false;");
+            html.AppendLine("    if(minPatternCount!==null&&item.pcount<minPatternCount) return false;");
+            html.AppendLine("    if(pattern&&!item.pattern.toLowerCase().includes(pattern)) return false;");
+            html.AppendLine("    if(action&&item.action!==action) return false;");
+            html.AppendLine("    if(holding&&item.stage!==holding) return false;");
+            html.AppendLine("    if(suggestion&&item.suggestion!==suggestion) return false;");
+            html.AppendLine("    if(minAvg!==null&&item.avg<minAvg) return false;");
+            html.AppendLine("    if(trendUp&&item.trend<=0) return false;");
+            html.AppendLine("    if(minConDays>0&&getConsecutive([item.d0,item.d1,item.d2,item.d3,item.d4],minConScore)<minConDays) return false;");
+            html.AppendLine("    return true;");
             html.AppendLine("  });");
+
+            html.AppendLine("  tbody.innerHTML = '';");
+            html.AppendLine("  renderedCount = 0;");
+            html.AppendLine("  container.scrollTop = 0;");
+            html.AppendLine("  renderBatch();");
             html.AppendLine("}");
 
-            // 3. 防抖處理 (Debounce)：避免手機打字時每按一個字就重新繪圖導致輸入卡死
-            html.AppendLine("function debounce(fn,d=200){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),d);};}");
-            html.AppendLine("const debouncedFilter=debounce(applyFilter,200);");
+            // 無感滾動加載 (Infinite Scroll)
+            html.AppendLine("container.addEventListener('scroll', ()=>{");
+            html.AppendLine("  if (container.scrollTop + container.clientHeight >= container.scrollHeight - 200) {");
+            html.AppendLine("    renderBatch();");
+            html.AppendLine("  }");
+            html.AppendLine("});");
+
+            // 防抖處理 (Debounce 300ms)
+            html.AppendLine("function debounce(fn,d=300){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),d);};}");
+            html.AppendLine("const debouncedFilter=debounce(applyFilter,300);");
             html.AppendLine("Object.values(f).forEach(el=>{if(!el)return;const isSel=el.type==='checkbox'||el.tagName==='SELECT';el.addEventListener(isSel?'change':'input',isSel?applyFilter:debouncedFilter);});");
 
-            // 點擊表頭排序
-            html.AppendLine("let sortState={idx:0,asc:true};[...table.tHead.rows[0].cells].forEach((th,idx)=>{th.addEventListener('click',()=>{const type=th.dataset.type||'text';sortState.asc=(sortState.idx===idx)?!sortState.asc:true;sortState.idx=idx;const rows=[...tbody.rows];rows.sort((a,b)=>{let va=(a.cells[idx].textContent||'').trim(),vb=(b.cells[idx].textContent||'').trim();if(type==='num'){va=parseNum(va)||0;vb=parseNum(vb)||0;return sortState.asc?va-vb:vb-va;}return sortState.asc?va.localeCompare(vb,'zh-Hant'):vb.localeCompare(va,'zh-Hant');});rows.forEach(r=>tbody.appendChild(r));applyFilter();});});");
+            // 排序機制
+            html.AppendLine("let sortState={idx:0,asc:true};");
+            html.AppendLine("const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','net','netAmount','action','stage','suggestion','price','chg'];");
+            html.AppendLine("[...table.tHead.rows[0].cells].forEach((th,idx)=>{");
+            html.AppendLine("  th.addEventListener('click',()=>{");
+            html.AppendLine("    sortState.asc=(sortState.idx===idx)?!sortState.asc:true;");
+            html.AppendLine("    sortState.idx=idx;");
+            html.AppendLine("    const key=propMap[idx];");
+            html.AppendLine("    filteredData.sort((a,b)=>{");
+            html.AppendLine("      let va=a[key], vb=b[key];");
+            html.AppendLine("      if(typeof va === 'string') return sortState.asc? va.localeCompare(vb,'zh-Hant') : vb.localeCompare(va,'zh-Hant');");
+            html.AppendLine("      return sortState.asc ? va - vb : vb - va;");
+            html.AppendLine("    });");
+            html.AppendLine("    tbody.innerHTML = '';");
+            html.AppendLine("    renderedCount = 0;");
+            html.AppendLine("    renderBatch();");
+            html.AppendLine("  });");
+            html.AppendLine("});");
 
-            // CSV 匯出邏輯 (僅導出目前畫面上符合過濾條件的資料)
+            // CSV 下載 (直接導出當前符合條件的 filteredData，速度極快)
             html.AppendLine("document.getElementById('btnDownloadCsv').addEventListener('click', () => {");
             html.AppendLine("  const csvRows = [];");
             html.AppendLine("  const headers = [...table.tHead.rows[0].cells].map(th => `\"${(th.textContent||'').trim().replace(/\"/g, '\"\"')}\"`);");
             html.AppendLine("  csvRows.push(headers.join(','));");
-            html.AppendLine("  [...tbody.rows].forEach(row => {");
-            html.AppendLine("    if (row.style.display !== 'none') {");
-            html.AppendLine("      const cols = [...row.cells].map(td => `\"${(td.textContent||'').trim().replace(/\"/g, '\"\"')}\"`);");
-            html.AppendLine("      csvRows.push(cols.join(','));");
-            html.AppendLine("    }");
+            html.AppendLine("  filteredData.forEach(s => {");
+            html.AppendLine("    const row = [s.rank, s.symbol, s.name, s.score, s.crash, s.pcount, s.pattern, s.d0, s.d1, s.d2, s.d3, s.d4, s.avg, s.trend, s.netStr, s.netAmountStr, s.action, s.stage, s.suggestion, s.price, s.chg];");
+            html.AppendLine("    csvRows.push(row.map(v => `\"${String(v).replace(/\"/g, '\"\"')}\"`).join(','));");
             html.AppendLine("  });");
             html.AppendLine("  const csvString = csvRows.join('\\r\\n');");
             html.AppendLine("  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvString], { type: 'text/csv;charset=utf-8;' });");
@@ -1225,6 +1276,9 @@ namespace StockTracker.ViewModels
             html.AppendLine("  link.click();");
             html.AppendLine("  URL.revokeObjectURL(link.href);");
             html.AppendLine("});");
+
+            // 初始次載入
+            html.AppendLine("renderBatch();");
 
             html.AppendLine("</script>");
             html.AppendLine("</body></html>");
