@@ -42,6 +42,7 @@ namespace StockTracker.ViewModels
         public string StrategyStageLabel { get; set; }
         public long ThreeMajorNet { get; set; }
         public decimal ThreeMajorNetAmount { get; set; }
+        public string ScoreReason { get; set; }
         public List<RankedStockScorePoint> RecentScores { get; set; } = new List<RankedStockScorePoint>();
         public string RecentScoresText => RecentScores == null || RecentScores.Count == 0
             ? Score.ToString(CultureInfo.InvariantCulture)
@@ -486,6 +487,7 @@ namespace StockTracker.ViewModels
                 bool hasStrategyDecisionColumn = false;
                 bool hasStrategyActionTextColumn = false;
                 bool hasStrategyStageLabelColumn = false;
+                bool hasScoreReasonColumn = false;
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = "PRAGMA table_info(LatestRanking);";
@@ -543,6 +545,11 @@ namespace StockTracker.ViewModels
                             {
                                 hasStrategyStageLabelColumn = true;
                             }
+
+                            if (colName == "ScoreReason")
+                            {
+                                hasScoreReasonColumn = true;
+                            }
                         }
                     }
                 }
@@ -567,7 +574,8 @@ namespace StockTracker.ViewModels
                             StrategyStageLabel TEXT NOT NULL DEFAULT '',
                             ThreeMajorNet INTEGER NOT NULL DEFAULT 0,
                             ThreeMajorNetAmount REAL NOT NULL DEFAULT 0,
-                            RecentScores TEXT NOT NULL DEFAULT ''
+                            RecentScores TEXT NOT NULL DEFAULT '',
+                            ScoreReason TEXT NOT NULL DEFAULT ''
                         );";
                     cmd.ExecuteNonQuery();
                 }
@@ -723,6 +731,21 @@ namespace StockTracker.ViewModels
                     {
                     }
                 }
+
+                if (!hasScoreReasonColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN ScoreReason TEXT NOT NULL DEFAULT '';";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
         }
 
@@ -736,7 +759,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -767,7 +790,8 @@ namespace StockTracker.ViewModels
                                     StrategyStageLabel = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
                                     ThreeMajorNet = reader.IsDBNull(14) ? 0 : reader.GetInt64(14),
                                     ThreeMajorNetAmount = reader.IsDBNull(15) ? 0m : Convert.ToDecimal(reader.GetValue(15), CultureInfo.InvariantCulture),
-                                    RecentScores = DeserializeRecentScores(recentScoresRaw, reader.GetInt32(5))
+                                    RecentScores = DeserializeRecentScores(recentScoresRaw, reader.GetInt32(5)),
+                                    ScoreReason = reader.IsDBNull(17) ? string.Empty : reader.GetString(17)
                                 });
                             }
                         }
@@ -826,8 +850,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -848,6 +872,7 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@net", s.ThreeMajorNet);
                                 cmd.Parameters.AddWithValue("@netAmount", s.ThreeMajorNetAmount);
                                 cmd.Parameters.AddWithValue("@recentScores", SerializeRecentScores(s.RecentScores));
+                                cmd.Parameters.AddWithValue("@scoreReason", s.ScoreReason ?? string.Empty);
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -948,6 +973,7 @@ namespace StockTracker.ViewModels
                         new XElement("Name", s.Name ?? string.Empty),
                         new XElement("Score", s.Score),
                         new XElement("ScoreDate", s.ScoreDate == DateTime.MinValue ? string.Empty : s.ScoreDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+                        new XElement("ScoreReason", s.ScoreReason ?? string.Empty),
                         new XElement("CrashRiskScore", s.CrashRiskScore),
                         new XElement("PatternTagCount", s.PatternTagCount),
                         new XElement("PatternTags", s.PatternTagsText ?? string.Empty),
@@ -1042,7 +1068,8 @@ namespace StockTracker.ViewModels
                 price = Math.Round((double)s.LatestPrice, 2),
                 chg = Math.Round((double)s.ChangePercent, 2),
                 chgClass = ResolveValueColorClass((double)s.ChangePercent),
-                searchKey = $"{s.Symbol} {s.Name} {s.PatternTagsText} {s.StrategyActionText} {s.Suggestion}".ToLower()
+                searchKey = $"{s.Symbol} {s.Name} {s.PatternTagsText} {s.StrategyActionText} {s.Suggestion}".ToLower(),
+                scoreReason = HtmlEncode(s.ScoreReason ?? string.Empty)
             }));
 
             var html = new StringBuilder();
@@ -1137,6 +1164,13 @@ namespace StockTracker.ViewModels
             html.AppendLine("</div>");
             html.AppendLine("</div>");
 
+            html.AppendLine("<div class=\"panel\">");
+            html.AppendLine("<h3 style='margin:0 0 12px 0;font-size:18px;font-weight:600;'>📊 0050 元大台灣50 K線走勢</h3>");
+            html.AppendLine("<div id='chart0050Container' style='background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;min-height:320px;'>");
+            html.AppendLine("<canvas id='chart0050' width='1100' height='300' style='width:100%;height:300px;'></canvas>");
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
+
             html.AppendLine("<div class=\"table-container\" id=\"tableContainer\"><table id=\"rankingTable\"><thead><tr>");
             html.AppendLine("<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
             html.AppendLine("</tr></thead><tbody id=\"tbody\"></tbody></table></div>");
@@ -1149,7 +1183,47 @@ namespace StockTracker.ViewModels
 
             html.AppendLine("let filteredData = [...rawData];");
             html.AppendLine("let renderedCount = 0;");
-            html.AppendLine("const PAGE_SIZE = 60;"); // 每次僅載入 60 筆，滑動到底部時自動追加
+            html.AppendLine("const PAGE_SIZE = 60;");
+
+            // Add function to draw 0050 K-Line chart
+            html.AppendLine("async function draw0050Chart() {");
+            html.AppendLine("  const stock0050 = rawData.find(s => s.symbol === '0050');");
+            html.AppendLine("  if (!stock0050) {");
+            html.AppendLine("    $('chart0050Container').innerHTML = '<p style=\"color:var(--text-muted);text-align:center;padding:40px;\">找不到 0050 資料</p>';");
+            html.AppendLine("    return;");
+            html.AppendLine("  }");
+            html.AppendLine("  const canvas = $('chart0050');");
+            html.AppendLine("  if (!canvas || !canvas.getContext) return;");
+            html.AppendLine("  const ctx = canvas.getContext('2d');");
+            html.AppendLine("  const w = canvas.width, h = canvas.height;");
+            html.AppendLine("  ctx.clearRect(0, 0, w, h);");
+            html.AppendLine("  ctx.fillStyle = '#c9d1d9';");
+            html.AppendLine("  ctx.font = '14px sans-serif';");
+            html.AppendLine("  ctx.textAlign = 'center';");
+            html.AppendLine("  const scores = [stock0050.d4, stock0050.d3, stock0050.d2, stock0050.d1, stock0050.d0];");
+            html.AppendLine("  const labels = ['D-4', 'D-3', 'D-2', 'D-1', 'D0'];");
+            html.AppendLine("  const maxScore = Math.max(...scores, 100);");
+            html.AppendLine("  const barWidth = (w - 100) / scores.length;");
+            html.AppendLine("  const padding = 50;");
+            html.AppendLine("  scores.forEach((score, i) => {");
+            html.AppendLine("    const barHeight = (score / maxScore) * (h - padding * 2);");
+            html.AppendLine("    const x = padding + i * barWidth + barWidth * 0.2;");
+            html.AppendLine("    const y = h - padding - barHeight;");
+            html.AppendLine("    const barW = barWidth * 0.6;");
+            html.AppendLine("    ctx.fillStyle = score >= 70 ? '#32d74b' : score >= 50 ? '#ffd60a' : '#ff453a';");
+            html.AppendLine("    ctx.fillRect(x, y, barW, barHeight);");
+            html.AppendLine("    ctx.fillStyle = '#c9d1d9';");
+            html.AppendLine("    ctx.fillText(labels[i], x + barW / 2, h - padding + 20);");
+            html.AppendLine("    ctx.fillText(score.toString(), x + barW / 2, y - 8);");
+            html.AppendLine("  });");
+            html.AppendLine("  ctx.fillStyle = '#8b949e';");
+            html.AppendLine("  ctx.font = '12px sans-serif';");
+            html.AppendLine("  ctx.textAlign = 'left';");
+            html.AppendLine("  ctx.fillText(`0050 (${stock0050.name})`, 10, 20);");
+            html.AppendLine("  ctx.fillText(`最新分數: ${stock0050.score} | 5日均分: ${stock0050.avg}`, 10, 40);");
+            html.AppendLine("  ctx.fillText(`最新價: ${stock0050.price} | 漲跌幅: ${stock0050.chg}%`, 10, 60);");
+            html.AppendLine("}");
+            html.AppendLine("draw0050Chart();");
 
             // 下拉選單填充
             html.AppendLine("function fillSelect(prop, sel){");
@@ -1169,10 +1243,12 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const frag = document.createDocumentFragment();");
             html.AppendLine("  nextBatch.forEach(s => {");
             html.AppendLine("    const tr = document.createElement('tr');");
+            html.AppendLine("    const scoreTitle = s.scoreReason ? `title=\"${s.scoreReason.replace(/\"/g, '&quot;')}\"` : '';");
+            html.AppendLine("    const scoreCell = s.scoreReason ? `<td ${scoreTitle} style='cursor:help;'><span class='badge score-badge'>${s.score}</span></td>` : `<td><span class='badge score-badge'>${s.score}</span></td>`;");
             html.AppendLine("    tr.innerHTML = `<td class='sticky-col'>${s.rank}</td>`+");
             html.AppendLine("      `<td class='sticky-col'>${s.symbol}</td>`+");
             html.AppendLine("      `<td class='sticky-col'>${s.name}</td>`+");
-            html.AppendLine("      `<td><span class='badge score-badge'>${s.score}</span></td>`+");
+            html.AppendLine("      scoreCell+");
             html.AppendLine("      `<td>${s.crash}</td>`+");
             html.AppendLine("      `<td>${s.pcount}</td>`+");
             html.AppendLine("      `<td class='text-left'>${s.pattern}</td>`+");
@@ -1473,6 +1549,10 @@ namespace StockTracker.ViewModels
                             lock (lockObj)
                             {
                                 var latestPatternTags = latestRecommendation.PatternTags ?? new List<PatternTag>();
+                                var scoreReasonText = latestRecommendation.Reasons != null && latestRecommendation.Reasons.Count > 0
+                                    ? string.Join(" | ", latestRecommendation.Reasons)
+                                    : string.Empty;
+
                                 results.Add(new RankedStock
                                 {
                                     Symbol = symbol,
@@ -1489,7 +1569,8 @@ namespace StockTracker.ViewModels
                                     StrategyStageLabel = strategyOutput.StageLabel,
                                     ThreeMajorNet = latestNet,
                                     ThreeMajorNetAmount = latestNet * dummyVm.LatestPrice,
-                                    RecentScores = recentScores
+                                    RecentScores = recentScores,
+                                    ScoreReason = scoreReasonText
                                 });
 
                                 analyzeChecked++;
