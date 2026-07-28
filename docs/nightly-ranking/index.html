@@ -230,6 +230,21 @@ function drawVolumeChart() {
   const maxVol = Math.max(...kLineData0050.map(d => d.volume));
   const volScale = chartH / maxVol;
   function indexToX(i) { return padding.left + i * barSpacing + barSpacing / 2; }
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 3; i++) {
+    const vol = maxVol * (1 - i / 3);
+    const y = padding.top + (chartH / 3) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(w - padding.right, y);
+    ctx.stroke();
+    const volLabel = vol >= 1000 ? (vol / 1000).toFixed(0) + 'K' : vol.toFixed(0);
+    ctx.fillText(volLabel, padding.left - 5, y + 4);
+  }
   kLineData0050.forEach((d, i) => {
     const x = indexToX(i);
     const barHeight = d.volume * volScale;
@@ -264,6 +279,21 @@ function drawMACDChart() {
   function indexToX(i) { return padding.left + i * barSpacing + barSpacing / 2; }
   ctx.strokeStyle = '#30363d';
   ctx.lineWidth = 1;
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  const maxMacd = maxAbs * 1.1;
+  for (let i = 0; i <= 4; i++) {
+    const value = maxMacd - (maxMacd * 2 * i / 4);
+    const y = padding.top + (chartH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(w - padding.right, y);
+    ctx.stroke();
+    ctx.fillText(value.toFixed(3), padding.left - 5, y + 4);
+  }
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(padding.left, zeroY);
   ctx.lineTo(w - padding.right, zeroY);
