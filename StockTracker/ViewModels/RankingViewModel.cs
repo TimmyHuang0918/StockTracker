@@ -1039,6 +1039,69 @@ namespace StockTracker.ViewModels
                 ? $"資料日期：{latestScoreDate.Value:yyyy-MM-dd} · 筆數：{exportStocks.Count}"
                 : $"筆數：{exportStocks.Count}";
 
+            // Fetch 0050 K-Line data for 120 days
+            var kLineData0050Json = "[]";
+            try
+            {
+                var candles0050 = new List<CandleData>();
+                int kLineCount = 120;
+                MainWindow.BuildDateRangeForBars("日K", kLineCount, out var startDate, out var endDate);
+
+                Action<string, CandleData> onKLineReceived = null;
+                onKLineReceived = (symbol, candle) =>
+                {
+                    if (symbol == "0050")
+                    {
+                        candles0050.Add(candle);
+                    }
+                };
+
+                _apiService.KLineDataReceived += onKLineReceived;
+                _apiService.RequestKLineByDate("0050", 4, 1, 0, startDate, endDate, 0);
+
+                // Wait for data with timeout
+                var startWait = DateTime.UtcNow;
+                while (candles0050.Count < kLineCount && (DateTime.UtcNow - startWait).TotalSeconds < 3)
+                {
+                    System.Threading.Thread.Sleep(50);
+                }
+
+                _apiService.KLineDataReceived -= onKLineReceived;
+
+                if (candles0050.Count > 0)
+                {
+                    candles0050.Sort((a, b) => a.Time.CompareTo(b.Time));
+
+                    // Take last 120 days
+                    var last120 = candles0050.Skip(Math.Max(0, candles0050.Count - 120)).ToList();
+
+                    kLineData0050Json = System.Text.Json.JsonSerializer.Serialize(last120.Select(c => new
+                    {
+                        date = c.Time.ToString("yyyy-MM-dd"),
+                        open = Math.Round((double)c.Open, 2),
+                        high = Math.Round((double)c.High, 2),
+                        low = Math.Round((double)c.Low, 2),
+                        close = Math.Round((double)c.Close, 2),
+                        volume = (double)c.Volume,
+                        ma5 = Math.Round(c.MA5, 2),
+                        ma20 = Math.Round(c.MA20, 2),
+                        ma120 = Math.Round(c.MA120, 2),
+                        ma240 = Math.Round(c.MA240, 2),
+                        bbUpper = Math.Round(c.BollingerUpper, 2),
+                        bbMiddle = Math.Round(c.BollingerMiddle, 2),
+                        bbLower = Math.Round(c.BollingerLower, 2),
+                        macd = Math.Round(c.MACD, 4),
+                        macdSignal = Math.Round(c.MacdSignal, 4),
+                        macdHist = Math.Round(c.MACD - c.MacdSignal, 4),
+                        rsi = Math.Round(c.RSI, 2)
+                    }));
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to fetch 0050 K-Line data: {ex.Message}");
+            }
+
             // 將所有股票資料序列化為 JSON，讓前端 JS 操作原生 Data Array，避免建立數萬個初始 DOM 節點
             var stockDataJson = System.Text.Json.JsonSerializer.Serialize(exportStocks.Select(s => new
             {
@@ -1165,9 +1228,19 @@ namespace StockTracker.ViewModels
             html.AppendLine("</div>");
 
             html.AppendLine("<div class=\"panel\">");
-            html.AppendLine("<h3 style='margin:0 0 12px 0;font-size:18px;font-weight:600;'>📊 0050 元大台灣50 K線走勢</h3>");
-            html.AppendLine("<div id='chart0050Container' style='background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;min-height:320px;'>");
-            html.AppendLine("<canvas id='chart0050' width='1100' height='300' style='width:100%;height:300px;'></canvas>");
+            html.AppendLine("<h3 style='margin:0 0 12px 0;font-size:18px;font-weight:600;'>📊 0050 元大台灣50 技術分析圖表 (120日)</h3>");
+            html.AppendLine("<div id='chart0050Container' style='background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;'>");
+            html.AppendLine("<canvas id='chartCandlestick' style='width:100%;height:400px;display:block;margin-bottom:8px;'></canvas>");
+            html.AppendLine("<canvas id='chartVolume' style='width:100%;height:120px;display:block;margin-bottom:8px;'></canvas>");
+            html.AppendLine("<canvas id='chartMACD' style='width:100%;height:120px;display:block;margin-bottom:8px;'></canvas>");
+            html.AppendLine("<canvas id='chartRSI' style='width:100%;height:100px;display:block;'></canvas>");
+            html.AppendLine("<div style='margin-top:12px;color:var(--text-muted);font-size:12px;'>");
+            html.AppendLine("<span style='margin-right:16px;'>📈 MA5 <span style='color:#58a6ff;'>━━</span></span>");
+            html.AppendLine("<span style='margin-right:16px;'>📈 MA20 <span style='color:#ff7b72;'>━━</span></span>");
+            html.AppendLine("<span style='margin-right:16px;'>📈 MA120 <span style='color:#a5d6ff;'>━━</span></span>");
+            html.AppendLine("<span style='margin-right:16px;'>📈 MA240 <span style='color:#d2a8ff;'>━━</span></span>");
+            html.AppendLine("<span style='margin-right:16px;'>📊 BB <span style='color:#8b949e;'>- - -</span></span>");
+            html.AppendLine("</div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
 
@@ -1178,6 +1251,7 @@ namespace StockTracker.ViewModels
             // 將原生 Stock JSON 埋在 JS 變數中
             html.AppendLine("<script>");
             html.AppendLine($"const rawData = {stockDataJson};");
+            html.AppendLine($"const kLineData0050 = {kLineData0050Json};");
             html.AppendLine("const table=document.getElementById('rankingTable');const tbody=document.getElementById('tbody');const container=document.getElementById('tableContainer');const $=id=>document.getElementById(id);");
             html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
 
@@ -1185,45 +1259,273 @@ namespace StockTracker.ViewModels
             html.AppendLine("let renderedCount = 0;");
             html.AppendLine("const PAGE_SIZE = 60;");
 
-            // Add function to draw 0050 K-Line chart
-            html.AppendLine("async function draw0050Chart() {");
-            html.AppendLine("  const stock0050 = rawData.find(s => s.symbol === '0050');");
-            html.AppendLine("  if (!stock0050) {");
-            html.AppendLine("    $('chart0050Container').innerHTML = '<p style=\"color:var(--text-muted);text-align:center;padding:40px;\">找不到 0050 資料</p>';");
+            // Add comprehensive 0050 chart rendering function
+            html.AppendLine("function draw0050Charts() {");
+            html.AppendLine("  if (!kLineData0050 || kLineData0050.length === 0) {");
+            html.AppendLine("    $('chart0050Container').innerHTML = '<p style=\"color:var(--text-muted);text-align:center;padding:40px;\">0050 K線資料載入中或無可用資料</p>';");
             html.AppendLine("    return;");
             html.AppendLine("  }");
-            html.AppendLine("  const canvas = $('chart0050');");
-            html.AppendLine("  if (!canvas || !canvas.getContext) return;");
+            html.AppendLine("  drawCandlestickChart();");
+            html.AppendLine("  drawVolumeChart();");
+            html.AppendLine("  drawMACDChart();");
+            html.AppendLine("  drawRSIChart();");
+            html.AppendLine("}");
+
+            // Candlestick chart with MA lines and Bollinger Bands
+            html.AppendLine("function drawCandlestickChart() {");
+            html.AppendLine("  const canvas = $('chartCandlestick');");
+            html.AppendLine("  if (!canvas) return;");
             html.AppendLine("  const ctx = canvas.getContext('2d');");
-            html.AppendLine("  const w = canvas.width, h = canvas.height;");
+            html.AppendLine("  canvas.width = canvas.offsetWidth * window.devicePixelRatio;");
+            html.AppendLine("  canvas.height = 400 * window.devicePixelRatio;");
+            html.AppendLine("  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);");
+            html.AppendLine("  const w = canvas.width / window.devicePixelRatio, h = canvas.height / window.devicePixelRatio;");
             html.AppendLine("  ctx.clearRect(0, 0, w, h);");
+            html.AppendLine("  const padding = {left: 60, right: 20, top: 30, bottom: 30};");
+            html.AppendLine("  const chartW = w - padding.left - padding.right;");
+            html.AppendLine("  const chartH = h - padding.top - padding.bottom;");
+            html.AppendLine("  const dataLen = kLineData0050.length;");
+            html.AppendLine("  const candleWidth = Math.max(2, chartW / dataLen * 0.7);");
+            html.AppendLine("  const candleSpacing = chartW / dataLen;");
+
+            // Find price range
+            html.AppendLine("  let minPrice = Math.min(...kLineData0050.map(d => d.low));");
+            html.AppendLine("  let maxPrice = Math.max(...kLineData0050.map(d => d.high));");
+            html.AppendLine("  const priceRange = maxPrice - minPrice;");
+            html.AppendLine("  minPrice -= priceRange * 0.05;");
+            html.AppendLine("  maxPrice += priceRange * 0.05;");
+            html.AppendLine("  const priceScale = chartH / (maxPrice - minPrice);");
+
+            html.AppendLine("  function priceToY(price) { return padding.top + chartH - (price - minPrice) * priceScale; }");
+            html.AppendLine("  function indexToX(i) { return padding.left + i * candleSpacing + candleSpacing / 2; }");
+
+            // Draw grid
+            html.AppendLine("  ctx.strokeStyle = '#30363d';");
+            html.AppendLine("  ctx.lineWidth = 1;");
+            html.AppendLine("  for (let i = 0; i <= 5; i++) {");
+            html.AppendLine("    const y = padding.top + (chartH / 5) * i;");
+            html.AppendLine("    ctx.beginPath();");
+            html.AppendLine("    ctx.moveTo(padding.left, y);");
+            html.AppendLine("    ctx.lineTo(w - padding.right, y);");
+            html.AppendLine("    ctx.stroke();");
+            html.AppendLine("    const price = maxPrice - (maxPrice - minPrice) * (i / 5);");
+            html.AppendLine("    ctx.fillStyle = '#8b949e';");
+            html.AppendLine("    ctx.font = '11px sans-serif';");
+            html.AppendLine("    ctx.textAlign = 'right';");
+            html.AppendLine("    ctx.fillText(price.toFixed(2), padding.left - 5, y + 4);");
+            html.AppendLine("  }");
+
+            // Draw MA lines
+            html.AppendLine("  const maConfigs = [");
+            html.AppendLine("    {key: 'ma5', color: '#58a6ff', width: 1.5},");
+            html.AppendLine("    {key: 'ma20', color: '#ff7b72', width: 1.5},");
+            html.AppendLine("    {key: 'ma120', color: '#a5d6ff', width: 1.2},");
+            html.AppendLine("    {key: 'ma240', color: '#d2a8ff', width: 1.2}");
+            html.AppendLine("  ];");
+            html.AppendLine("  maConfigs.forEach(cfg => {");
+            html.AppendLine("    ctx.strokeStyle = cfg.color;");
+            html.AppendLine("    ctx.lineWidth = cfg.width;");
+            html.AppendLine("    ctx.beginPath();");
+            html.AppendLine("    kLineData0050.forEach((d, i) => {");
+            html.AppendLine("      if (d[cfg.key] && d[cfg.key] > 0) {");
+            html.AppendLine("        const x = indexToX(i);");
+            html.AppendLine("        const y = priceToY(d[cfg.key]);");
+            html.AppendLine("        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);");
+            html.AppendLine("      }");
+            html.AppendLine("    });");
+            html.AppendLine("    ctx.stroke();");
+            html.AppendLine("  });");
+
+            // Draw Bollinger Bands
+            html.AppendLine("  ctx.strokeStyle = '#8b949e';");
+            html.AppendLine("  ctx.lineWidth = 1;");
+            html.AppendLine("  ctx.setLineDash([3, 3]);");
+            html.AppendLine("  ['bbUpper', 'bbMiddle', 'bbLower'].forEach(key => {");
+            html.AppendLine("    ctx.beginPath();");
+            html.AppendLine("    kLineData0050.forEach((d, i) => {");
+            html.AppendLine("      if (d[key] && d[key] > 0) {");
+            html.AppendLine("        const x = indexToX(i);");
+            html.AppendLine("        const y = priceToY(d[key]);");
+            html.AppendLine("        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);");
+            html.AppendLine("      }");
+            html.AppendLine("    });");
+            html.AppendLine("    ctx.stroke();");
+            html.AppendLine("  });");
+            html.AppendLine("  ctx.setLineDash([]);");
+
+            // Draw candlesticks
+            html.AppendLine("  kLineData0050.forEach((d, i) => {");
+            html.AppendLine("    const x = indexToX(i);");
+            html.AppendLine("    const isRise = d.close >= d.open;");
+            html.AppendLine("    ctx.strokeStyle = isRise ? '#ff453a' : '#32d74b';");
+            html.AppendLine("    ctx.fillStyle = isRise ? '#ff453a' : '#32d74b';");
+            html.AppendLine("    const yHigh = priceToY(d.high);");
+            html.AppendLine("    const yLow = priceToY(d.low);");
+            html.AppendLine("    const yOpen = priceToY(d.open);");
+            html.AppendLine("    const yClose = priceToY(d.close);");
+            html.AppendLine("    ctx.lineWidth = 1;");
+            html.AppendLine("    ctx.beginPath();");
+            html.AppendLine("    ctx.moveTo(x, yHigh);");
+            html.AppendLine("    ctx.lineTo(x, yLow);");
+            html.AppendLine("    ctx.stroke();");
+            html.AppendLine("    const bodyHeight = Math.abs(yClose - yOpen);");
+            html.AppendLine("    if (bodyHeight > 0.5) {");
+            html.AppendLine("      ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), candleWidth, bodyHeight);");
+            html.AppendLine("    } else {");
+            html.AppendLine("      ctx.fillRect(x - candleWidth / 2, yClose - 0.5, candleWidth, 1);");
+            html.AppendLine("    }");
+            html.AppendLine("  });");
+
+            // Draw title and legend
             html.AppendLine("  ctx.fillStyle = '#c9d1d9';");
-            html.AppendLine("  ctx.font = '14px sans-serif';");
-            html.AppendLine("  ctx.textAlign = 'center';");
-            html.AppendLine("  const scores = [stock0050.d4, stock0050.d3, stock0050.d2, stock0050.d1, stock0050.d0];");
-            html.AppendLine("  const labels = ['D-4', 'D-3', 'D-2', 'D-1', 'D0'];");
-            html.AppendLine("  const maxScore = Math.max(...scores, 100);");
-            html.AppendLine("  const barWidth = (w - 100) / scores.length;");
-            html.AppendLine("  const padding = 50;");
-            html.AppendLine("  scores.forEach((score, i) => {");
-            html.AppendLine("    const barHeight = (score / maxScore) * (h - padding * 2);");
-            html.AppendLine("    const x = padding + i * barWidth + barWidth * 0.2;");
-            html.AppendLine("    const y = h - padding - barHeight;");
-            html.AppendLine("    const barW = barWidth * 0.6;");
-            html.AppendLine("    ctx.fillStyle = score >= 70 ? '#32d74b' : score >= 50 ? '#ffd60a' : '#ff453a';");
-            html.AppendLine("    ctx.fillRect(x, y, barW, barHeight);");
-            html.AppendLine("    ctx.fillStyle = '#c9d1d9';");
-            html.AppendLine("    ctx.fillText(labels[i], x + barW / 2, h - padding + 20);");
-            html.AppendLine("    ctx.fillText(score.toString(), x + barW / 2, y - 8);");
+            html.AppendLine("  ctx.font = 'bold 14px sans-serif';");
+            html.AppendLine("  ctx.textAlign = 'left';");
+            html.AppendLine("  const latest = kLineData0050[kLineData0050.length - 1];");
+            html.AppendLine("  ctx.fillText(`0050 元大台灣50 - 收盤: ${latest.close} (${latest.date})`, padding.left, 20);");
+            html.AppendLine("}");
+
+            // Volume chart
+            html.AppendLine("function drawVolumeChart() {");
+            html.AppendLine("  const canvas = $('chartVolume');");
+            html.AppendLine("  if (!canvas) return;");
+            html.AppendLine("  const ctx = canvas.getContext('2d');");
+            html.AppendLine("  canvas.width = canvas.offsetWidth * window.devicePixelRatio;");
+            html.AppendLine("  canvas.height = 120 * window.devicePixelRatio;");
+            html.AppendLine("  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);");
+            html.AppendLine("  const w = canvas.width / window.devicePixelRatio, h = canvas.height / window.devicePixelRatio;");
+            html.AppendLine("  ctx.clearRect(0, 0, w, h);");
+            html.AppendLine("  const padding = {left: 60, right: 20, top: 10, bottom: 20};");
+            html.AppendLine("  const chartW = w - padding.left - padding.right;");
+            html.AppendLine("  const chartH = h - padding.top - padding.bottom;");
+            html.AppendLine("  const dataLen = kLineData0050.length;");
+            html.AppendLine("  const barWidth = Math.max(2, chartW / dataLen * 0.7);");
+            html.AppendLine("  const barSpacing = chartW / dataLen;");
+            html.AppendLine("  const maxVol = Math.max(...kLineData0050.map(d => d.volume));");
+            html.AppendLine("  const volScale = chartH / maxVol;");
+            html.AppendLine("  function indexToX(i) { return padding.left + i * barSpacing + barSpacing / 2; }");
+            html.AppendLine("  kLineData0050.forEach((d, i) => {");
+            html.AppendLine("    const x = indexToX(i);");
+            html.AppendLine("    const barHeight = d.volume * volScale;");
+            html.AppendLine("    const y = padding.top + chartH - barHeight;");
+            html.AppendLine("    const isRise = d.close >= d.open;");
+            html.AppendLine("    ctx.fillStyle = isRise ? 'rgba(255,69,58,0.6)' : 'rgba(50,215,75,0.6)';");
+            html.AppendLine("    ctx.fillRect(x - barWidth / 2, y, barWidth, barHeight);");
             html.AppendLine("  });");
             html.AppendLine("  ctx.fillStyle = '#8b949e';");
-            html.AppendLine("  ctx.font = '12px sans-serif';");
+            html.AppendLine("  ctx.font = '11px sans-serif';");
             html.AppendLine("  ctx.textAlign = 'left';");
-            html.AppendLine("  ctx.fillText(`0050 (${stock0050.name})`, 10, 20);");
-            html.AppendLine("  ctx.fillText(`最新分數: ${stock0050.score} | 5日均分: ${stock0050.avg}`, 10, 40);");
-            html.AppendLine("  ctx.fillText(`最新價: ${stock0050.price} | 漲跌幅: ${stock0050.chg}%`, 10, 60);");
+            html.AppendLine("  ctx.fillText('成交量', padding.left, padding.top + 12);");
             html.AppendLine("}");
-            html.AppendLine("draw0050Chart();");
+
+            // MACD chart
+            html.AppendLine("function drawMACDChart() {");
+            html.AppendLine("  const canvas = $('chartMACD');");
+            html.AppendLine("  if (!canvas) return;");
+            html.AppendLine("  const ctx = canvas.getContext('2d');");
+            html.AppendLine("  canvas.width = canvas.offsetWidth * window.devicePixelRatio;");
+            html.AppendLine("  canvas.height = 120 * window.devicePixelRatio;");
+            html.AppendLine("  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);");
+            html.AppendLine("  const w = canvas.width / window.devicePixelRatio, h = canvas.height / window.devicePixelRatio;");
+            html.AppendLine("  ctx.clearRect(0, 0, w, h);");
+            html.AppendLine("  const padding = {left: 60, right: 20, top: 10, bottom: 20};");
+            html.AppendLine("  const chartW = w - padding.left - padding.right;");
+            html.AppendLine("  const chartH = h - padding.top - padding.bottom;");
+            html.AppendLine("  const dataLen = kLineData0050.length;");
+            html.AppendLine("  const barWidth = Math.max(2, chartW / dataLen * 0.7);");
+            html.AppendLine("  const barSpacing = chartW / dataLen;");
+            html.AppendLine("  const maxAbs = Math.max(...kLineData0050.map(d => Math.max(Math.abs(d.macd), Math.abs(d.macdSignal), Math.abs(d.macdHist))));");
+            html.AppendLine("  const scale = (chartH / 2) / (maxAbs * 1.1);");
+            html.AppendLine("  const zeroY = padding.top + chartH / 2;");
+            html.AppendLine("  function indexToX(i) { return padding.left + i * barSpacing + barSpacing / 2; }");
+            html.AppendLine("  ctx.strokeStyle = '#30363d';");
+            html.AppendLine("  ctx.lineWidth = 1;");
+            html.AppendLine("  ctx.beginPath();");
+            html.AppendLine("  ctx.moveTo(padding.left, zeroY);");
+            html.AppendLine("  ctx.lineTo(w - padding.right, zeroY);");
+            html.AppendLine("  ctx.stroke();");
+            html.AppendLine("  kLineData0050.forEach((d, i) => {");
+            html.AppendLine("    const x = indexToX(i);");
+            html.AppendLine("    const histHeight = d.macdHist * scale;");
+            html.AppendLine("    ctx.fillStyle = d.macdHist >= 0 ? 'rgba(255,69,58,0.8)' : 'rgba(50,215,75,0.8)';");
+            html.AppendLine("    if (histHeight >= 0) {");
+            html.AppendLine("      ctx.fillRect(x - barWidth / 2, zeroY - histHeight, barWidth, histHeight);");
+            html.AppendLine("    } else {");
+            html.AppendLine("      ctx.fillRect(x - barWidth / 2, zeroY, barWidth, -histHeight);");
+            html.AppendLine("    }");
+            html.AppendLine("  });");
+            html.AppendLine("  ctx.strokeStyle = '#58a6ff';");
+            html.AppendLine("  ctx.lineWidth = 1.5;");
+            html.AppendLine("  ctx.beginPath();");
+            html.AppendLine("  kLineData0050.forEach((d, i) => {");
+            html.AppendLine("    const x = indexToX(i);");
+            html.AppendLine("    const y = zeroY - d.macd * scale;");
+            html.AppendLine("    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);");
+            html.AppendLine("  });");
+            html.AppendLine("  ctx.stroke();");
+            html.AppendLine("  ctx.strokeStyle = '#ffa657';");
+            html.AppendLine("  ctx.lineWidth = 1.5;");
+            html.AppendLine("  ctx.beginPath();");
+            html.AppendLine("  kLineData0050.forEach((d, i) => {");
+            html.AppendLine("    const x = indexToX(i);");
+            html.AppendLine("    const y = zeroY - d.macdSignal * scale;");
+            html.AppendLine("    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);");
+            html.AppendLine("  });");
+            html.AppendLine("  ctx.stroke();");
+            html.AppendLine("  ctx.fillStyle = '#8b949e';");
+            html.AppendLine("  ctx.font = '11px sans-serif';");
+            html.AppendLine("  ctx.textAlign = 'left';");
+            html.AppendLine("  ctx.fillText('MACD', padding.left, padding.top + 12);");
+            html.AppendLine("}");
+
+            // RSI chart
+            html.AppendLine("function drawRSIChart() {");
+            html.AppendLine("  const canvas = $('chartRSI');");
+            html.AppendLine("  if (!canvas) return;");
+            html.AppendLine("  const ctx = canvas.getContext('2d');");
+            html.AppendLine("  canvas.width = canvas.offsetWidth * window.devicePixelRatio;");
+            html.AppendLine("  canvas.height = 100 * window.devicePixelRatio;");
+            html.AppendLine("  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);");
+            html.AppendLine("  const w = canvas.width / window.devicePixelRatio, h = canvas.height / window.devicePixelRatio;");
+            html.AppendLine("  ctx.clearRect(0, 0, w, h);");
+            html.AppendLine("  const padding = {left: 60, right: 20, top: 10, bottom: 20};");
+            html.AppendLine("  const chartW = w - padding.left - padding.right;");
+            html.AppendLine("  const chartH = h - padding.top - padding.bottom;");
+            html.AppendLine("  const dataLen = kLineData0050.length;");
+            html.AppendLine("  const barSpacing = chartW / dataLen;");
+            html.AppendLine("  const rsiScale = chartH / 100;");
+            html.AppendLine("  function indexToX(i) { return padding.left + i * barSpacing + barSpacing / 2; }");
+            html.AppendLine("  function rsiToY(rsi) { return padding.top + chartH - rsi * rsiScale; }");
+            html.AppendLine("  [70, 50, 30].forEach(level => {");
+            html.AppendLine("    const y = rsiToY(level);");
+            html.AppendLine("    ctx.strokeStyle = level === 50 ? '#30363d' : '#8b949e';");
+            html.AppendLine("    ctx.lineWidth = 1;");
+            html.AppendLine("    ctx.setLineDash(level === 50 ? [] : [2, 2]);");
+            html.AppendLine("    ctx.beginPath();");
+            html.AppendLine("    ctx.moveTo(padding.left, y);");
+            html.AppendLine("    ctx.lineTo(w - padding.right, y);");
+            html.AppendLine("    ctx.stroke();");
+            html.AppendLine("    ctx.fillStyle = '#8b949e';");
+            html.AppendLine("    ctx.font = '10px sans-serif';");
+            html.AppendLine("    ctx.textAlign = 'right';");
+            html.AppendLine("    ctx.fillText(level.toString(), padding.left - 5, y + 3);");
+            html.AppendLine("  });");
+            html.AppendLine("  ctx.setLineDash([]);");
+            html.AppendLine("  ctx.strokeStyle = '#d2a8ff';");
+            html.AppendLine("  ctx.lineWidth = 2;");
+            html.AppendLine("  ctx.beginPath();");
+            html.AppendLine("  kLineData0050.forEach((d, i) => {");
+            html.AppendLine("    const x = indexToX(i);");
+            html.AppendLine("    const y = rsiToY(d.rsi);");
+            html.AppendLine("    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);");
+            html.AppendLine("  });");
+            html.AppendLine("  ctx.stroke();");
+            html.AppendLine("  ctx.fillStyle = '#8b949e';");
+            html.AppendLine("  ctx.font = '11px sans-serif';");
+            html.AppendLine("  ctx.textAlign = 'left';");
+            html.AppendLine("  ctx.fillText('RSI', padding.left, padding.top + 12);");
+            html.AppendLine("}");
+
+            html.AppendLine("draw0050Charts();");
 
             // 下拉選單填充
             html.AppendLine("function fillSelect(prop, sel){");
