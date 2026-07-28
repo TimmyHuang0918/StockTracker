@@ -1072,8 +1072,18 @@ namespace StockTracker.ViewModels
                 {
                     candles0050.Sort((a, b) => a.Time.CompareTo(b.Time));
 
+                    // Create a temporary StockViewModel to calculate technical indicators
+                    var temp0050Vm = new StockViewModel("0050", "元大台灣50")
+                    {
+                        SelectedKLineInterval = "日K"
+                    };
+                    temp0050Vm.LoadCandlesForAnalysis(candles0050);
+
+                    // Get the enriched candles with all indicators calculated
+                    var enrichedCandles = temp0050Vm.GetPublicCandles().ToList();
+
                     // Take last 120 days
-                    var last120 = candles0050.Skip(Math.Max(0, candles0050.Count - 120)).ToList();
+                    var last120 = enrichedCandles.Skip(Math.Max(0, enrichedCandles.Count - 120)).ToList();
 
                     kLineData0050Json = System.Text.Json.JsonSerializer.Serialize(last120.Select(c => new
                     {
