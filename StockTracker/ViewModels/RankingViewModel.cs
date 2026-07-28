@@ -1413,6 +1413,24 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const maxVol = Math.max(...kLineData0050.map(d => d.volume));");
             html.AppendLine("  const volScale = chartH / maxVol;");
             html.AppendLine("  function indexToX(i) { return padding.left + i * barSpacing + barSpacing / 2; }");
+
+            // Add Y-axis grid lines and labels
+            html.AppendLine("  ctx.strokeStyle = '#30363d';");
+            html.AppendLine("  ctx.lineWidth = 1;");
+            html.AppendLine("  ctx.fillStyle = '#8b949e';");
+            html.AppendLine("  ctx.font = '10px sans-serif';");
+            html.AppendLine("  ctx.textAlign = 'right';");
+            html.AppendLine("  for (let i = 0; i <= 3; i++) {");
+            html.AppendLine("    const vol = maxVol * (1 - i / 3);");
+            html.AppendLine("    const y = padding.top + (chartH / 3) * i;");
+            html.AppendLine("    ctx.beginPath();");
+            html.AppendLine("    ctx.moveTo(padding.left, y);");
+            html.AppendLine("    ctx.lineTo(w - padding.right, y);");
+            html.AppendLine("    ctx.stroke();");
+            html.AppendLine("    const volLabel = vol >= 1000 ? (vol / 1000).toFixed(0) + 'K' : vol.toFixed(0);");
+            html.AppendLine("    ctx.fillText(volLabel, padding.left - 5, y + 4);");
+            html.AppendLine("  }");
+
             html.AppendLine("  kLineData0050.forEach((d, i) => {");
             html.AppendLine("    const x = indexToX(i);");
             html.AppendLine("    const barHeight = d.volume * volScale;");
@@ -1447,12 +1465,32 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const scale = (chartH / 2) / (maxAbs * 1.1);");
             html.AppendLine("  const zeroY = padding.top + chartH / 2;");
             html.AppendLine("  function indexToX(i) { return padding.left + i * barSpacing + barSpacing / 2; }");
+
+            // Add Y-axis grid lines and labels
             html.AppendLine("  ctx.strokeStyle = '#30363d';");
             html.AppendLine("  ctx.lineWidth = 1;");
+            html.AppendLine("  ctx.fillStyle = '#8b949e';");
+            html.AppendLine("  ctx.font = '10px sans-serif';");
+            html.AppendLine("  ctx.textAlign = 'right';");
+            html.AppendLine("  const maxMacd = maxAbs * 1.1;");
+            html.AppendLine("  for (let i = 0; i <= 4; i++) {");
+            html.AppendLine("    const value = maxMacd - (maxMacd * 2 * i / 4);");
+            html.AppendLine("    const y = padding.top + (chartH / 4) * i;");
+            html.AppendLine("    ctx.beginPath();");
+            html.AppendLine("    ctx.moveTo(padding.left, y);");
+            html.AppendLine("    ctx.lineTo(w - padding.right, y);");
+            html.AppendLine("    ctx.stroke();");
+            html.AppendLine("    ctx.fillText(value.toFixed(3), padding.left - 5, y + 4);");
+            html.AppendLine("  }");
+
+            // Emphasize zero line
+            html.AppendLine("  ctx.strokeStyle = '#58a6ff';");
+            html.AppendLine("  ctx.lineWidth = 1.5;");
             html.AppendLine("  ctx.beginPath();");
             html.AppendLine("  ctx.moveTo(padding.left, zeroY);");
             html.AppendLine("  ctx.lineTo(w - padding.right, zeroY);");
             html.AppendLine("  ctx.stroke();");
+
             html.AppendLine("  kLineData0050.forEach((d, i) => {");
             html.AppendLine("    const x = indexToX(i);");
             html.AppendLine("    const histHeight = d.macdHist * scale;");
