@@ -42,6 +42,9 @@ namespace StockTracker.ViewModels
         public string StrategyStageLabel { get; set; }
         public long ThreeMajorNet { get; set; }
         public decimal ThreeMajorNetAmount { get; set; }
+        public long ForeignNet { get; set; }
+        public long DealerNet { get; set; }
+        public long InvestmentTrustNet { get; set; }
         public string ScoreReason { get; set; }
         public List<RankedStockScorePoint> RecentScores { get; set; } = new List<RankedStockScorePoint>();
         public string RecentScoresText => RecentScores == null || RecentScores.Count == 0
@@ -77,6 +80,39 @@ namespace StockTracker.ViewModels
         public System.Windows.Media.Brush NetAmountDisplayBrush => ThreeMajorNetAmount > 0 ? System.Windows.Media.Brushes.IndianRed :
                                                                      ThreeMajorNetAmount < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
                                                                      System.Windows.Media.Brushes.Gray;
+        public string ForeignNetDisplay
+        {
+            get
+            {
+                var lots = ForeignNet / 1000m;
+                return lots > 0 ? $"+{lots:N0}" : lots.ToString("N0", CultureInfo.InvariantCulture);
+            }
+        }
+        public System.Windows.Media.Brush ForeignNetBrush => ForeignNet > 0 ? System.Windows.Media.Brushes.IndianRed :
+                                                              ForeignNet < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
+                                                              System.Windows.Media.Brushes.Gray;
+        public string DealerNetDisplay
+        {
+            get
+            {
+                var lots = DealerNet / 1000m;
+                return lots > 0 ? $"+{lots:N0}" : lots.ToString("N0", CultureInfo.InvariantCulture);
+            }
+        }
+        public System.Windows.Media.Brush DealerNetBrush => DealerNet > 0 ? System.Windows.Media.Brushes.IndianRed :
+                                                             DealerNet < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
+                                                             System.Windows.Media.Brushes.Gray;
+        public string TrustNetDisplay
+        {
+            get
+            {
+                var lots = InvestmentTrustNet / 1000m;
+                return lots > 0 ? $"+{lots:N0}" : lots.ToString("N0", CultureInfo.InvariantCulture);
+            }
+        }
+        public System.Windows.Media.Brush TrustNetBrush => InvestmentTrustNet > 0 ? System.Windows.Media.Brushes.IndianRed :
+                                                            InvestmentTrustNet < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
+                                                            System.Windows.Media.Brushes.Gray;
         public System.Windows.Media.Brush StrategyActionBrush =>
             string.Equals(StrategyDecision, "CLEAR", StringComparison.OrdinalIgnoreCase)
                 ? System.Windows.Media.Brushes.IndianRed
@@ -160,6 +196,7 @@ namespace StockTracker.ViewModels
         private string _scoreDay2Header = "D2";
         private string _scoreDay3Header = "D3";
         private string _scoreDay4Header = "D4";
+        private RankedStock _stock0050;
 
         public RankingViewModel(CapitalApiService apiService, MainWindowViewModel mainViewModel)
         {
@@ -398,6 +435,19 @@ namespace StockTracker.ViewModels
             private set { _scoreDay4Header = value; OnPropertyChanged(); }
         }
 
+        public RankedStock Stock0050
+        {
+            get => _stock0050;
+            private set
+            {
+                _stock0050 = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Has0050Data));
+            }
+        }
+
+        public bool Has0050Data => Stock0050 != null;
+
         public ICommand ClearFiltersCommand { get; }
         public ICommand ApplyStrongMomentumFilterCommand { get; }
         public ICommand ApplyLowPriceHighScoreFilterCommand { get; }
@@ -488,6 +538,9 @@ namespace StockTracker.ViewModels
                 bool hasStrategyActionTextColumn = false;
                 bool hasStrategyStageLabelColumn = false;
                 bool hasScoreReasonColumn = false;
+                bool hasForeignNetColumn = false;
+                bool hasDealerNetColumn = false;
+                bool hasInvestmentTrustNetColumn = false;
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = "PRAGMA table_info(LatestRanking);";
@@ -549,6 +602,21 @@ namespace StockTracker.ViewModels
                             if (colName == "ScoreReason")
                             {
                                 hasScoreReasonColumn = true;
+                            }
+
+                            if (colName == "ForeignNet")
+                            {
+                                hasForeignNetColumn = true;
+                            }
+
+                            if (colName == "DealerNet")
+                            {
+                                hasDealerNetColumn = true;
+                            }
+
+                            if (colName == "InvestmentTrustNet")
+                            {
+                                hasInvestmentTrustNetColumn = true;
                             }
                         }
                     }
@@ -746,6 +814,51 @@ namespace StockTracker.ViewModels
                     {
                     }
                 }
+
+                if (!hasForeignNetColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN ForeignNet INTEGER NOT NULL DEFAULT 0;";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                if (!hasDealerNetColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN DealerNet INTEGER NOT NULL DEFAULT 0;";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                if (!hasInvestmentTrustNetColumn)
+                {
+                    try
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "ALTER TABLE LatestRanking ADD COLUMN InvestmentTrustNet INTEGER NOT NULL DEFAULT 0;";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
         }
 
@@ -759,7 +872,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -791,7 +904,10 @@ namespace StockTracker.ViewModels
                                     ThreeMajorNet = reader.IsDBNull(14) ? 0 : reader.GetInt64(14),
                                     ThreeMajorNetAmount = reader.IsDBNull(15) ? 0m : Convert.ToDecimal(reader.GetValue(15), CultureInfo.InvariantCulture),
                                     RecentScores = DeserializeRecentScores(recentScoresRaw, reader.GetInt32(5)),
-                                    ScoreReason = reader.IsDBNull(17) ? string.Empty : reader.GetString(17)
+                                    ScoreReason = reader.IsDBNull(17) ? string.Empty : reader.GetString(17),
+                                    ForeignNet = reader.IsDBNull(18) ? 0 : reader.GetInt64(18),
+                                    DealerNet = reader.IsDBNull(19) ? 0 : reader.GetInt64(19),
+                                    InvestmentTrustNet = reader.IsDBNull(20) ? 0 : reader.GetInt64(20)
                                 });
                             }
                         }
@@ -817,6 +933,7 @@ namespace StockTracker.ViewModels
                     UpdateStrategyActionOptions(loaded);
                     UpdateStrategyHoldingOptions(loaded);
                     UpdateSuggestionOptions(loaded);
+                    Stock0050 = loaded.FirstOrDefault(s => s.Symbol == "0050");
                     ProgressText = $"已載入上次儲存的排行 ({loaded.Count} 筆)";
                 }
                 else
@@ -850,8 +967,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -873,6 +990,9 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@netAmount", s.ThreeMajorNetAmount);
                                 cmd.Parameters.AddWithValue("@recentScores", SerializeRecentScores(s.RecentScores));
                                 cmd.Parameters.AddWithValue("@scoreReason", s.ScoreReason ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@foreignNet", s.ForeignNet);
+                                cmd.Parameters.AddWithValue("@dealerNet", s.DealerNet);
+                                cmd.Parameters.AddWithValue("@trustNet", s.InvestmentTrustNet);
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -1112,6 +1232,40 @@ namespace StockTracker.ViewModels
                 System.Diagnostics.Debug.WriteLine($"Failed to fetch 0050 K-Line data: {ex.Message}");
             }
 
+            // Extract 0050 data for summary display
+            var stock0050 = exportStocks.FirstOrDefault(s => s.Symbol == "0050");
+            string stock0050Json = "null";
+            if (stock0050 != null)
+            {
+                stock0050Json = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    rank = stock0050.Rank,
+                    symbol = HtmlEncode(stock0050.Symbol),
+                    name = HtmlEncode(stock0050.Name),
+                    score = stock0050.Score,
+                    crash = stock0050.CrashRiskScore,
+                    pcount = stock0050.PatternTagCount,
+                    pattern = HtmlEncode(stock0050.PatternTagsText),
+                    d0 = stock0050.ScoreDay0,
+                    d1 = stock0050.ScoreDay1,
+                    d2 = stock0050.ScoreDay2,
+                    d3 = stock0050.ScoreDay3,
+                    d4 = stock0050.ScoreDay4,
+                    avg = Math.Round((double)stock0050.AverageRecentScore, 1),
+                    trend = stock0050.ScoreTrend,
+                    net = (double)stock0050.ThreeMajorNet,
+                    netStr = FormatNetShares((double)stock0050.ThreeMajorNet),
+                    netAmount = (double)stock0050.ThreeMajorNetAmount,
+                    netAmountStr = FormatMoney((double)stock0050.ThreeMajorNetAmount),
+                    action = HtmlEncode(stock0050.StrategyActionText),
+                    stage = HtmlEncode(stock0050.StrategyStageLabel),
+                    suggestion = HtmlEncode(stock0050.Suggestion),
+                    price = Math.Round((double)stock0050.LatestPrice, 2),
+                    chg = Math.Round((double)stock0050.ChangePercent, 2),
+                    scoreReason = HtmlEncode(stock0050.ScoreReason ?? string.Empty)
+                });
+            }
+
             // 將所有股票資料序列化為 JSON，讓前端 JS 操作原生 Data Array，避免建立數萬個初始 DOM 節點
             var stockDataJson = System.Text.Json.JsonSerializer.Serialize(exportStocks.Select(s => new
             {
@@ -1167,6 +1321,26 @@ namespace StockTracker.ViewModels
             html.AppendLine(".btn-csv:hover{background:var(--primary-hover);}");
 
             html.AppendLine(".panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
+            html.AppendLine(".hero-card{background:linear-gradient(135deg, #1f2937 0%, #111827 100%);border:2px solid #2563eb;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 8px 24px rgba(37,99,235,0.2);}");
+            html.AppendLine(".hero-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:16px;}");
+            html.AppendLine(".hero-title{flex:1;min-width:200px;}");
+            html.AppendLine(".hero-title h2{margin:0 0 4px 0;font-size:28px;font-weight:700;color:#fff;display:flex;align-items:center;gap:12px;}");
+            html.AppendLine(".hero-title .subtitle{color:var(--text-muted);font-size:14px;}");
+            html.AppendLine(".hero-price{text-align:right;}");
+            html.AppendLine(".hero-price .price{font-size:32px;font-weight:700;color:#fff;margin:0;}");
+            html.AppendLine(".hero-price .change{font-size:18px;font-weight:600;margin:4px 0 0 0;}");
+            html.AppendLine(".hero-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px;}");
+            html.AppendLine(".stat-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px 16px;}");
+            html.AppendLine(".stat-label{color:var(--text-muted);font-size:12px;font-weight:600;text-transform:uppercase;margin-bottom:6px;}");
+            html.AppendLine(".stat-value{color:#fff;font-size:20px;font-weight:700;}");
+            html.AppendLine(".stat-value.large{font-size:24px;}");
+            html.AppendLine(".hero-action{background:rgba(59,130,246,0.15);border:1px solid #3b82f6;border-radius:8px;padding:16px;margin-bottom:12px;}");
+            html.AppendLine(".hero-action .action-title{color:#3b82f6;font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:8px;}");
+            html.AppendLine(".hero-action .action-content{color:#fff;font-size:16px;font-weight:600;}");
+            html.AppendLine(".hero-suggestion{background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:8px;padding:16px;}");
+            html.AppendLine(".hero-suggestion .suggestion-title{color:#10b981;font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:8px;}");
+            html.AppendLine(".hero-suggestion .suggestion-content{color:#fff;font-size:15px;line-height:1.6;}");
+            html.AppendLine(".rank-badge{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:6px 12px;border-radius:6px;font-size:16px;font-weight:700;display:inline-block;}");
             html.AppendLine(".filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px;}");
             html.AppendLine(".filter-group{display:flex;flex-direction:column;gap:4px;}");
             html.AppendLine(".filter-group.row-inputs{flex-direction:row;align-items:center;gap:8px;}");
@@ -1237,6 +1411,58 @@ namespace StockTracker.ViewModels
             html.AppendLine("</div>");
             html.AppendLine("</div>");
 
+            // 0050 Market Leader Summary Card
+            html.AppendLine("<div id='hero0050Card' class='hero-card' style='display:none;'>");
+            html.AppendLine("<div class='hero-header'>");
+            html.AppendLine("<div class='hero-title'>");
+            html.AppendLine("<h2>🏆 <span id='hero-symbol'></span> <span id='hero-name'></span></h2>");
+            html.AppendLine("<div class='subtitle'>市場主要趨勢指標 | 排名: <span class='rank-badge' id='hero-rank'></span></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='hero-price'>");
+            html.AppendLine("<p class='price' id='hero-price'></p>");
+            html.AppendLine("<p class='change' id='hero-change'></p>");
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='hero-stats'>");
+            html.AppendLine("<div class='stat-box'>");
+            html.AppendLine("<div class='stat-label'>綜合評分</div>");
+            html.AppendLine("<div class='stat-value large' id='hero-score'></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='stat-box'>");
+            html.AppendLine("<div class='stat-label'>風險評分</div>");
+            html.AppendLine("<div class='stat-value' id='hero-crash'></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='stat-box'>");
+            html.AppendLine("<div class='stat-label'>5日均分</div>");
+            html.AppendLine("<div class='stat-value' id='hero-avg'></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='stat-box'>");
+            html.AppendLine("<div class='stat-label'>分數趨勢 (5日)</div>");
+            html.AppendLine("<div class='stat-value' id='hero-trend'></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='stat-box'>");
+            html.AppendLine("<div class='stat-label'>法人買賣(張)</div>");
+            html.AppendLine("<div class='stat-value' id='hero-net'></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='stat-box'>");
+            html.AppendLine("<div class='stat-label'>買賣金額</div>");
+            html.AppendLine("<div class='stat-value' id='hero-netAmount'></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='hero-action'>");
+            html.AppendLine("<div class='action-title'>📈 策略建議</div>");
+            html.AppendLine("<div class='action-content'><span id='hero-action'></span> | <span id='hero-stage'></span></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='hero-suggestion'>");
+            html.AppendLine("<div class='suggestion-title'>💡 下一步操作建議</div>");
+            html.AppendLine("<div class='suggestion-content' id='hero-suggestion'></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div style='margin-top:16px;padding:12px;background:rgba(139,148,158,0.1);border-radius:6px;'>");
+            html.AppendLine("<div style='color:var(--text-muted);font-size:13px;font-weight:600;margin-bottom:8px;'>📊 評分理由</div>");
+            html.AppendLine("<div style='color:var(--text);font-size:13px;line-height:1.6;' id='hero-reason'></div>");
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
+
             html.AppendLine("<div class=\"panel\">");
             html.AppendLine("<h3 style='margin:0 0 12px 0;font-size:18px;font-weight:600;'>📊 0050 元大台灣50 技術分析圖表 (120日)</h3>");
             html.AppendLine("<div id='chart0050Container' style='background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;'>");
@@ -1262,7 +1488,37 @@ namespace StockTracker.ViewModels
             html.AppendLine("<script>");
             html.AppendLine($"const rawData = {stockDataJson};");
             html.AppendLine($"const kLineData0050 = {kLineData0050Json};");
+            html.AppendLine($"const stock0050Data = {stock0050Json};");
             html.AppendLine("const table=document.getElementById('rankingTable');const tbody=document.getElementById('tbody');const container=document.getElementById('tableContainer');const $=id=>document.getElementById(id);");
+            html.AppendLine("function populate0050Hero() {");
+            html.AppendLine("  if (!stock0050Data) { $('hero0050Card').style.display='none'; return; }");
+            html.AppendLine("  $('hero0050Card').style.display='block';");
+            html.AppendLine("  $('hero-symbol').textContent = stock0050Data.symbol;");
+            html.AppendLine("  $('hero-name').textContent = stock0050Data.name;");
+            html.AppendLine("  $('hero-rank').textContent = '#' + stock0050Data.rank;");
+            html.AppendLine("  $('hero-price').textContent = stock0050Data.price.toFixed(2);");
+            html.AppendLine("  const chgSign = stock0050Data.chg >= 0 ? '+' : '';");
+            html.AppendLine("  const chgColor = stock0050Data.chg > 0 ? 'var(--rise)' : stock0050Data.chg < 0 ? 'var(--fall)' : 'var(--flat)';");
+            html.AppendLine("  $('hero-change').textContent = chgSign + stock0050Data.chg.toFixed(2) + '%';");
+            html.AppendLine("  $('hero-change').style.color = chgColor;");
+            html.AppendLine("  $('hero-score').textContent = stock0050Data.score;");
+            html.AppendLine("  $('hero-crash').textContent = stock0050Data.crash;");
+            html.AppendLine("  $('hero-avg').textContent = stock0050Data.avg.toFixed(1);");
+            html.AppendLine("  const trendSign = stock0050Data.trend > 0 ? '+' : '';");
+            html.AppendLine("  const trendColor = stock0050Data.trend > 0 ? 'var(--rise)' : stock0050Data.trend < 0 ? 'var(--fall)' : 'var(--flat)';");
+            html.AppendLine("  $('hero-trend').textContent = trendSign + stock0050Data.trend;");
+            html.AppendLine("  $('hero-trend').style.color = trendColor;");
+            html.AppendLine("  const netColor = stock0050Data.net > 0 ? 'var(--rise)' : stock0050Data.net < 0 ? 'var(--fall)' : 'var(--flat)';");
+            html.AppendLine("  $('hero-net').textContent = stock0050Data.netStr;");
+            html.AppendLine("  $('hero-net').style.color = netColor;");
+            html.AppendLine("  const netAmountColor = stock0050Data.netAmount > 0 ? 'var(--rise)' : stock0050Data.netAmount < 0 ? 'var(--fall)' : 'var(--flat)';");
+            html.AppendLine("  $('hero-netAmount').textContent = stock0050Data.netAmountStr;");
+            html.AppendLine("  $('hero-netAmount').style.color = netAmountColor;");
+            html.AppendLine("  $('hero-action').textContent = stock0050Data.action;");
+            html.AppendLine("  $('hero-stage').textContent = stock0050Data.stage;");
+            html.AppendLine("  $('hero-suggestion').textContent = stock0050Data.suggestion || '無特別建議';");
+            html.AppendLine("  $('hero-reason').textContent = stock0050Data.scoreReason || '評分理由尚未載入';");
+            html.AppendLine("}");
             html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
 
             html.AppendLine("let filteredData = [...rawData];");
@@ -1573,6 +1829,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  ctx.fillText('RSI', padding.left, padding.top + 12);");
             html.AppendLine("}");
 
+            html.AppendLine("populate0050Hero();");
             html.AppendLine("draw0050Charts();");
 
             // 下拉選單填充
@@ -1895,6 +2152,9 @@ namespace StockTracker.ViewModels
                                 0d);
 
                             long latestNet = ResolveThreeMajorNetByDate(t86History, scoreDate);
+                            long foreignNet = ResolveForeignNetByDate(t86History, scoreDate);
+                            long dealerNet = ResolveDealerNetByDate(t86History, scoreDate);
+                            long trustNet = ResolveInvestmentTrustNetByDate(t86History, scoreDate);
 
                             lock (lockObj)
                             {
@@ -1919,6 +2179,9 @@ namespace StockTracker.ViewModels
                                     StrategyStageLabel = strategyOutput.StageLabel,
                                     ThreeMajorNet = latestNet,
                                     ThreeMajorNetAmount = latestNet * dummyVm.LatestPrice,
+                                    ForeignNet = foreignNet,
+                                    DealerNet = dealerNet,
+                                    InvestmentTrustNet = trustNet,
                                     RecentScores = recentScores,
                                     ScoreReason = scoreReasonText
                                 });
@@ -1957,6 +2220,7 @@ namespace StockTracker.ViewModels
                 UpdateStrategyActionOptions(results);
                 UpdateStrategyHoldingOptions(results);
                 UpdateSuggestionOptions(results);
+                Stock0050 = results.FirstOrDefault(r => r.Symbol == "0050");
                 SaveRankingToDb(results);
 
                 ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票";
@@ -2042,6 +2306,36 @@ namespace StockTracker.ViewModels
                 return exactRecord.ThreeMajorNet;
             }
 
+            return 0;
+        }
+
+        private static long ResolveForeignNetByDate(TwseT86History t86History, DateTime targetDate)
+        {
+            if (t86History == null || t86History.RecordsByDate == null || t86History.RecordsByDate.Count == 0)
+                return 0;
+            TwseT86Record exactRecord;
+            if (t86History.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
+                return exactRecord.ForeignNet;
+            return 0;
+        }
+
+        private static long ResolveDealerNetByDate(TwseT86History t86History, DateTime targetDate)
+        {
+            if (t86History == null || t86History.RecordsByDate == null || t86History.RecordsByDate.Count == 0)
+                return 0;
+            TwseT86Record exactRecord;
+            if (t86History.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
+                return exactRecord.DealerNet;
+            return 0;
+        }
+
+        private static long ResolveInvestmentTrustNetByDate(TwseT86History t86History, DateTime targetDate)
+        {
+            if (t86History == null || t86History.RecordsByDate == null || t86History.RecordsByDate.Count == 0)
+                return 0;
+            TwseT86Record exactRecord;
+            if (t86History.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
+                return exactRecord.InvestmentTrustNet;
             return 0;
         }
 
