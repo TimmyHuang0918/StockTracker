@@ -141,7 +141,15 @@ namespace StockTracker.Services
             // 線性滑動倉位計算與【多頭鎖倉防線】
             // ----------------------------------------------------
             var action = "HOLD";
+            var entryConfirmed = finalScore >= 72 && crashRiskScore < 45 && ma5.HasValue && ma20.HasValue && currentPrice > ma20.Value && ma5.Value > ma20.Value;
             var originalTarget = ResolveLinearTargetHolding(finalScore);
+            if (normalizedHolding <= 0d && !entryConfirmed)
+            {
+                // A high composite score alone is not enough to open a new position. Require trend
+                // confirmation and a low risk reading, matching the non-look-ahead backtest policy.
+                originalTarget = 0d;
+                output.Reasons.Add("Entry gate: wait for score, trend, and risk confirmation.");
+            }
             var targetHolding = originalTarget;
             var isOverheat = crashRiskScore >= 75 || string.Equals(currentRecommendation.GlobalDecision, "CRASH_WARNING", StringComparison.OrdinalIgnoreCase);
 

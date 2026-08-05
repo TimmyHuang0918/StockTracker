@@ -64,6 +64,41 @@
                     </StackPanel>
                 </Border>
 
+                <Border Margin="0,0,0,10" Padding="8" CornerRadius="6" BorderThickness="1" Background="#22202A36" BorderBrush="#FF4D8CC9">
+                    <StackPanel>
+                        <TextBlock Text="交易紀錄與風控" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <WrapPanel Margin="0,0,0,6">
+                            <TextBlock Text="股數" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBox Width="72" Text="{Binding TransactionQuantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="成交價" VerticalAlignment="Center" Margin="10,0,4,0"/>
+                            <TextBox Width="72" Text="{Binding TransactionPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="手續費" VerticalAlignment="Center" Margin="10,0,4,0"/>
+                            <TextBox Width="62" Text="{Binding TransactionFee, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Width="150" Margin="10,0,4,0" Text="{Binding TransactionNote, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip="備註"/>
+                            <Button Content="記錄買進" Command="{Binding RecordBuyCommand}" Margin="4,0"/>
+                            <Button Content="記錄賣出" Command="{Binding RecordSellCommand}" Margin="4,0"/>
+                            <Button Content="執行回測" Command="{Binding RunBacktestCommand}" Margin="4,0"/>
+                            <Button Content="群益歷史日K回測" Command="{Binding RunBrokerHistoryBacktestCommand}" Margin="4,0" ToolTip="僅使用登入後由群益 API 回傳並保存的日 K 資料"/>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding OpenPosition.Quantity, StringFormat=現有股數：{0:N0}}"/>
+                        <TextBlock Text="{Binding OpenPosition.AverageCost, StringFormat=平均成本：{0:F2}}"/>
+                        <TextBlock Text="{Binding RiskRecommendation.Summary}" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#FFFFD27A"/>
+                        <TextBlock Text="{Binding BacktestResult.WinRate, StringFormat=回測勝率：{0:F2}%}" Margin="0,4,0,0"/>
+                        <TextBlock Text="{Binding BacktestResult.TotalTrades, StringFormat=回測交易數：{0}}"/>
+                        <TextBlock Text="{Binding BacktestResult.ValidationMessage}" TextWrapping="Wrap" Foreground="#FFFFD27A"/>
+                        <DataGrid ItemsSource="{Binding Transactions}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" Height="110" Margin="0,6,0,0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="時間" Binding="{Binding TradeTime, StringFormat=yyyy/MM/dd HH:mm}" Width="150"/>
+                                <DataGridTextColumn Header="方向" Binding="{Binding Side}" Width="70"/>
+                                <DataGridTextColumn Header="股數" Binding="{Binding Quantity, StringFormat=N0}" Width="80"/>
+                                <DataGridTextColumn Header="價格" Binding="{Binding Price, StringFormat=F2}" Width="80"/>
+                                <DataGridTextColumn Header="費用" Binding="{Binding Fee, StringFormat=F0}" Width="70"/>
+                                <DataGridTextColumn Header="備註" Binding="{Binding Note}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
                 <ItemsControl ItemsSource="{Binding CurrentPatternTags}" Margin="0,0,0,10">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>

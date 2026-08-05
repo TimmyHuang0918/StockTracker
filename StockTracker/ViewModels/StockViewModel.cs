@@ -4,7 +4,10 @@ using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Input;
 using System.Windows;
 using System.Windows.Media;
 
@@ -48,6 +51,14 @@ namespace StockTracker.ViewModels
         private string _signal = "中立";
         private double _currentHoldingPercentage;
         private double _holdingCost;
+        private readonly PortfolioRepository _portfolioRepository;
+        private readonly DailyCandleRepository _dailyCandleRepository;
+        private decimal _transactionQuantity = 1000m;
+        private decimal _transactionPrice;
+        private decimal _transactionFee;
+        private string _transactionNote;
+        private OpenPosition _openPosition = new OpenPosition();
+        private RiskRecommendation _riskRecommendation = new RiskRecommendation { Summary = "尚無持倉，請先記錄買進交易。" };
         private string _lastNotifiedSignal = string.Empty;
         private List<string> _latestRecommendationReasons = new List<string>();
         private int _maxDisplayPoints = 60;
@@ -90,6 +101,8 @@ namespace StockTracker.ViewModels
         {
             Symbol = symbol;
             Name = name;
+            _portfolioRepository = new PortfolioRepository(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "portfolio.db"));
+            _dailyCandleRepository = new DailyCandleRepository(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "broker_candles.db"));
 
             Candles = new ObservableCollection<CandlestickVisual>();
             MacdHistogram = new ObservableCollection<HistogramBarVisual>();
@@ -125,6 +138,12 @@ namespace StockTracker.ViewModels
             InvestmentTrustNetPoints = new PointCollection();
             DealerNetPoints = new PointCollection();
             ThreeMajorLevels = new ObservableCollection<PriceLevelVisual>();
+            Transactions = new ObservableCollection<TradeTransaction>();
+            RecordBuyCommand = new RelayCommand(async _ => await RecordTransactionAsync(TradeSide.Buy), _ => CanRecordTransaction());
+            RecordSellCommand = new RelayCommand(async _ => await RecordTransactionAsync(TradeSide.Sell), _ => CanRecordTransaction());
+            RunBacktestCommand = new RelayCommand(_ => RunBacktest());
+            RunBrokerHistoryBacktestCommand = new RelayCommand(async _ => await RunBrokerHistoryBacktestAsync());
+            _ = LoadTransactionsAsync();
         }
 
         public string Symbol { get; }
@@ -146,6 +165,20 @@ namespace StockTracker.ViewModels
         }
 
         public string NameWithExDividendTag => string.IsNullOrWhiteSpace(ExDividendTagText) ? Name : $"{Name} {ExDividendTagText}";
+
+        public ObservableCollection<TradeTransaction> Transactions { get; }
+        public ICommand RecordBuyCommand { get; }
+        public ICommand RecordSellCommand { get; }
+        public ICommand RunBacktestCommand { get; }
+        public ICommand RunBrokerHistoryBacktestCommand { get; }
+
+        public decimal TransactionQuantity { get => _transactionQuantity; set { _transactionQuantity = value; OnPropertyChanged(); } }
+        public decimal TransactionPrice { get => _transactionPrice; set { _transactionPrice = value; OnPropertyChanged(); } }
+        public decimal TransactionFee { get => _transactionFee; set { _transactionFee = value; OnPropertyChanged(); } }
+        public string TransactionNote { get => _transactionNote; set { _transactionNote = value; OnPropertyChanged(); } }
+        public OpenPosition OpenPosition { get => _openPosition; private set { _openPosition = value; OnPropertyChanged(); } }
+        public RiskRecommendation RiskRecommendation { get => _riskRecommendation; private set { _riskRecommendation = value; OnPropertyChanged(); } }
+        public BacktestResult BacktestResult { get; private set; }
 
         public decimal LatestPrice
         {
@@ -2090,6 +2123,88 @@ namespace StockTracker.ViewModels
             };
         }
 
+        private bool CanRecordTransaction()
+        {
+            return TransactionQuantity > 0m && (TransactionPrice > 0m || LatestPrice > 0m);
+        }
+
+        private async Task RecordTransactionAsync(TradeSide side)
+        {
+            var price = TransactionPrice > 0m ? TransactionPrice : LatestPrice;
+            if (TransactionQuantity <= 0m || price <= 0m)
+            {
+                return;
+            }
+
+            var transaction = new TradeTransaction
+            {
+                Symbol = Symbol, Name = Name, TradeTime = DateTime.Now, Side = side,
+                Quantity = TransactionQuantity, Price = price, Fee = Math.Max(0m, TransactionFee), Note = TransactionNote ?? string.Empty
+            };
+
+            if (propagateToDetailViews)
+            {
+                _ = _dailyCandleRepository.UpsertAsync(Symbol, new[] { normalized });
+            }
+            transaction.Id = await _portfolioRepository.AddAsync(transaction);
+            Transactions.Add(transaction);
+            RebuildPosition();
+            TransactionNote = string.Empty;
+        }
+
+        private async Task LoadTransactionsAsync()
+        {
+            var transactions = await _portfolioRepository.LoadBySymbolAsync(Symbol);
+            Transactions.Clear();
+            foreach (var transaction in transactions) Transactions.Add(transaction);
+            RebuildPosition();
+        }
+
+        private void RebuildPosition()
+        {
+            decimal quantity = 0m, cost = 0m, realized = 0m;
+            foreach (var transaction in Transactions.OrderBy(x => x.TradeTime).ThenBy(x => x.Id))
+            {
+                if (transaction.Side == TradeSide.Buy)
+                {
+                    quantity += transaction.Quantity;
+                    cost += transaction.Quantity * transaction.Price + transaction.Fee;
+                }
+                else
+                {
+                    var sold = Math.Min(quantity, transaction.Quantity);
+                    var averageCost = quantity <= 0m ? 0m : cost / quantity;
+                    realized += sold * (transaction.Price - averageCost) - transaction.Fee;
+                    quantity -= sold;
+                    cost -= sold * averageCost;
+                }
+            }
+            OpenPosition = new OpenPosition { Symbol = Symbol, Name = Name, Quantity = quantity, TotalCost = cost, AverageCost = quantity <= 0m ? 0m : Math.Round(cost / quantity, 4), RealizedProfitLoss = realized };
+            _currentHoldingPercentage = quantity > 0m ? 100d : 0d;
+            _holdingCost = (double)OpenPosition.AverageCost;
+            OnPropertyChanged(nameof(CurrentHoldingPercentage));
+            OnPropertyChanged(nameof(HoldingCost));
+            RefreshRiskRecommendation();
+        }
+
+        private void RefreshRiskRecommendation()
+        {
+            RiskRecommendation = RiskManagementService.Evaluate(OpenPosition, LatestPrice, _candles, _currentOpportunityScore, CurrentCrashRiskScore);
+        }
+
+        private void RunBacktest()
+        {
+            BacktestResult = StrategyBacktester.Run(_candles);
+            OnPropertyChanged(nameof(BacktestResult));
+        }
+
+        private async Task RunBrokerHistoryBacktestAsync()
+        {
+            var candles = await _dailyCandleRepository.LoadAsync(Symbol);
+            BacktestResult = StrategyBacktester.Run(candles);
+            OnPropertyChanged(nameof(BacktestResult));
+        }
+
         private void RefreshStrategyOutput(TrendRecommendationResult recommendation = null)
         {
             if (_candles.Count < 2 || SelectedKLineInterval != "日K")
@@ -2138,6 +2253,7 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(StrategyOutput));
             OnPropertyChanged(nameof(StrategyStageLabel));
             OnPropertyChanged(nameof(StrategyDescription));
+            RefreshRiskRecommendation();
         }
 
         private void RebuildMacdVisuals(IReadOnlyList<CandleData> sourceCandles)
