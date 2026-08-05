@@ -2141,6 +2141,11 @@ namespace StockTracker.ViewModels
                             var latestScore = latestRecommendation.Score;
                             var scoreDate = enrichedCandles.Last().Time.Date;
                             var previousMa20 = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].MA20 : null;
+                            var latestVolume = enrichedCandles.Count > 0 ? (double?)enrichedCandles[enrichedCandles.Count - 1].Volume : null;
+                            var avgVolume20 = enrichedCandles.Count == 0
+                                ? (double?)null
+                                : enrichedCandles.Skip(Math.Max(0, enrichedCandles.Count - 20)).Average(x => (double)x.Volume);
+                            var latestCandle = enrichedCandles.Count > 0 ? enrichedCandles.Last() : null;
                             var strategyOutput = AdvancedTradingStrategyEngine.EvaluateStrategy(
                                 latestRecommendation,
                                 recentRecommendations,
@@ -2149,7 +2154,12 @@ namespace StockTracker.ViewModels
                                 dummyVm.MA5,
                                 dummyVm.MA20,
                                 previousMa20,
-                                0d);
+                                0d,
+                                latestVolume,
+                                avgVolume20,
+                                null,
+                                latestCandle?.MA120,
+                                latestCandle?.MA240);
 
                             long latestNet = ResolveThreeMajorNetByDate(t86History, scoreDate);
                             long foreignNet = ResolveForeignNetByDate(t86History, scoreDate);

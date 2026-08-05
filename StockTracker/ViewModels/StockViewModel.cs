@@ -2132,7 +2132,10 @@ namespace StockTracker.ViewModels
                 previousMa20,
                 HoldingCost,
                 latestVolume,
-                avgVolume20);
+                avgVolume20,
+                null,
+                MA120,
+                MA240);
 
             StrategyOutput = result;
             OnPropertyChanged(nameof(StrategyOutput));
