@@ -2141,6 +2141,8 @@ namespace StockTracker.ViewModels
                             var latestScore = latestRecommendation.Score;
                             var scoreDate = enrichedCandles.Last().Time.Date;
                             var previousMa20 = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].MA20 : null;
+                            var yesterdayPrice = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].Close : null;
+                            var price20DaysAgo = enrichedCandles.Count > 20 ? (double?)enrichedCandles[enrichedCandles.Count - 21].Close : null;
                             var latestVolume = enrichedCandles.Count > 0 ? (double?)enrichedCandles[enrichedCandles.Count - 1].Volume : null;
                             var avgVolume20 = enrichedCandles.Count == 0
                                 ? (double?)null
@@ -2151,13 +2153,15 @@ namespace StockTracker.ViewModels
                                 recentRecommendations,
                                 0d,
                                 (double)dummyVm.LatestPrice,
+                                yesterdayPrice,
+                                price20DaysAgo,
                                 dummyVm.MA5,
                                 dummyVm.MA20,
                                 previousMa20,
                                 0d,
                                 latestVolume,
                                 avgVolume20,
-                                null,
+                                latestCandle?.MA60,
                                 latestCandle?.MA120,
                                 latestCandle?.MA240);
 

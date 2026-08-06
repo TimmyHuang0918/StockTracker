@@ -23,6 +23,7 @@ namespace StockTracker.Models
         public long Volume { get; set; }
         public double MA5 { get; set; }
         public double MA20 { get; set; }
+        public double MA60 { get; set; }
         public double MA120 { get; set; }
         public double MA240 { get; set; }
         public double MACD { get; set; }

@@ -36,6 +36,7 @@ namespace StockTracker.ViewModels
         private Brush _latestChangeBrush = Brushes.Gainsboro;
         private double _ma5;
         private double _ma20;
+        private double _ma60;
         private double _ma120;
         private double _ma240;
         private double _macd;
@@ -226,6 +227,16 @@ namespace StockTracker.ViewModels
             private set
             {
                 _ma20 = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double MA60
+        {
+            get => _ma60;
+            private set
+            {
+                _ma60 = value;
                 OnPropertyChanged();
             }
         }
@@ -940,7 +951,9 @@ namespace StockTracker.ViewModels
             {
                 MA5 = 0;
                 MA20 = 0;
+                MA60 = 0;
                 MA120 = 0;
+                MA240 = 0;
                 MACD = 0;
                 RSI = 0;
                 _macdSeries.Clear();
@@ -963,15 +976,18 @@ namespace StockTracker.ViewModels
             {
                 var ma5Start = Math.Max(0, i - 4);
                 var ma20Start = Math.Max(0, i - 19);
+                var ma60Start = Math.Max(0, i - 59);
                 var ma120Start = Math.Max(0, i - 119);
                 var ma240Start = Math.Max(0, i - 239);
                 var ma5Count = i - ma5Start + 1;
                 var ma20Count = i - ma20Start + 1;
+                var ma60Count = i - ma60Start + 1;
                 var ma120Count = i - ma120Start + 1;
                 var ma240Count = i - ma240Start + 1;
 
                 _candles[i].MA5 = closes.Skip(ma5Start).Take(ma5Count).Average();
                 _candles[i].MA20 = closes.Skip(ma20Start).Take(ma20Count).Average();
+                _candles[i].MA60 = closes.Skip(ma60Start).Take(ma60Count).Average();
                 _candles[i].MA120 = closes.Skip(ma120Start).Take(ma120Count).Average();
                 _candles[i].MA240 = closes.Skip(ma240Start).Take(ma240Count).Average();
                 _candles[i].MACD = macdSeries[i];
@@ -994,6 +1010,7 @@ namespace StockTracker.ViewModels
             var latest = _candles[_candles.Count - 1];
             MA5 = latest.MA5;
             MA20 = latest.MA20;
+            MA60 = latest.MA60;
             MA120 = latest.MA120;
             MA240 = latest.MA240;
             MACD = latest.MACD;
@@ -1609,15 +1626,24 @@ namespace StockTracker.ViewModels
                     latest.Time);
 
                 var previousMa20 = subset.Count > 1 ? (double?)subset[subset.Count - 2].MA20 : null;
+                var yesterdayPrice = subset.Count > 1 ? (double?)subset[subset.Count - 2].Close : null;
+                var price20DaysAgo = subset.Count > 20 ? (double?)subset[subset.Count - 21].Close : null;
                 var strategy = AdvancedTradingStrategyEngine.EvaluateStrategy(
                     recommendation,
                     new List<TrendRecommendationResult>(),
                     simulatedHolding,
                     (double)latest.Close,
+                    yesterdayPrice,
+                    price20DaysAgo,
                     latest.MA5,
                     latest.MA20,
                     previousMa20,
-                    simulatedHoldingCost);
+                    simulatedHoldingCost,
+                    (double?)latest.Volume,
+                    null,
+                    latest.MA60,
+                    latest.MA120,
+                    latest.MA240);
 
                 // 以策略真正執行後的部位為主（經過風險壓制 + 速度限制器）
                 var executedHolding = strategy == null
@@ -2118,6 +2144,8 @@ namespace StockTracker.ViewModels
                 .ToList();
 
             var previousMa20 = _candles.Count >= 2 ? (double?)_candles[_candles.Count - 2].MA20 : null;
+            var yesterdayPrice = _candles.Count >= 2 ? (double?)_candles[_candles.Count - 2].Close : null;
+            var price20DaysAgo = _candles.Count > 20 ? (double?)_candles[_candles.Count - 21].Close : null;
             var latestVolume = _candles.Count > 0 ? (double?)_candles[_candles.Count - 1].Volume : null;
             var avgVolume20 = _candles.Count == 0
                 ? (double?)null
@@ -2127,13 +2155,15 @@ namespace StockTracker.ViewModels
                 recent,
                 CurrentHoldingPercentage,
                 (double)LatestPrice,
+                yesterdayPrice,
+                price20DaysAgo,
                 MA5,
                 MA20,
                 previousMa20,
                 HoldingCost,
                 latestVolume,
                 avgVolume20,
-                null,
+                MA60,
                 MA120,
                 MA240);
 
