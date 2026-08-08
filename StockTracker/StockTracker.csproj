@@ -229,6 +229,7 @@
     <Compile Include="Services\MarginDataFetcher.cs" />
     <Compile Include="Services\MarginMetricCalculator.cs" />
     <Compile Include="Services\SKAPI.cs" />
+    <Compile Include="Services\TechnicalLineQuantizer.cs" />
     <Compile Include="Services\TradingRecommendationLibrary.cs" />
     <Compile Include="Services\TwseMarginMetricRepository.cs" />
     <Compile Include="Services\TwseMarginRepository.cs" />

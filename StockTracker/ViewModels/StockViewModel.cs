@@ -1093,10 +1093,12 @@ namespace StockTracker.ViewModels
                 _crashRiskScoreCache[latestCandle.Time] = recommendation.CrashRiskScore;
                 _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
                 _recommendationPatternTagsCache[latestCandle.Time] = recommendation.PatternTags ?? new List<PatternTag>();
-                CurrentOpportunityScore = recommendation.Score;
                 CurrentCrashRiskScore = recommendation.CrashRiskScore;
                 UpdateCurrentPatternTags(latestCandle.Time);
                 RefreshStrategyOutput(recommendation);
+                CurrentOpportunityScore = StrategyOutput?.FinalScore ?? recommendation.Score;
+                // 同步 cache 為 FinalScore，使 K 線 tooltip 與儀表板一致
+                _recommendationScoreCache[latestCandle.Time] = CurrentOpportunityScore;
 
                 var strategyDecision = StrategyOutput?.GlobalDecision ?? "NEUTRAL";
                 var actionSignal = ResolveActionSignalByStrategyDecision(strategyDecision);
@@ -1209,17 +1211,24 @@ namespace StockTracker.ViewModels
                 return "中立";
             }
 
-            if (strategyDecision == "BUY" || strategyDecision == "STRONG_BUY" || strategyDecision == "LATE_BUY")
+            if (strategyDecision == "BUY_LINEAR")
             {
                 return "買進訊號";
             }
 
-            if (strategyDecision == "BUY_STAGE1" || strategyDecision == "BUY_STAGE2" || strategyDecision == "BUY_STAGE3")
+            if (strategyDecision == "REDUCE_LINEAR" || strategyDecision == "EXIT_OVERHEAT" || strategyDecision == "CLEAR")
+            {
+                return "賣出訊號";
+            }
+
+            // 舊版決策名稱相容
+            if (strategyDecision == "BUY" || strategyDecision == "STRONG_BUY" || strategyDecision == "LATE_BUY" ||
+                strategyDecision == "BUY_STAGE1" || strategyDecision == "BUY_STAGE2" || strategyDecision == "BUY_STAGE3")
             {
                 return "買進訊號";
             }
 
-            if (strategyDecision == "CRASH_WARNING" || strategyDecision == "CLEAR" || strategyDecision == "EXIT_STAGE1" || strategyDecision == "EXIT_STAGE2" || strategyDecision == "EXIT_STAGE3")
+            if (strategyDecision == "CRASH_WARNING" || strategyDecision == "EXIT_STAGE1" || strategyDecision == "EXIT_STAGE2" || strategyDecision == "EXIT_STAGE3")
             {
                 return "賣出訊號";
             }
@@ -1411,23 +1420,36 @@ namespace StockTracker.ViewModels
                 Brush brush;
                 double offsetY;
 
-                if (signal.StrategyDecision == "BUY")
+                if (signal.StrategyDecision == "BUY_LINEAR")
                 {
                     text = "▲";
                     brush = Brushes.OrangeRed;
                     offsetY = highY - 20;
                 }
-                else if (signal.StrategyDecision == "STRONG_BUY")
+                else if (signal.StrategyDecision == "CLEAR")
                 {
-                    text = "▲";
+                    text = "✕";
                     brush = Brushes.Red;
-                    offsetY = highY - 22;
+                    offsetY = lowY + 8;
                 }
-                else if (signal.StrategyDecision == "LATE_BUY")
+                else if (signal.StrategyDecision == "EXIT_OVERHEAT")
+                {
+                    text = "▼";
+                    brush = Brushes.OrangeRed;
+                    offsetY = lowY + 8;
+                }
+                else if (signal.StrategyDecision == "REDUCE_LINEAR")
+                {
+                    text = "▼";
+                    brush = Brushes.MediumSeaGreen;
+                    offsetY = lowY + 8;
+                }
+                // 舊版相容
+                else if (signal.StrategyDecision == "BUY" || signal.StrategyDecision == "STRONG_BUY" || signal.StrategyDecision == "LATE_BUY")
                 {
                     text = "▲";
-                    brush = Brushes.Orange;
-                    offsetY = highY - 18;
+                    brush = Brushes.OrangeRed;
+                    offsetY = highY - 20;
                 }
                 else
                 {
@@ -1602,6 +1624,7 @@ namespace StockTracker.ViewModels
 
             var simulatedHolding = 0d;
             var simulatedHoldingCost = 0d;
+            double? previousFinalScore = null;
 
             for (var i = 19; i < _candles.Count; i++)
             {
@@ -1625,12 +1648,33 @@ namespace StockTracker.ViewModels
                     filteredT86History,
                     latest.Time);
 
+                // 取前 5 棒的推薦結果（與儀表板邏輯一致，避免籌碼防禦機制失效）
+                var recent5 = new List<TrendRecommendationResult>();
+                for (var j = Math.Max(19, i - 4); j < i; j++)
+                {
+                    var prevSubset = _candles.Take(j + 1).ToList();
+                    var prevLatest = prevSubset[prevSubset.Count - 1];
+                    var prevClose2 = prevSubset.Count > 1 ? (double)prevSubset[prevSubset.Count - 2].Close : (double)prevLatest.Close;
+                    var prevT86 = new TwseT86History
+                    {
+                        Symbol = Symbol,
+                        Name = Name,
+                        RecordsByDate = _twseByDate
+                            .Where(x => x.Key.Date <= prevLatest.Time.Date)
+                            .ToDictionary(x => x.Key, x => x.Value)
+                    };
+                    recent5.Add(TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                        prevSubset, (double)prevLatest.Close, (double?)prevLatest.PercentageChange,
+                        prevClose2, prevT86, prevLatest.Time));
+                }
+
                 var previousMa20 = subset.Count > 1 ? (double?)subset[subset.Count - 2].MA20 : null;
                 var yesterdayPrice = subset.Count > 1 ? (double?)subset[subset.Count - 2].Close : null;
                 var price20DaysAgo = subset.Count > 20 ? (double?)subset[subset.Count - 21].Close : null;
+                var openPriceForBar = (double?)latest.Open;
                 var strategy = AdvancedTradingStrategyEngine.EvaluateStrategy(
                     recommendation,
-                    new List<TrendRecommendationResult>(),
+                    recent5,
                     simulatedHolding,
                     (double)latest.Close,
                     yesterdayPrice,
@@ -1643,7 +1687,14 @@ namespace StockTracker.ViewModels
                     null,
                     latest.MA60,
                     latest.MA120,
-                    latest.MA240);
+                    latest.MA240,
+                    openPriceForBar,
+                    previousFinalScore,
+                    null);
+
+                // 記錄本次平滑分供下一棒使用
+                if (strategy != null)
+                    previousFinalScore = strategy.FinalScore;
 
                 // 以策略真正執行後的部位為主（經過風險壓制 + 速度限制器）
                 var executedHolding = strategy == null
@@ -1657,7 +1708,7 @@ namespace StockTracker.ViewModels
                 });
 
                 var decision = strategy?.GlobalDecision ?? "NEUTRAL";
-                if (decision == "BUY" || decision == "LATE_BUY" || decision == "STRONG_BUY" || decision == "REDUCE" || decision == "CRASH_WARNING")
+                if (decision == "BUY_LINEAR" || decision == "REDUCE_LINEAR" || decision == "EXIT_OVERHEAT" || decision == "CLEAR")
                 {
                     _signalHistory.Add(new SignalMarkerData
                     {
@@ -1665,9 +1716,10 @@ namespace StockTracker.ViewModels
                         Time = latest.Time,
                         Price = latest.Close,
                         Signal = ResolveActionSignalByStrategyDecision(decision),
-                        Score = recommendation.Score,
+                        Score = strategy?.FinalScore ?? recommendation.Score,
                         StrategyDecision = decision,
                         StrategyActionText = strategy.ActionText,
+                        StrategyDescription = strategy.Description,
                         TargetHoldingPercentage = executedHolding
                     });
                 }
@@ -2150,6 +2202,8 @@ namespace StockTracker.ViewModels
             var avgVolume20 = _candles.Count == 0
                 ? (double?)null
                 : _candles.Skip(Math.Max(0, _candles.Count - 20)).Average(x => (double)x.Volume);
+            var latestOpenPrice = _candles.Count > 0 ? (double?)_candles[_candles.Count - 1].Open : null;
+            var previousFinalScore = StrategyOutput?.FinalScore > 0 ? (double?)StrategyOutput.FinalScore : (double?)null;
             var result = AdvancedTradingStrategyEngine.EvaluateStrategy(
                 latestRecommendation,
                 recent,
@@ -2165,7 +2219,10 @@ namespace StockTracker.ViewModels
                 avgVolume20,
                 MA60,
                 MA120,
-                MA240);
+                MA240,
+                latestOpenPrice,
+                previousFinalScore,
+                _candles);
 
             StrategyOutput = result;
             OnPropertyChanged(nameof(StrategyOutput));

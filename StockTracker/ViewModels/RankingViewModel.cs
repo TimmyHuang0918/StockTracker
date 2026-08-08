@@ -2148,6 +2148,7 @@ namespace StockTracker.ViewModels
                                 ? (double?)null
                                 : enrichedCandles.Skip(Math.Max(0, enrichedCandles.Count - 20)).Average(x => (double)x.Volume);
                             var latestCandle = enrichedCandles.Count > 0 ? enrichedCandles.Last() : null;
+                            var latestOpenPrice = latestCandle != null ? (double?)latestCandle.Open : null;
                             var strategyOutput = AdvancedTradingStrategyEngine.EvaluateStrategy(
                                 latestRecommendation,
                                 recentRecommendations,
@@ -2163,7 +2164,13 @@ namespace StockTracker.ViewModels
                                 avgVolume20,
                                 latestCandle?.MA60,
                                 latestCandle?.MA120,
-                                latestCandle?.MA240);
+                                latestCandle?.MA240,
+                                latestOpenPrice,
+                                null,
+                                null);
+
+                            // 使用儀表板版本的 FinalScore（EMA 平滑後）作為顯示分數
+                            latestScore = strategyOutput?.FinalScore ?? latestRecommendation.Score;
 
                             long latestNet = ResolveThreeMajorNetByDate(t86History, scoreDate);
                             long foreignNet = ResolveForeignNetByDate(t86History, scoreDate);
@@ -2293,11 +2300,28 @@ namespace StockTracker.ViewModels
                     filteredT86History,
                     latestCandle.Time);
 
+                // 計算策略評分（與儀表板一致），取 FinalScore 作為近期分數
+                var prevMa20 = subset.Count > 1 ? (double?)subset[subset.Count - 2].MA20 : null;
+                var ydPrice = subset.Count > 1 ? (double?)subset[subset.Count - 2].Close : null;
+                var p20DaysAgo = subset.Count > 20 ? (double?)subset[subset.Count - 21].Close : null;
+                var vol = subset.Count > 0 ? (double?)subset[subset.Count - 1].Volume : null;
+                var avgVol = subset.Count == 0 ? (double?)null : subset.Skip(Math.Max(0, subset.Count - 20)).Average(x => (double)x.Volume);
+                var openPx = (double?)latestCandle.Open;
+                var recentForPoint = result.RecentRecommendations.Count > 1
+                    ? result.RecentRecommendations.Take(result.RecentRecommendations.Count - 1).ToList()
+                    : new List<TrendRecommendationResult>();
+                var strategyPoint = AdvancedTradingStrategyEngine.EvaluateStrategy(
+                    recommendation, recentForPoint, 0d, (double)latestCandle.Close,
+                    ydPrice, p20DaysAgo, latestCandle.MA5, latestCandle.MA20, prevMa20,
+                    0d, vol, avgVol, latestCandle.MA60, latestCandle.MA120, latestCandle.MA240,
+                    openPx, null, null);
+                var displayScore = strategyPoint?.FinalScore ?? recommendation.Score;
+
                 result.RecentRecommendations.Add(recommendation);
                 result.RecentScores.Add(new RankedStockScorePoint
                 {
                     Date = latestCandle.Time.Date,
-                    Score = recommendation.Score
+                    Score = displayScore
                 });
             }
 

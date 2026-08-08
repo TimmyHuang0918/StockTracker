@@ -25,11 +25,12 @@
                     <Run Text="{Binding Signal, Mode=OneWay}"/>
                 </TextBlock>
 
-                <Border Margin="0,0,0,10" Padding="8" CornerRadius="6" BorderThickness="1"
+                <Border Margin="0,0,0,10" Padding="10" CornerRadius="6" BorderThickness="1.5"
                         Background="#221A1A1A"
                         BorderBrush="{Binding StrategyOutput.ActionColor, Mode=OneWay}">
                     <StackPanel>
-                        <WrapPanel Margin="0,0,0,6">
+                        <!-- 持股輸入列 -->
+                        <WrapPanel Margin="0,0,0,8">
                             <TextBlock Text="目前持股(%):" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBox Width="70" Height="26"
                                      Text="{Binding CurrentHoldingPercentage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F1}"/>
@@ -38,14 +39,73 @@
                                      Text="{Binding HoldingCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=F2}"/>
                         </WrapPanel>
 
-                        <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{Binding StrategyOutput.ActionColor, Mode=OneWay}">
-                            <Run Text="策略動作: "/>
-                            <Run Text="{Binding StrategyOutput.ActionText, Mode=OneWay}"/>
-                        </TextBlock>
-                        <TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource MutedForegroundBrush}"
-                                   Text="{Binding StrategyOutput.CurrentHoldingPercentage, StringFormat=建議持股：{0:F1}%, Mode=OneWay}"/>
+                        <!-- 決策標題列 -->
+                        <WrapPanel Margin="0,0,0,6" VerticalAlignment="Center">
+                            <Border Padding="10,4" CornerRadius="4" Background="{Binding StrategyOutput.ActionColor, Mode=OneWay}" Margin="0,0,8,0">
+                                <TextBlock FontSize="13" FontWeight="Bold" Foreground="#FF1A1A1A"
+                                           Text="{Binding StrategyOutput.ActionText, Mode=OneWay}"/>
+                            </Border>
+                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource MutedForegroundBrush}">
+                                <Run Text="建議持股："/>
+                                <Run Text="{Binding StrategyOutput.CurrentHoldingPercentage, StringFormat={}{0:F1}%, Mode=OneWay}"
+                                     Foreground="{Binding StrategyOutput.ActionColor, Mode=OneWay}"/>
+                            </TextBlock>
+                        </WrapPanel>
 
-                        <ItemsControl ItemsSource="{Binding StrategyOutput.Reasons, Mode=OneWay}" Margin="0,6,0,0">
+                        <!-- 分數儀表板 -->
+                        <Border Margin="0,0,0,8" Padding="8,6" CornerRadius="4" Background="#33000000" BorderThickness="1" BorderBrush="#44FFFFFF">
+                            <StackPanel>
+                                <WrapPanel Margin="0,0,0,4">
+                                    <!-- 最終分數標籤 -->
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="綜合評分" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,0,2"/>
+                                        <TextBlock FontSize="22" FontWeight="Bold"
+                                                   Text="{Binding StrategyOutput.FinalScoreText, Mode=OneWay}"
+                                                   Foreground="{Binding StrategyOutput.FinalScoreColor, Mode=OneWay}"/>
+                                    </StackPanel>
+                                    <!-- 分項標籤 -->
+                                    <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <TextBlock FontSize="11" Foreground="#FFAAAAAA"
+                                                   Text="{Binding StrategyOutput.TechScoreText, Mode=OneWay}" Margin="0,0,0,2"/>
+                                        <TextBlock FontSize="11" Foreground="#FFAAAAAA"
+                                                   Text="{Binding StrategyOutput.ChipScoreText, Mode=OneWay}"/>
+                                    </StackPanel>
+                                    <!-- 量比 / 乖離標籤 -->
+                                    <StackPanel Margin="0,0,0,0" VerticalAlignment="Center">
+                                        <Border Padding="5,2" CornerRadius="3" Margin="0,0,0,3"
+                                                Background="#33FFFFFF">
+                                            <TextBlock FontSize="11" FontWeight="SemiBold"
+                                                       Text="{Binding StrategyOutput.VolumeRatioText, Mode=OneWay}"
+                                                       Foreground="{Binding StrategyOutput.VolumeRatioColor, Mode=OneWay}"/>
+                                        </Border>
+                                        <Border Padding="5,2" CornerRadius="3"
+                                                Background="#33FFFFFF">
+                                            <TextBlock FontSize="11" FontWeight="SemiBold"
+                                                       Text="{Binding StrategyOutput.Bias20Text, Mode=OneWay}"
+                                                       Foreground="{Binding StrategyOutput.Bias20Color, Mode=OneWay}"/>
+                                        </Border>
+                                    </StackPanel>
+                                </WrapPanel>
+
+                                <!-- 分數進度條 -->
+                                <Grid Height="8" Margin="0,2,0,0">
+                                    <Rectangle Fill="#33FFFFFF" RadiusX="4" RadiusY="4"/>
+                                    <Rectangle Fill="{Binding StrategyOutput.FinalScoreColor, Mode=OneWay}" RadiusX="4" RadiusY="4"
+                                               Width="{Binding StrategyOutput.FinalScoreBarWidth, Mode=OneWay}"
+                                               HorizontalAlignment="Left"/>
+                                </Grid>
+                                <!-- 進度條刻度標記 50/90 -->
+                                <Grid Margin="0,1,0,0">
+                                    <TextBlock Text="50" FontSize="9" Foreground="#55FFFFFF"
+                                               HorizontalAlignment="Left" Margin="100,0,0,0"/>
+                                    <TextBlock Text="90" FontSize="9" Foreground="#55FFFFFF"
+                                               HorizontalAlignment="Left" Margin="180,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 推理紀錄標籤 -->
+                        <ItemsControl ItemsSource="{Binding StrategyOutput.Reasons, Mode=OneWay}" Margin="0,2,0,0">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel Orientation="Horizontal"/>
@@ -53,10 +113,10 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="0,0,6,4" Padding="6,2" CornerRadius="9" BorderThickness="1"
+                                    <Border Margin="0,0,5,4" Padding="6,3" CornerRadius="9" BorderThickness="1"
                                             Background="#22242424"
                                             BorderBrush="{Binding DataContext.StrategyOutput.ActionColor, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
-                                        <TextBlock Text="{Binding}" FontSize="10" Foreground="#FFF1F1F1" TextTrimming="CharacterEllipsis" MaxWidth="300"/>
+                                        <TextBlock Text="{Binding}" FontSize="10" Foreground="#FFF1F1F1" TextWrapping="Wrap" MaxWidth="320"/>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

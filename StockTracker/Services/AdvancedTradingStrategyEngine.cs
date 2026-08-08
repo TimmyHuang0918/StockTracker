@@ -1,5 +1,6 @@
 using StockManager.Library;
 using StockTracker.Models;
+using StockTracker.Services;
 using StockTracker.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -19,8 +20,8 @@ public static class AdvancedTradingStrategyEngine
         IReadOnlyList<TrendRecommendationResult> recent5DayRecommendations,
         double currentHoldingPercentage,
         double currentPrice,
-        double? yesterdayPrice,          // 傳入昨日收盤價 (用於老王 2 天站穩驗證)
-        double? price20DaysAgo,          // 傳入 20 天前收盤價 (用於 MA20 扣抵預判)
+        double? yesterdayPrice,
+        double? price20DaysAgo,
         double? ma5,
         double? ma20,
         double? previousMa20,
@@ -31,7 +32,8 @@ public static class AdvancedTradingStrategyEngine
         double? ma120 = null,
         double? ma240 = null,
         double? openPrice = null,
-        double? previousFinalScore = null) // 傳入前一日最終平滑分
+        double? previousFinalScore = null,
+        IReadOnlyList<CandleData> candles = null) // 傳入 K 棒資料以啟用量化線型分析
     {
         // 1. 初始化與邊界保護
         var normalizedHolding = ClampHolding(currentHoldingPercentage);
@@ -94,6 +96,10 @@ public static class AdvancedTradingStrategyEngine
         bool isRedCandle = openPrice.HasValue ? (currentPrice >= openPrice.Value) : false;
         bool isInstitutionalBuy = currentRecommendation.Reasons != null &&
                                   currentRecommendation.Reasons.Any(r => r.Contains("投信") || r.Contains("外資買超") || r.Contains("法人買超"));
+
+        // 填充 output 指標欄位（供 UI 顯示）
+        output.Bias20 = bias20;
+        output.VolumeRatio = volumeRatio;
 
         // ----------------------------------------------------
         // 3. 位階動態乖離率 (Bias20) 風險扣分
@@ -435,6 +441,19 @@ public static class AdvancedTradingStrategyEngine
             string markerText = isBuy ? "加" : "減";
             if (action == "EXIT_OVERHEAT") markerText = "熱";
             AddChartMarker(output, currentPrice, markerText, output.ActionColor, isBuy ? "BUY" : "SELL");
+        }
+
+        // 11. 填充量化指標（供儀表板 UI 顯示）
+        output.FinalScore = finalScore;
+        output.TechScore  = Math.Round(techScore, 1);
+        output.ChipScore  = Math.Round(CalculateChipScore(currentRecommendation, recent5DayRecommendations), 1);
+
+        // 12. 量化線型分析（TechnicalLineQuantizer）
+        if (candles != null && candles.Count >= 10)
+        {
+            var analysis = TechnicalLineQuantizer.Analyze(candles);
+            output.SupportZones = analysis.Zones.Where(z => z.IsValid).ToList();
+            output.TrendLines   = analysis.TrendLines;
         }
 
         return output;
