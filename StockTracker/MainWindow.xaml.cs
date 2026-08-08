@@ -68,6 +68,15 @@ namespace StockTracker
             Close();
         }
 
+        private void ScoreDetailToggle_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.Tag is StockViewModel stock)
+            {
+                stock.ToggleScoreDetail();
+            }
+            e.Handled = true;
+        }
+
         private void StockList_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if ((e.OriginalSource as FrameworkElement)?.DataContext is StockViewModel stock)

@@ -68,6 +68,7 @@ namespace StockTracker.ViewModels
         private readonly ObservableCollection<PatternTag> _currentPatternTags = new ObservableCollection<PatternTag>();
         private int _currentCrashRiskScore;
         private int _currentOpportunityScore;
+        private bool _isScoreDetailExpanded;
         private bool _showPatternMarkers = true;
         private bool _showRiskMarkers = true;
         private double _lastMinPrice;
@@ -160,20 +161,23 @@ namespace StockTracker.ViewModels
             }
         }
 
-        public int CurrentOpportunityScore
-        {
-            get => _currentOpportunityScore;
-            private set
-            {
-                if (_currentOpportunityScore == value)
-                {
-                    return;
-                }
+        /// <summary>綜合評分，直接讀 StrategyOutput.FinalScore，與 detail 儀表板保持一致。</summary>
+        public int CurrentOpportunityScore => StrategyOutput?.FinalScore ?? _currentOpportunityScore;
 
-                _currentOpportunityScore = value;
+        public bool IsScoreDetailExpanded
+        {
+            get => _isScoreDetailExpanded;
+            set
+            {
+                _isScoreDetailExpanded = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(ScoreDetailVisibility));
             }
         }
+
+        public Visibility ScoreDetailVisibility => _isScoreDetailExpanded ? Visibility.Visible : Visibility.Collapsed;
+
+        public void ToggleScoreDetail() => IsScoreDetailExpanded = !IsScoreDetailExpanded;
 
         public double ThreeMajorZeroY
         {
@@ -1070,7 +1074,8 @@ namespace StockTracker.ViewModels
                 Signal = "資料不足";
                 _latestRecommendationReasons.Clear();
                 _currentPatternTags.Clear();
-                CurrentOpportunityScore = 0;
+                _currentOpportunityScore = 0;
+                OnPropertyChanged(nameof(CurrentOpportunityScore));
                 CurrentCrashRiskScore = 0;
                 return;
             }
@@ -1096,7 +1101,6 @@ namespace StockTracker.ViewModels
                 CurrentCrashRiskScore = recommendation.CrashRiskScore;
                 UpdateCurrentPatternTags(latestCandle.Time);
                 RefreshStrategyOutput(recommendation);
-                CurrentOpportunityScore = StrategyOutput?.FinalScore ?? recommendation.Score;
                 // 同步 cache 為 FinalScore，使 K 線 tooltip 與儀表板一致
                 _recommendationScoreCache[latestCandle.Time] = CurrentOpportunityScore;
 
@@ -1140,7 +1144,8 @@ namespace StockTracker.ViewModels
                 _recommendationReasonsCache[latestCandle.Time] = _latestRecommendationReasons;
                 _crashRiskScoreCache[latestCandle.Time] = 0;
                 _recommendationPatternTagsCache[latestCandle.Time] = new List<PatternTag>();
-                CurrentOpportunityScore = score;
+                _currentOpportunityScore = score;
+                OnPropertyChanged(nameof(CurrentOpportunityScore));
                 CurrentCrashRiskScore = 0;
                 UpdateCurrentPatternTags(latestCandle.Time);
                 StrategyOutput = new StrategyOutputViewModel
@@ -2228,6 +2233,7 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(StrategyOutput));
             OnPropertyChanged(nameof(StrategyStageLabel));
             OnPropertyChanged(nameof(StrategyDescription));
+            OnPropertyChanged(nameof(CurrentOpportunityScore));
         }
 
         private void RebuildMacdVisuals(IReadOnlyList<CandleData> sourceCandles)

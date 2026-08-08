@@ -173,15 +173,33 @@
                                 <Border Padding="4" Margin="2" BorderThickness="1" BorderBrush="{DynamicResource AppBorderBrush}" Background="Transparent">
                                     <StackPanel>
                                         <DockPanel Margin="0,0,0,6" Tag="StockDragHandle" Cursor="SizeAll" ToolTip="按住這裡可拖曳調整股票位置">
-                                            <Border DockPanel.Dock="Right" Padding="6,3" Margin="8,0,0,0"
+                                            <Border DockPanel.Dock="Right" Padding="4,3" Margin="8,0,0,0"
                                                     Background="#AA1E1E1E" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Border Width="28" Height="28" CornerRadius="14" BorderThickness="1.2" BorderBrush="#FFCD5C5C" Background="#22B22222" Margin="0,0,6,0" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="機會分數">
-                                                        <TextBlock Text="{Binding CurrentOpportunityScore}" Foreground="#FFFFD0D0" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
-                                                    </Border>
-                                                    <Border Width="28" Height="28" CornerRadius="14" BorderThickness="1.2" BorderBrush="#FF66CDAA" Background="#223CB371" Margin="0,0,6,0" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="風險分數">
-                                                        <TextBlock Text="{Binding CurrentCrashRiskScore}" Foreground="#FFE8FFF2" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
-                                                    </Border>
+                                                    <!-- 分數圓圈（可點擊展開說明） -->
+                                                    <Button Background="Transparent" BorderThickness="0" Padding="2,0"
+                                                            Cursor="Hand" ToolTip="點擊展開／收合分數說明"
+                                                            Tag="{Binding}" Click="ScoreDetailToggle_Click">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Border Width="28" Height="28" CornerRadius="14" BorderThickness="1.2"
+                                                                    BorderBrush="#FFCD5C5C" Background="#22B22222"
+                                                                    Margin="0,0,3,0" ToolTip="綜合分數（儀表板版本）">
+                                                                <TextBlock Text="{Binding StrategyOutput.FinalScore, Mode=OneWay}" Foreground="#FFFFD0D0"
+                                                                           FontSize="11" FontWeight="Bold"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
+                                                            </Border>
+                                                            <Border Width="28" Height="28" CornerRadius="14" BorderThickness="1.2"
+                                                                    BorderBrush="#FF66CDAA" Background="#223CB371"
+                                                                    Margin="0,0,3,0" ToolTip="大跌風險分數">
+                                                                <TextBlock Text="{Binding CurrentCrashRiskScore}" Foreground="#FFE8FFF2"
+                                                                           FontSize="11" FontWeight="Bold"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding IsScoreDetailExpanded, Converter={StaticResource BoolToExpandArrowConverter}}"
+                                                                       VerticalAlignment="Center" FontSize="9"
+                                                                       Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,0,3,0"/>
+                                                        </StackPanel>
+                                                    </Button>
                                                     <TextBlock FontSize="15" FontWeight="SemiBold" x:Name="PriceTextBlock">
                                                     <Run Text="現價 " Foreground="{DynamicResource MutedForegroundBrush}"/>
                                                     <Run Text="{Binding LatestPrice, StringFormat={}{0:F2}, Mode=OneWay, NotifyOnTargetUpdated=True}" Foreground="{Binding LatestChangeBrush}"/>
@@ -221,6 +239,85 @@
                                             <Run Text="訊號: "/>
                                             <Run Text="{Binding Signal, Mode=OneWay}"/>
                                         </TextBlock>
+
+                                        <!-- 可折疊分數說明面板 -->
+                                        <Border Visibility="{Binding ScoreDetailVisibility, Mode=OneWay}"
+                                                Margin="0,4,0,4" Padding="8,6" CornerRadius="6" BorderThickness="1"
+                                                Background="#1A1A2E" BorderBrush="#555588">
+                                            <StackPanel>
+                                                <TextBlock Text="📊 分數說明" FontSize="12" FontWeight="Bold" Foreground="#AAAAFF" Margin="0,0,0,6"/>
+
+                                                <!-- 綜合分數（紅圈） -->
+                                                <Grid Margin="0,0,0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="110"/>
+                                                        <ColumnDefinition Width="36"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="🔴 綜合評分" FontSize="11" Foreground="#FFFFD0D0" VerticalAlignment="Center"/>
+                                                    <Border Grid.Column="1" Width="32" Height="22" CornerRadius="4"
+                                                            Background="#44B22222" BorderBrush="#FFCD5C5C" BorderThickness="1" HorizontalAlignment="Center">
+                                                        <TextBlock Text="{Binding StrategyOutput.FinalScore, Mode=OneWay}" Foreground="#FFFFD0D0"
+                                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="2" TextWrapping="Wrap" FontSize="10"
+                                                               Foreground="{DynamicResource MutedForegroundBrush}" Margin="6,0,0,0"
+                                                               Text="{Binding StrategyOutput.FinalScore, Mode=OneWay, StringFormat={}越高越有機會（0–100），目前 {0} 分。≥70 多頭積極，≤30 偏空。}"/>
+                                                </Grid>
+
+                                                <!-- 大跌風險分數（綠圈） -->
+                                                <Grid Margin="0,0,0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="110"/>
+                                                        <ColumnDefinition Width="36"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="🟢 大跌風險" FontSize="11" Foreground="#FFE8FFF2" VerticalAlignment="Center"/>
+                                                    <Border Grid.Column="1" Width="32" Height="22" CornerRadius="4"
+                                                            Background="#443CB371" BorderBrush="#FF66CDAA" BorderThickness="1" HorizontalAlignment="Center">
+                                                        <TextBlock Text="{Binding CurrentCrashRiskScore}" Foreground="#FFE8FFF2"
+                                                                   FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="2" TextWrapping="Wrap" FontSize="10"
+                                                               Foreground="{DynamicResource MutedForegroundBrush}" Margin="6,0,0,0"
+                                                               Text="{Binding CurrentCrashRiskScore, StringFormat={}越高代表崩跌風險越大（0–100），目前 {0} 分。≥75 危險，建議減碼。}"/>
+                                                </Grid>
+
+                                                <!-- 策略決策 -->
+                                                <Grid Margin="0,0,0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="110"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="⚡ 策略決策" FontSize="11" Foreground="#FFEFD58A" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" Margin="6,0,0,0" TextWrapping="Wrap">
+                                                        <Run Text="{Binding StrategyOutput.ActionText, Mode=OneWay}"/>
+                                                        <Run Text=" — "/>
+                                                        <Run Text="{Binding StrategyOutput.ExecutedHolding, StringFormat={}目標持股 {0:F0}%}"/>
+                                                    </TextBlock>
+                                                </Grid>
+
+                                                <!-- 技術/籌碼子分數 -->
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <Border Padding="5,2" CornerRadius="4" Background="#22334455" BorderBrush="#446688AA" BorderThickness="1" Margin="0,0,6,0">
+                                                        <TextBlock Text="{Binding StrategyOutput.TechScoreText, Mode=OneWay}" FontSize="10" Foreground="#AAD4E8"/>
+                                                    </Border>
+                                                    <Border Padding="5,2" CornerRadius="4" Background="#22334455" BorderBrush="#446688AA" BorderThickness="1" Margin="0,0,6,0">
+                                                        <TextBlock Text="{Binding StrategyOutput.ChipScoreText, Mode=OneWay}" FontSize="10" Foreground="#AAD4E8"/>
+                                                    </Border>
+                                                    <Border Padding="5,2" CornerRadius="4" BorderThickness="1" Margin="0,0,6,0"
+                                                            Background="#22334455" BorderBrush="{Binding StrategyOutput.VolumeRatioColor, Mode=OneWay}">
+                                                        <TextBlock Text="{Binding StrategyOutput.VolumeRatioText, Mode=OneWay}" FontSize="10"
+                                                                   Foreground="{Binding StrategyOutput.VolumeRatioColor, Mode=OneWay}"/>
+                                                    </Border>
+                                                    <Border Padding="5,2" CornerRadius="4" BorderThickness="1"
+                                                            Background="#22334455" BorderBrush="{Binding StrategyOutput.Bias20Color, Mode=OneWay}">
+                                                        <TextBlock Text="{Binding StrategyOutput.Bias20Text, Mode=OneWay}" FontSize="10"
+                                                                   Foreground="{Binding StrategyOutput.Bias20Color, Mode=OneWay}"/>
+                                                    </Border>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
 
                                         <Border Margin="0,4,0,6" Padding="6,5" CornerRadius="6" BorderThickness="1"
                                                 Background="#221A1A1A"
