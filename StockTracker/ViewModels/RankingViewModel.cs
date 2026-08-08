@@ -1289,6 +1289,15 @@ namespace StockTracker.ViewModels
                 netAmount = (double)s.ThreeMajorNetAmount,
                 netAmountStr = FormatMoney((double)s.ThreeMajorNetAmount),
                 netAmountClass = ResolveValueColorClass((double)s.ThreeMajorNetAmount),
+                foreignNet = (double)s.ForeignNet,
+                foreignNetStr = FormatNetShares((double)s.ForeignNet),
+                foreignNetClass = ResolveValueColorClass((double)s.ForeignNet),
+                dealerNet = (double)s.DealerNet,
+                dealerNetStr = FormatNetShares((double)s.DealerNet),
+                dealerNetClass = ResolveValueColorClass((double)s.DealerNet),
+                trustNet = (double)s.InvestmentTrustNet,
+                trustNetStr = FormatNetShares((double)s.InvestmentTrustNet),
+                trustNetClass = ResolveValueColorClass((double)s.InvestmentTrustNet),
                 action = HtmlEncode(s.StrategyActionText),
                 stage = HtmlEncode(s.StrategyStageLabel),
                 suggestion = HtmlEncode(s.Suggestion),
@@ -1376,6 +1385,26 @@ namespace StockTracker.ViewModels
             html.AppendLine(".rise{color:var(--rise);font-weight:600;}");
             html.AppendLine(".fall{color:var(--fall);font-weight:600;}");
             html.AppendLine(".flat{color:var(--flat);}");
+            html.AppendLine(".modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;}");
+            html.AppendLine(".modal-box{background:#161b22;border:1px solid #30363d;border-radius:16px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.6);}");
+            html.AppendLine(".modal-header{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 24px 16px;border-bottom:1px solid #30363d;gap:12px;}");
+            html.AppendLine(".modal-body{padding:20px 24px 24px;}");
+            html.AppendLine(".modal-close{background:none;border:none;color:#8b949e;font-size:26px;cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0;}");
+            html.AppendLine(".modal-close:hover{color:#fff;}");
+            html.AppendLine(".detail-section{margin-bottom:18px;}");
+            html.AppendLine(".detail-section-title{color:#8b949e;font-size:12px;font-weight:700;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #21262d;letter-spacing:0.05em;}");
+            html.AppendLine(".detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}");
+            html.AppendLine(".detail-item{background:#21262d;border-radius:8px;padding:10px 14px;}");
+            html.AppendLine(".detail-item-label{color:#8b949e;font-size:11px;font-weight:600;text-transform:uppercase;margin-bottom:5px;}");
+            html.AppendLine(".detail-item-value{color:#fff;font-size:17px;font-weight:700;}");
+            html.AppendLine(".reason-box{background:#21262d;border-radius:8px;padding:14px 16px;color:#c9d1d9;font-size:13px;line-height:1.8;white-space:pre-wrap;word-break:break-all;}");
+            html.AppendLine(".score-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}");
+            html.AppendLine(".score-pill{background:#21262d;border-radius:8px;padding:8px 14px;text-align:center;min-width:68px;}");
+            html.AppendLine(".score-pill-label{color:#8b949e;font-size:10px;font-weight:600;margin-bottom:4px;}");
+            html.AppendLine(".score-pill-value{color:#58a6ff;font-size:20px;font-weight:700;}");
+            html.AppendLine(".tag-list{display:flex;flex-wrap:wrap;gap:6px;}");
+            html.AppendLine(".tag-chip{background:rgba(31,111,235,0.15);color:#58a6ff;border:1px solid rgba(31,111,235,0.3);border-radius:12px;padding:4px 12px;font-size:12px;font-weight:600;}");
+            html.AppendLine(".inst-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
@@ -1480,6 +1509,66 @@ namespace StockTracker.ViewModels
             html.AppendLine("</div>");
             html.AppendLine("</div>");
 
+            html.AppendLine("<div id='stockModal' class='modal-overlay' style='display:none;' onclick=\"if(event.target===this)closeModal()\">");
+            html.AppendLine("<div class='modal-box'>");
+            html.AppendLine("<div class='modal-header'>");
+            html.AppendLine("<div style='flex:1;min-width:0;'>");
+            html.AppendLine("  <div style='display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;'>");
+            html.AppendLine("    <span style='font-size:22px;font-weight:700;color:#fff;' id='md-symbol'></span>");
+            html.AppendLine("    <span style='font-size:17px;color:#c9d1d9;' id='md-name'></span>");
+            html.AppendLine("    <span class='rank-badge' id='md-rank'></span>");
+            html.AppendLine("  </div>");
+            html.AppendLine("  <div style='display:flex;gap:14px;align-items:baseline;'>");
+            html.AppendLine("    <span style='font-size:30px;font-weight:700;color:#fff;font-family:ui-monospace,monospace;' id='md-price'></span>");
+            html.AppendLine("    <span style='font-size:18px;font-weight:600;font-family:ui-monospace,monospace;' id='md-chg'></span>");
+            html.AppendLine("  </div>");
+            html.AppendLine("</div>");
+            html.AppendLine("<button class='modal-close' onclick='closeModal()'>✕</button>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='modal-body'>");
+            html.AppendLine("  <div class='detail-section'>");
+            html.AppendLine("    <div class='detail-section-title'>評分概覽</div>");
+            html.AppendLine("    <div class='detail-grid'>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>最新分數</div><div class='detail-item-value' id='md-score'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>風險評分</div><div class='detail-item-value' id='md-crash'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>5日均分</div><div class='detail-item-value' id='md-avg'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>分數趨勢(5日)</div><div class='detail-item-value' id='md-trend'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>型態數量</div><div class='detail-item-value' id='md-pcount'></div></div>");
+            html.AppendLine("    </div>");
+            html.AppendLine("    <div class='score-pills' id='md-score-pills'></div>");
+            html.AppendLine("  </div>");
+            html.AppendLine("  <div class='detail-section'>");
+            html.AppendLine("    <div class='detail-section-title'>📋 評分理由明細</div>");
+            html.AppendLine("    <div class='reason-box' id='md-reason'>（無評分理由）</div>");
+            html.AppendLine("  </div>");
+            html.AppendLine("  <div class='detail-section' id='md-pattern-section'>");
+            html.AppendLine("    <div class='detail-section-title'>📊 型態標籤</div>");
+            html.AppendLine("    <div class='tag-list' id='md-patterns'></div>");
+            html.AppendLine("  </div>");
+            html.AppendLine("  <div class='detail-section'>");
+            html.AppendLine("    <div class='detail-section-title'>📈 策略建議</div>");
+            html.AppendLine("    <div class='detail-grid' style='margin-bottom:10px;'>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>策略動作</div><div class='detail-item-value' id='md-action'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>倉位狀態</div><div class='detail-item-value' id='md-stage'></div></div>");
+            html.AppendLine("    </div>");
+            html.AppendLine("    <div style='background:#21262d;border-radius:8px;padding:12px 16px;'>");
+            html.AppendLine("      <div style='color:#8b949e;font-size:11px;font-weight:600;text-transform:uppercase;margin-bottom:6px;'>綜合建議</div>");
+            html.AppendLine("      <div style='color:#c9d1d9;font-size:14px;line-height:1.6;' id='md-suggestion'></div>");
+            html.AppendLine("    </div>");
+            html.AppendLine("  </div>");
+            html.AppendLine("  <div class='detail-section'>");
+            html.AppendLine("    <div class='detail-section-title'>🏦 法人買賣超 (張)</div>");
+            html.AppendLine("    <div class='inst-row'>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>三大法人合計</div><div class='detail-item-value' id='md-net'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>外資</div><div class='detail-item-value' id='md-foreign'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>自營商</div><div class='detail-item-value' id='md-dealer'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>投信</div><div class='detail-item-value' id='md-trust'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>買賣金額</div><div class='detail-item-value' id='md-netAmount'></div></div>");
+            html.AppendLine("    </div>");
+            html.AppendLine("  </div>");
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
             html.AppendLine("<div class=\"table-container\" id=\"tableContainer\"><table id=\"rankingTable\"><thead><tr>");
             html.AppendLine("<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
             html.AppendLine("</tr></thead><tbody id=\"tbody\"></tbody></table></div>");
@@ -1829,6 +1918,71 @@ namespace StockTracker.ViewModels
             html.AppendLine("  ctx.fillText('RSI', padding.left, padding.top + 12);");
             html.AppendLine("}");
 
+            html.AppendLine("function closeModal(){$('stockModal').style.display='none';document.body.style.overflow='';}" );
+            html.AppendLine("document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});");
+            html.AppendLine("function applyValueColor(el,value){");
+            html.AppendLine("  el.style.color = value > 0 ? 'var(--rise)' : value < 0 ? 'var(--fall)' : 'var(--flat)';");
+            html.AppendLine("}");
+            html.AppendLine("function showStockDetail(s){");
+            html.AppendLine("  $('md-symbol').textContent = s.symbol;");
+            html.AppendLine("  $('md-name').textContent = s.name;");
+            html.AppendLine("  $('md-rank').textContent = '#' + s.rank;");
+            html.AppendLine("  $('md-price').textContent = s.price.toFixed(2);");
+            html.AppendLine("  const chgSign = s.chg >= 0 ? '+' : '';");
+            html.AppendLine("  const chgEl = $('md-chg');");
+            html.AppendLine("  chgEl.textContent = chgSign + s.chg.toFixed(2) + '%';");
+            html.AppendLine("  applyValueColor(chgEl, s.chg);");
+            html.AppendLine("  $('md-score').textContent = s.score;");
+            html.AppendLine("  $('md-crash').textContent = s.crash;");
+            html.AppendLine("  $('md-avg').textContent = s.avg.toFixed(1);");
+            html.AppendLine("  const trendEl = $('md-trend');");
+            html.AppendLine("  trendEl.textContent = (s.trend > 0 ? '+' : '') + s.trend;");
+            html.AppendLine("  applyValueColor(trendEl, s.trend);");
+            html.AppendLine("  $('md-pcount').textContent = s.pcount;");
+            html.AppendLine("  const headers = ['D0','D1','D2','D3','D4'];");
+            html.AppendLine("  const dayScores = [s.d0, s.d1, s.d2, s.d3, s.d4];");
+            html.AppendLine("  const pillsEl = $('md-score-pills');");
+            html.AppendLine("  pillsEl.innerHTML = '';");
+            html.AppendLine("  dayScores.forEach((sc, i) => {");
+            html.AppendLine("    if (sc === 0 && i > 0) return;");
+            html.AppendLine("    const pill = document.createElement('div');");
+            html.AppendLine("    pill.className = 'score-pill';");
+            html.AppendLine("    const color = sc >= 75 ? 'var(--fall)' : sc >= 60 ? '#ffa657' : sc > 0 ? 'var(--text-muted)' : '#444';");
+            html.AppendLine("    pill.innerHTML = `<div class='score-pill-label'>${headers[i]}</div><div class='score-pill-value' style='color:${color}'>${sc}</div>`;");
+            html.AppendLine("    pillsEl.appendChild(pill);");
+            html.AppendLine("  });");
+            html.AppendLine("  const reasonEl = $('md-reason');");
+            html.AppendLine("  if (s.scoreReason) {");
+            html.AppendLine("    const lines = s.scoreReason.split(' | ').filter(r => r.trim());");
+            html.AppendLine("    reasonEl.textContent = lines.join('\n');");
+            html.AppendLine("  } else {");
+            html.AppendLine("    reasonEl.textContent = '（無評分理由）';");
+            html.AppendLine("  }");
+            html.AppendLine("  const patternsEl = $('md-patterns');");
+            html.AppendLine("  patternsEl.innerHTML = '';");
+            html.AppendLine("  const patternSection = $('md-pattern-section');");
+            html.AppendLine("  if (s.pattern) {");
+            html.AppendLine("    patternSection.style.display = '';");
+            html.AppendLine("    s.pattern.split('、').filter(p => p.trim()).forEach(tag => {");
+            html.AppendLine("      const chip = document.createElement('span');");
+            html.AppendLine("      chip.className = 'tag-chip';");
+            html.AppendLine("      chip.textContent = tag.trim();");
+            html.AppendLine("      patternsEl.appendChild(chip);");
+            html.AppendLine("    });");
+            html.AppendLine("  } else {");
+            html.AppendLine("    patternSection.style.display = 'none';");
+            html.AppendLine("  }");
+            html.AppendLine("  $('md-action').textContent = s.action || '—';");
+            html.AppendLine("  $('md-stage').textContent = s.stage || '—';");
+            html.AppendLine("  $('md-suggestion').textContent = s.suggestion || '無特別建議';");
+            html.AppendLine("  const netEl = $('md-net'); netEl.textContent = s.netStr; applyValueColor(netEl, s.net);");
+            html.AppendLine("  const fEl = $('md-foreign'); fEl.textContent = s.foreignNetStr; applyValueColor(fEl, s.foreignNet);");
+            html.AppendLine("  const dEl = $('md-dealer'); dEl.textContent = s.dealerNetStr; applyValueColor(dEl, s.dealerNet);");
+            html.AppendLine("  const tEl = $('md-trust'); tEl.textContent = s.trustNetStr; applyValueColor(tEl, s.trustNet);");
+            html.AppendLine("  const naEl = $('md-netAmount'); naEl.textContent = s.netAmountStr; applyValueColor(naEl, s.netAmount);");
+            html.AppendLine("  $('stockModal').style.display = 'flex';");
+            html.AppendLine("  document.body.style.overflow = 'hidden';");
+            html.AppendLine("}");
             html.AppendLine("populate0050Hero();");
             html.AppendLine("draw0050Charts();");
 
@@ -1850,6 +2004,8 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const frag = document.createDocumentFragment();");
             html.AppendLine("  nextBatch.forEach(s => {");
             html.AppendLine("    const tr = document.createElement('tr');");
+            html.AppendLine("    tr.style.cursor='pointer';");
+            html.AppendLine("    tr.addEventListener('click', () => showStockDetail(s));");
             html.AppendLine("    const scoreTitle = s.scoreReason ? `title=\"${s.scoreReason.replace(/\"/g, '&quot;')}\"` : '';");
             html.AppendLine("    const scoreCell = s.scoreReason ? `<td ${scoreTitle} style='cursor:help;'><span class='badge score-badge'>${s.score}</span></td>` : `<td><span class='badge score-badge'>${s.score}</span></td>`;");
             html.AppendLine("    tr.innerHTML = `<td class='sticky-col'>${s.rank}</td>`+");
