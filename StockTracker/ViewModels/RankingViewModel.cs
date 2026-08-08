@@ -1954,7 +1954,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const reasonEl = $('md-reason');");
             html.AppendLine("  if (s.scoreReason) {");
             html.AppendLine("    const lines = s.scoreReason.split(' | ').filter(r => r.trim());");
-            html.AppendLine("    reasonEl.textContent = lines.join('\n');");
+            html.AppendLine("    reasonEl.textContent = lines.join('\\n');");
             html.AppendLine("  } else {");
             html.AppendLine("    reasonEl.textContent = '（無評分理由）';");
             html.AppendLine("  }");
@@ -2280,12 +2280,7 @@ namespace StockTracker.ViewModels
                             var recentAnalysis = BuildRecentAnalysis(enrichedCandles, t86History, symbol, name);
                             var recentScores = recentAnalysis.RecentScores;
                             var recentRecommendations = recentAnalysis.RecentRecommendations;
-                            if (recentScores.Count > 0)
-                            {
-                                recentScores[0].Score = latestRecommendation.Score;
-                                recentScores[0].Date = enrichedCandles.Last().Time.Date;
-                            }
-                            else
+                            if (recentScores.Count == 0)
                             {
                                 recentScores.Add(new RankedStockScorePoint
                                 {
@@ -2328,6 +2323,13 @@ namespace StockTracker.ViewModels
                             // 使用儀表板版本的 FinalScore（EMA 平滑後）作為顯示分數
                             latestScore = strategyOutput?.FinalScore ?? latestRecommendation.Score;
 
+                            // 同步 D0 分數與顯示分數一致（FinalScore）
+                            if (recentScores.Count > 0)
+                            {
+                                recentScores[0].Score = latestScore;
+                                recentScores[0].Date = enrichedCandles.Last().Time.Date;
+                            }
+
                             long latestNet = ResolveThreeMajorNetByDate(t86History, scoreDate);
                             long foreignNet = ResolveForeignNetByDate(t86History, scoreDate);
                             long dealerNet = ResolveDealerNetByDate(t86History, scoreDate);
@@ -2336,8 +2338,18 @@ namespace StockTracker.ViewModels
                             lock (lockObj)
                             {
                                 var latestPatternTags = latestRecommendation.PatternTags ?? new List<PatternTag>();
-                                var scoreReasonText = latestRecommendation.Reasons != null && latestRecommendation.Reasons.Count > 0
-                                    ? string.Join(" | ", latestRecommendation.Reasons)
+
+                                // 合併推薦理由（技術面）與策略引擎理由（策略面），與儀表板 detail page 顯示一致
+                                var allReasons = new List<string>();
+                                if (latestRecommendation.Reasons != null)
+                                    allReasons.AddRange(latestRecommendation.Reasons);
+                                if (strategyOutput?.Reasons != null)
+                                    foreach (var r in strategyOutput.Reasons)
+                                        if (!string.IsNullOrWhiteSpace(r) && !allReasons.Contains(r))
+                                            allReasons.Add(r);
+
+                                var scoreReasonText = allReasons.Count > 0
+                                    ? string.Join(" | ", allReasons)
                                     : string.Empty;
 
                                 results.Add(new RankedStock
