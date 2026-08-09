@@ -774,8 +774,8 @@ namespace StockTracker.ViewModels
             if (!appendedToTail)
             {
                 _signalHistory.Clear();
-            _holdingHistory.Clear();
-            HoldingHistory.Clear();
+                _holdingHistory.Clear();
+                HoldingHistory.Clear();
                 _lastNotifiedSignal = string.Empty;
             }
 
