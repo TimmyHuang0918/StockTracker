@@ -27,6 +27,8 @@ namespace StockTracker.ViewModels
         private readonly List<double> _signalSeries = new List<double>();
         private readonly List<SignalMarkerData> _signalHistory = new List<SignalMarkerData>();
         private readonly List<HoldingPoint> _holdingHistory = new List<HoldingPoint>();
+        private StrategyOutputViewModel _latestBacktestStrategyOutput;
+        private DateTime? _strategyHistoryLastCandleTime;
         private readonly Dictionary<DateTime, TwseT86Record> _twseByDate = new Dictionary<DateTime, TwseT86Record>();
         private readonly Dictionary<DateTime, TwseMarginRecord> _marginByDate = new Dictionary<DateTime, TwseMarginRecord>();
         private string _exDividendTagText;
@@ -379,6 +381,10 @@ namespace StockTracker.ViewModels
             detailVm.SetTwseMarginMetricRecords(_marginMetricByDate.Values);
             foreach (var candle in _candles)
             {
+                if(candle == _candles[_candles.Count - 1])
+                {
+
+                }
                 detailVm.UpdateFromKLine(candle);
             }
 
@@ -775,6 +781,8 @@ namespace StockTracker.ViewModels
             {
                 _signalHistory.Clear();
                 _holdingHistory.Clear();
+                _latestBacktestStrategyOutput = null;
+                _strategyHistoryLastCandleTime = null;
                 HoldingHistory.Clear();
                 _lastNotifiedSignal = string.Empty;
             }
@@ -805,6 +813,8 @@ namespace StockTracker.ViewModels
         {
             _candles.Clear();
             _signalHistory.Clear();
+            _latestBacktestStrategyOutput = null;
+            _strategyHistoryLastCandleTime = null;
             _lastNotifiedSignal = string.Empty;
             LatestPrice = 0;
             ChangePercent = 0;
@@ -878,6 +888,7 @@ namespace StockTracker.ViewModels
         public void SetTwseT86Records(IEnumerable<TwseT86Record> records)
         {
             _twseByDate.Clear();
+            _strategyHistoryLastCandleTime = null;
             if (records != null)
             {
                 foreach (var record in records)
@@ -1081,6 +1092,20 @@ namespace StockTracker.ViewModels
             }
 
             var latestCandle = _candles.Last();
+            DateTime today = DateTime.Today;
+
+            int dayOfWeek = (int)today.DayOfWeek;
+
+            int daysSinceFriday = (dayOfWeek >= 5)
+                ? dayOfWeek - 5
+                : dayOfWeek + 2;
+
+            DateTime lastFriday = today.AddDays(-daysSinceFriday);
+
+            if (latestCandle.Time.Date == lastFriday)
+            {
+
+            }
 
             if (_selectedKLineInterval == "日K")
             {
@@ -1621,18 +1646,29 @@ namespace StockTracker.ViewModels
 
         private void RebuildStrategyBacktestSignalHistory()
         {
+            var latestCandleTime = _candles.LastOrDefault()?.Time;
+            if (_latestBacktestStrategyOutput != null && _strategyHistoryLastCandleTime == latestCandleTime)
+            {
+                return;
+            }
+
             _signalHistory.Clear();
+            _holdingHistory.Clear();
+            _latestBacktestStrategyOutput = null;
+            _strategyHistoryLastCandleTime = latestCandleTime;
             if (SelectedKLineInterval != "日K" || _candles.Count < 20)
             {
                 return;
             }
 
-            var simulatedHolding = 0d;
-            var simulatedHoldingCost = 0d;
-            double? previousFinalScore = null;
+            var simulationState = new AdvancedTradingStrategyEngine.SimulationState();
 
             for (var i = 19; i < _candles.Count; i++)
             {
+                if (_candles.Count == 279 && i == 278)
+                {
+
+                }
                 var subset = _candles.Take(i + 1).ToList();
                 var latest = subset[subset.Count - 1];
                 var previousClose = subset.Count > 1 ? (double)subset[subset.Count - 2].Close : (double)latest.Close;
@@ -1654,53 +1690,55 @@ namespace StockTracker.ViewModels
                     latest.Time);
 
                 // 取前 5 棒的推薦結果（與儀表板邏輯一致，避免籌碼防禦機制失效）
-                var recent5 = new List<TrendRecommendationResult>();
-                for (var j = Math.Max(19, i - 4); j < i; j++)
+
+                var recent = new List<TrendRecommendationResult>();
+                for (var j = Math.Max(19, i - 5); j < i; j++)
                 {
-                    var prevSubset = _candles.Take(j + 1).ToList();
-                    var prevLatest = prevSubset[prevSubset.Count - 1];
-                    var prevClose2 = prevSubset.Count > 1 ? (double)prevSubset[prevSubset.Count - 2].Close : (double)prevLatest.Close;
-                    var prevT86 = new TwseT86History
+                    var previousSubset = _candles.Take(j + 1).ToList();
+                    var previousLatest = previousSubset[previousSubset.Count - 1];
+                    var previousCloseForPoint = previousSubset.Count > 1
+                        ? (double)previousSubset[previousSubset.Count - 2].Close
+                        : (double)previousLatest.Close;
+                    var previousT86 = new TwseT86History
                     {
                         Symbol = Symbol,
                         Name = Name,
                         RecordsByDate = _twseByDate
-                            .Where(x => x.Key.Date <= prevLatest.Time.Date)
+                            .Where(x => x.Key.Date <= previousLatest.Time.Date)
                             .ToDictionary(x => x.Key, x => x.Value)
                     };
-                    recent5.Add(TradingRecommendationLibrary.CalculateAdvancedRecommendation(
-                        prevSubset, (double)prevLatest.Close, (double?)prevLatest.PercentageChange,
-                        prevClose2, prevT86, prevLatest.Time));
+                    recent.Add(TradingRecommendationLibrary.CalculateAdvancedRecommendation(
+                        previousSubset, (double)previousLatest.Close, (double?)previousLatest.PercentageChange,
+                        previousCloseForPoint, previousT86, previousLatest.Time));
                 }
 
-                var previousMa20 = subset.Count > 1 ? (double?)subset[subset.Count - 2].MA20 : null;
-                var yesterdayPrice = subset.Count > 1 ? (double?)subset[subset.Count - 2].Close : null;
+                var previousMa20 = subset.Count >= 2 ? (double?)subset[subset.Count - 2].MA20 : null;
+                var yesterdayPrice = subset.Count >= 2 ? (double?)subset[subset.Count - 2].Close : null;
                 var price20DaysAgo = subset.Count > 20 ? (double?)subset[subset.Count - 21].Close : null;
+                var avgVolume20 = subset.Skip(Math.Max(0, subset.Count - 20)).Average(x => (double)x.Volume);
                 var openPriceForBar = (double?)latest.Open;
-                var strategy = AdvancedTradingStrategyEngine.EvaluateStrategy(
+                var strategy = AdvancedTradingStrategyEngine.EvaluateSimulatedDay(
+                    simulationState,
                     recommendation,
-                    recent5,
-                    simulatedHolding,
+                    recent,
                     (double)latest.Close,
                     yesterdayPrice,
                     price20DaysAgo,
                     latest.MA5,
                     latest.MA20,
                     previousMa20,
-                    simulatedHoldingCost,
                     (double?)latest.Volume,
-                    null,
+                    avgVolume20,
                     latest.MA60,
                     latest.MA120,
                     latest.MA240,
                     openPriceForBar,
-                    previousFinalScore,
-                    null);
+                    subset);
+
+                if (i == _candles.Count - 1)
+                    _latestBacktestStrategyOutput = strategy;
 
                 // 記錄本次平滑分供下一棒使用
-                if (strategy != null)
-                    previousFinalScore = strategy.FinalScore;
-
                 // 以策略真正執行後的部位為主（經過風險壓制 + 速度限制器）
                 var executedHolding = strategy == null
                     ? 0d
@@ -1729,25 +1767,6 @@ namespace StockTracker.ViewModels
                     });
                 }
 
-                var nextHolding = executedHolding;
-                if (nextHolding <= 0.0001d)
-                {
-                    simulatedHoldingCost = 0d;
-                }
-                else if (nextHolding > simulatedHolding + 0.0001d)
-                {
-                    if (simulatedHolding <= 0.0001d)
-                    {
-                        simulatedHoldingCost = (double)latest.Close;
-                    }
-                    else
-                    {
-                        var added = nextHolding - simulatedHolding;
-                        simulatedHoldingCost = ((simulatedHolding * simulatedHoldingCost) + (added * (double)latest.Close)) / nextHolding;
-                    }
-                }
-
-                simulatedHolding = nextHolding;
             }
 
             HoldingHistory.Clear();
@@ -2180,6 +2199,17 @@ namespace StockTracker.ViewModels
                 return;
             }
 
+            RebuildStrategyBacktestSignalHistory();
+            if (_latestBacktestStrategyOutput != null)
+            {
+                StrategyOutput = _latestBacktestStrategyOutput;
+                OnPropertyChanged(nameof(StrategyOutput));
+                OnPropertyChanged(nameof(StrategyStageLabel));
+                OnPropertyChanged(nameof(StrategyDescription));
+                OnPropertyChanged(nameof(CurrentOpportunityScore));
+                return;
+            }
+
             var latestRecommendation = recommendation ?? TradingRecommendationLibrary.CalculateAdvancedRecommendation(
                 _candles,
                 (double)LatestPrice,
@@ -2208,25 +2238,22 @@ namespace StockTracker.ViewModels
                 ? (double?)null
                 : _candles.Skip(Math.Max(0, _candles.Count - 20)).Average(x => (double)x.Volume);
             var latestOpenPrice = _candles.Count > 0 ? (double?)_candles[_candles.Count - 1].Open : null;
-            var previousFinalScore = StrategyOutput?.FinalScore > 0 ? (double?)StrategyOutput.FinalScore : (double?)null;
-            var result = AdvancedTradingStrategyEngine.EvaluateStrategy(
+            var result = AdvancedTradingStrategyEngine.EvaluateSimulatedDay(
+                new AdvancedTradingStrategyEngine.SimulationState(),
                 latestRecommendation,
                 recent,
-                CurrentHoldingPercentage,
                 (double)LatestPrice,
                 yesterdayPrice,
                 price20DaysAgo,
                 MA5,
                 MA20,
                 previousMa20,
-                HoldingCost,
                 latestVolume,
                 avgVolume20,
                 MA60,
                 MA120,
                 MA240,
                 latestOpenPrice,
-                previousFinalScore,
                 _candles);
 
             StrategyOutput = result;

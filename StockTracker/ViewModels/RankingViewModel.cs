@@ -2300,25 +2300,7 @@ namespace StockTracker.ViewModels
                                 : enrichedCandles.Skip(Math.Max(0, enrichedCandles.Count - 20)).Average(x => (double)x.Volume);
                             var latestCandle = enrichedCandles.Count > 0 ? enrichedCandles.Last() : null;
                             var latestOpenPrice = latestCandle != null ? (double?)latestCandle.Open : null;
-                            var strategyOutput = AdvancedTradingStrategyEngine.EvaluateStrategy(
-                                latestRecommendation,
-                                recentRecommendations,
-                                0d,
-                                (double)dummyVm.LatestPrice,
-                                yesterdayPrice,
-                                price20DaysAgo,
-                                dummyVm.MA5,
-                                dummyVm.MA20,
-                                previousMa20,
-                                0d,
-                                latestVolume,
-                                avgVolume20,
-                                latestCandle?.MA60,
-                                latestCandle?.MA120,
-                                latestCandle?.MA240,
-                                latestOpenPrice,
-                                null,
-                                null);
+                            var strategyOutput = recentAnalysis.LatestStrategyOutput;
 
                             // 使用儀表板版本的 FinalScore（EMA 平滑後）作為顯示分數
                             latestScore = strategyOutput?.FinalScore ?? latestRecommendation.Score;
@@ -2429,6 +2411,7 @@ namespace StockTracker.ViewModels
         {
             public List<RankedStockScorePoint> RecentScores { get; set; } = new List<RankedStockScorePoint>();
             public List<TrendRecommendationResult> RecentRecommendations { get; set; } = new List<TrendRecommendationResult>();
+            public StrategyOutputViewModel LatestStrategyOutput { get; set; }
             public TrendRecommendationResult LatestRecommendation => RecentRecommendations.Count == 0 ? null : RecentRecommendations[RecentRecommendations.Count - 1];
         }
 
@@ -2440,7 +2423,11 @@ namespace StockTracker.ViewModels
                 return result;
             }
 
-            var startIndex = Math.Max(0, candles.Count - 5);
+            // Simulate from the same zero-holding initial state as the Detail view.
+            // Only the five display points are retained, so scanning does not keep full histories.
+            var startIndex = 19;
+            var simulationState = new AdvancedTradingStrategyEngine.SimulationState();
+            var recentRecommendations = new List<TrendRecommendationResult>();
             for (var i = startIndex; i < candles.Count; i++)
             {
                 var subset = candles.Take(i + 1).ToList();
@@ -2475,16 +2462,21 @@ namespace StockTracker.ViewModels
                 var vol = subset.Count > 0 ? (double?)subset[subset.Count - 1].Volume : null;
                 var avgVol = subset.Count == 0 ? (double?)null : subset.Skip(Math.Max(0, subset.Count - 20)).Average(x => (double)x.Volume);
                 var openPx = (double?)latestCandle.Open;
-                var recentForPoint = result.RecentRecommendations.Count > 1
-                    ? result.RecentRecommendations.Take(result.RecentRecommendations.Count - 1).ToList()
-                    : new List<TrendRecommendationResult>();
-                var strategyPoint = AdvancedTradingStrategyEngine.EvaluateStrategy(
-                    recommendation, recentForPoint, 0d, (double)latestCandle.Close,
+                var strategyPoint = AdvancedTradingStrategyEngine.EvaluateSimulatedDay(
+                    simulationState, recommendation, recentRecommendations, (double)latestCandle.Close,
                     ydPrice, p20DaysAgo, latestCandle.MA5, latestCandle.MA20, prevMa20,
-                    0d, vol, avgVol, latestCandle.MA60, latestCandle.MA120, latestCandle.MA240,
-                    openPx, null, null);
+                    vol, avgVol, latestCandle.MA60, latestCandle.MA120, latestCandle.MA240,
+                    openPx, subset);
                 var displayScore = strategyPoint?.FinalScore ?? recommendation.Score;
 
+                recentRecommendations.Add(recommendation);
+                if (recentRecommendations.Count > 5)
+                    recentRecommendations.RemoveAt(0);
+
+                if (i < candles.Count - 5)
+                    continue;
+
+                result.LatestStrategyOutput = strategyPoint;
                 result.RecentRecommendations.Add(recommendation);
                 result.RecentScores.Add(new RankedStockScorePoint
                 {

@@ -9,6 +9,68 @@ using System.Text.RegularExpressions;
 
 public static class AdvancedTradingStrategyEngine
 {
+    /// <summary>
+    /// Shared state for the deterministic, zero-holding strategy simulation.
+    /// Every caller advances this state one trading day at a time.
+    /// </summary>
+    public sealed class SimulationState
+    {
+        public double HoldingPercentage { get; private set; }
+        public double HoldingCost { get; private set; }
+        public double? PreviousFinalScore { get; private set; }
+
+        public void Advance(StrategyOutputViewModel output, double closingPrice)
+        {
+            if (output == null) return;
+
+            var nextHolding = ClampHolding(output.ExecutedHolding);
+            if (nextHolding <= ComparisonEpsilon)
+            {
+                HoldingCost = 0d;
+            }
+            else if (nextHolding > HoldingPercentage + ComparisonEpsilon)
+            {
+                if (HoldingPercentage <= ComparisonEpsilon)
+                    HoldingCost = closingPrice;
+                else
+                {
+                    var addedHolding = nextHolding - HoldingPercentage;
+                    HoldingCost = ((HoldingPercentage * HoldingCost) + (addedHolding * closingPrice)) / nextHolding;
+                }
+            }
+
+            HoldingPercentage = nextHolding;
+            PreviousFinalScore = output.FinalScore;
+        }
+    }
+
+    public static StrategyOutputViewModel EvaluateSimulatedDay(
+        SimulationState state,
+        TrendRecommendationResult currentRecommendation,
+        IReadOnlyList<TrendRecommendationResult> recent5DayRecommendations,
+        double currentPrice,
+        double? yesterdayPrice,
+        double? price20DaysAgo,
+        double? ma5,
+        double? ma20,
+        double? previousMa20,
+        double? currentVolume = null,
+        double? averageVolume20 = null,
+        double? ma60 = null,
+        double? ma120 = null,
+        double? ma240 = null,
+        double? openPrice = null,
+        IReadOnlyList<CandleData> candles = null)
+    {
+        state = state ?? new SimulationState();
+        var output = EvaluateStrategy(
+            currentRecommendation, recent5DayRecommendations, state.HoldingPercentage,
+            currentPrice, yesterdayPrice, price20DaysAgo, ma5, ma20, previousMa20,
+            state.HoldingCost, currentVolume, averageVolume20, ma60, ma120, ma240,
+            openPrice, state.PreviousFinalScore, candles);
+        state.Advance(output, currentPrice);
+        return output;
+    }
     private static readonly double[] StageLevels = { 0d, 30d, 60d, 100d };
     private const double ComparisonEpsilon = 0.0001d;
     private const double LinearStartScore = 50d;
@@ -356,6 +418,9 @@ public static class AdvancedTradingStrategyEngine
                 output.CurrentHoldingPercentage = 0d;
                 output.ExecutedHolding = 0d;
                 output.ActionColor = "#FF3333";
+                output.FinalScore = finalScore;
+                output.TechScore = Math.Round(techScore, 1);
+                output.ChipScore = Math.Round(chipScore, 1);
                 output.Reasons.Add($"觸發 -7% 機械停損");
                 return output;
             }
