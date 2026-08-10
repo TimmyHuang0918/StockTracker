@@ -333,7 +333,10 @@
                                                            Text="{Binding StrategyOutput.ExecutedHolding, StringFormat=實際執行持股：{0:F0}%, Mode=OneWay}"/>
                                                 <TextBlock Margin="0,2,0,0" FontSize="10" Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap"
                                                            Text="{Binding StrategyDescription, Mode=OneWay}"/>
-                                                <ItemsControl ItemsSource="{Binding StrategyOutput.Reasons, Mode=OneWay}" Margin="0,4,0,0">
+                                                <TextBlock Text="判斷重點" FontSize="10" FontWeight="SemiBold" Margin="0,4,0,2"/>
+                                                <TextBlock Text="{Binding StrategyOutput.DecisionSummary, Mode=OneWay}" FontSize="10"
+                                                           Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap" Margin="0,0,0,3"/>
+                                                <ItemsControl ItemsSource="{Binding StrategyOutput.KeyReasons, Mode=OneWay}" Margin="0,2,0,0">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
                                                             <WrapPanel Orientation="Horizontal"/>

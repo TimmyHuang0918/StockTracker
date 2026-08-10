@@ -46,6 +46,9 @@ namespace StockTracker.ViewModels
         public long DealerNet { get; set; }
         public long InvestmentTrustNet { get; set; }
         public string ScoreReason { get; set; }
+        public string DecisionSummary { get; set; }
+        public string PositionPlanText { get; set; }
+        public string KeyReasonsText { get; set; }
         public List<RankedStockScorePoint> RecentScores { get; set; } = new List<RankedStockScorePoint>();
         public string RecentScoresText => RecentScores == null || RecentScores.Count == 0
             ? Score.ToString(CultureInfo.InvariantCulture)
@@ -538,6 +541,9 @@ namespace StockTracker.ViewModels
                 bool hasStrategyActionTextColumn = false;
                 bool hasStrategyStageLabelColumn = false;
                 bool hasScoreReasonColumn = false;
+                bool hasDecisionSummaryColumn = false;
+                bool hasPositionPlanTextColumn = false;
+                bool hasKeyReasonsTextColumn = false;
                 bool hasForeignNetColumn = false;
                 bool hasDealerNetColumn = false;
                 bool hasInvestmentTrustNetColumn = false;
@@ -604,6 +610,10 @@ namespace StockTracker.ViewModels
                                 hasScoreReasonColumn = true;
                             }
 
+                            if (colName == "DecisionSummary") hasDecisionSummaryColumn = true;
+                            if (colName == "PositionPlanText") hasPositionPlanTextColumn = true;
+                            if (colName == "KeyReasonsText") hasKeyReasonsTextColumn = true;
+
                             if (colName == "ForeignNet")
                             {
                                 hasForeignNetColumn = true;
@@ -643,7 +653,10 @@ namespace StockTracker.ViewModels
                             ThreeMajorNet INTEGER NOT NULL DEFAULT 0,
                             ThreeMajorNetAmount REAL NOT NULL DEFAULT 0,
                             RecentScores TEXT NOT NULL DEFAULT '',
-                            ScoreReason TEXT NOT NULL DEFAULT ''
+                            ScoreReason TEXT NOT NULL DEFAULT '',
+                            DecisionSummary TEXT NOT NULL DEFAULT '',
+                            PositionPlanText TEXT NOT NULL DEFAULT '',
+                            KeyReasonsText TEXT NOT NULL DEFAULT ''
                         );";
                     cmd.ExecuteNonQuery();
                 }
@@ -815,6 +828,10 @@ namespace StockTracker.ViewModels
                     }
                 }
 
+                AddRankingTextColumnIfMissing(conn, hasDecisionSummaryColumn, "DecisionSummary");
+                AddRankingTextColumnIfMissing(conn, hasPositionPlanTextColumn, "PositionPlanText");
+                AddRankingTextColumnIfMissing(conn, hasKeyReasonsTextColumn, "KeyReasonsText");
+
                 if (!hasForeignNetColumn)
                 {
                     try
@@ -862,6 +879,26 @@ namespace StockTracker.ViewModels
             }
         }
 
+        private static void AddRankingTextColumnIfMissing(System.Data.SQLite.SQLiteConnection conn, bool exists, string columnName)
+        {
+            if (exists)
+            {
+                return;
+            }
+
+            try
+            {
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = $"ALTER TABLE LatestRanking ADD COLUMN {columnName} TEXT NOT NULL DEFAULT '';";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
         private void LoadSavedRanking()
         {
             try
@@ -872,7 +909,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -907,7 +944,10 @@ namespace StockTracker.ViewModels
                                     ScoreReason = reader.IsDBNull(17) ? string.Empty : reader.GetString(17),
                                     ForeignNet = reader.IsDBNull(18) ? 0 : reader.GetInt64(18),
                                     DealerNet = reader.IsDBNull(19) ? 0 : reader.GetInt64(19),
-                                    InvestmentTrustNet = reader.IsDBNull(20) ? 0 : reader.GetInt64(20)
+                                    InvestmentTrustNet = reader.IsDBNull(20) ? 0 : reader.GetInt64(20),
+                                    DecisionSummary = reader.IsDBNull(21) ? string.Empty : reader.GetString(21),
+                                    PositionPlanText = reader.IsDBNull(22) ? string.Empty : reader.GetString(22),
+                                    KeyReasonsText = reader.IsDBNull(23) ? string.Empty : reader.GetString(23)
                                 });
                             }
                         }
@@ -967,8 +1007,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -993,6 +1033,9 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@foreignNet", s.ForeignNet);
                                 cmd.Parameters.AddWithValue("@dealerNet", s.DealerNet);
                                 cmd.Parameters.AddWithValue("@trustNet", s.InvestmentTrustNet);
+                                cmd.Parameters.AddWithValue("@decisionSummary", s.DecisionSummary ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@positionPlanText", s.PositionPlanText ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@keyReasonsText", s.KeyReasonsText ?? string.Empty);
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -1262,7 +1305,10 @@ namespace StockTracker.ViewModels
                     suggestion = HtmlEncode(stock0050.Suggestion),
                     price = Math.Round((double)stock0050.LatestPrice, 2),
                     chg = Math.Round((double)stock0050.ChangePercent, 2),
-                    scoreReason = HtmlEncode(stock0050.ScoreReason ?? string.Empty)
+                    scoreReason = HtmlEncode(stock0050.ScoreReason ?? string.Empty),
+                    decisionSummary = HtmlEncode(stock0050.DecisionSummary ?? string.Empty),
+                    positionPlan = HtmlEncode(stock0050.PositionPlanText ?? string.Empty),
+                    keyReasons = HtmlEncode(stock0050.KeyReasonsText ?? string.Empty)
                 });
             }
 
@@ -1305,7 +1351,10 @@ namespace StockTracker.ViewModels
                 chg = Math.Round((double)s.ChangePercent, 2),
                 chgClass = ResolveValueColorClass((double)s.ChangePercent),
                 searchKey = $"{s.Symbol} {s.Name} {s.PatternTagsText} {s.StrategyActionText} {s.Suggestion}".ToLower(),
-                scoreReason = HtmlEncode(s.ScoreReason ?? string.Empty)
+                scoreReason = HtmlEncode(s.ScoreReason ?? string.Empty),
+                decisionSummary = HtmlEncode(s.DecisionSummary ?? string.Empty),
+                positionPlan = HtmlEncode(s.PositionPlanText ?? string.Empty),
+                keyReasons = HtmlEncode(s.KeyReasonsText ?? string.Empty)
             }));
 
             var html = new StringBuilder();
@@ -1540,6 +1589,10 @@ namespace StockTracker.ViewModels
             html.AppendLine("  <div class='detail-section'>");
             html.AppendLine("    <div class='detail-section-title'>📋 評分理由明細</div>");
             html.AppendLine("    <div class='reason-box' id='md-reason'>（無評分理由）</div>");
+            html.AppendLine("  </div>");
+            html.AppendLine("  <div class='detail-section'>");
+            html.AppendLine("    <div class='detail-section-title'>判斷重點</div>");
+            html.AppendLine("    <div class='reason-box'><strong id='md-decision-summary'></strong><br/><span id='md-position-plan'></span><ul id='md-key-reasons' style='margin:8px 0 0 18px;padding:0;'></ul></div>");
             html.AppendLine("  </div>");
             html.AppendLine("  <div class='detail-section' id='md-pattern-section'>");
             html.AppendLine("    <div class='detail-section-title'>📊 型態標籤</div>");
@@ -1958,6 +2011,11 @@ namespace StockTracker.ViewModels
             html.AppendLine("  } else {");
             html.AppendLine("    reasonEl.textContent = '（無評分理由）';");
             html.AppendLine("  }");
+            html.AppendLine("  $('md-decision-summary').textContent = s.decisionSummary || '目前沒有額外的策略判斷。';");
+            html.AppendLine("  $('md-position-plan').textContent = s.positionPlan || ''; ");
+            html.AppendLine("  const keyReasonsEl = $('md-key-reasons');");
+            html.AppendLine("  keyReasonsEl.innerHTML = ''; ");
+            html.AppendLine("  (s.keyReasons || '').split('\\n').filter(r => r.trim()).forEach(reason => { const li = document.createElement('li'); li.textContent = reason; keyReasonsEl.appendChild(li); });");
             html.AppendLine("  const patternsEl = $('md-patterns');");
             html.AppendLine("  patternsEl.innerHTML = '';");
             html.AppendLine("  const patternSection = $('md-pattern-section');");
@@ -2354,7 +2412,12 @@ namespace StockTracker.ViewModels
                                     DealerNet = dealerNet,
                                     InvestmentTrustNet = trustNet,
                                     RecentScores = recentScores,
-                                    ScoreReason = scoreReasonText
+                                    ScoreReason = scoreReasonText,
+                                    DecisionSummary = strategyOutput?.DecisionSummary ?? string.Empty,
+                                    PositionPlanText = strategyOutput?.PositionPlanText ?? string.Empty,
+                                    KeyReasonsText = strategyOutput?.KeyReasons == null
+                                        ? string.Empty
+                                        : string.Join("\n", strategyOutput.KeyReasons)
                                 });
 
                                 analyzeChecked++;

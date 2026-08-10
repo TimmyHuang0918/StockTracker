@@ -105,19 +105,21 @@
                         </Border>
 
                         <!-- 推理紀錄標籤 -->
-                        <ItemsControl ItemsSource="{Binding StrategyOutput.Reasons, Mode=OneWay}" Margin="0,2,0,0">
+                        <TextBlock Text="本次判斷重點" FontSize="12" FontWeight="SemiBold" Margin="0,4,0,4"/>
+                        <TextBlock Text="{Binding StrategyOutput.DecisionSummary, Mode=OneWay}" FontSize="12"
+                                   Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding StrategyOutput.PositionPlanText, Mode=OneWay}" FontSize="11"
+                                   Foreground="{Binding StrategyOutput.ActionColor, Mode=OneWay}" Margin="0,0,0,5"/>
+                        <ItemsControl ItemsSource="{Binding StrategyOutput.KeyReasons, Mode=OneWay}" Margin="0,2,0,0">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal"/>
+                                    <StackPanel/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="0,0,5,4" Padding="6,3" CornerRadius="9" BorderThickness="1"
-                                            Background="#22242424"
-                                            BorderBrush="{Binding DataContext.StrategyOutput.ActionColor, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
-                                        <TextBlock Text="{Binding}" FontSize="10" Foreground="#FFF1F1F1" TextWrapping="Wrap" MaxWidth="320"/>
-                                    </Border>
+                                    <TextBlock Text="{Binding StringFormat={}• {0}}" FontSize="11" Foreground="#FFF1F1F1"
+                                               TextWrapping="Wrap" Margin="0,0,0,3"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

@@ -421,6 +421,11 @@ public static class AdvancedTradingStrategyEngine
                 output.FinalScore = finalScore;
                 output.TechScore = Math.Round(techScore, 1);
                 output.ChipScore = Math.Round(chipScore, 1);
+                output.DecisionSummary = "跌幅已達預設停損門檻，優先清空模擬部位控制損失。";
+                output.PositionPlanText = $"模擬持股：{normalizedHolding:F0}% → 0%（降低 {normalizedHolding:F0}%）";
+                output.KeyReasons.Clear();
+                output.KeyReasons.Add($"現價相對持倉成本下跌 {drawdown:P1}，低於 -7% 停損門檻。");
+                output.KeyReasons.Add($"綜合分數 {finalScore} 分（技術 {techScore:F0}、籌碼 {chipScore:F0}）。");
                 output.Reasons.Add($"觸發 -7% 機械停損");
                 return output;
             }
@@ -512,6 +517,7 @@ public static class AdvancedTradingStrategyEngine
         output.FinalScore = finalScore;
         output.TechScore  = Math.Round(techScore, 1);
         output.ChipScore  = Math.Round(CalculateChipScore(currentRecommendation, recent5DayRecommendations), 1);
+        PopulateUserFacingSummary(output, normalizedHolding, originalTarget, currentDayRawScore, isOverheat);
 
         // 12. 量化線型分析（TechnicalLineQuantizer）
         if (candles != null && candles.Count >= 10)
@@ -528,6 +534,36 @@ public static class AdvancedTradingStrategyEngine
     private static void AddChartMarker(StrategyOutputViewModel output, double price, string text, string colorHex, string type)
     {
         output.ChartMarkers.Add(new ChartMarker { Time = DateTime.Now, Text = text, Price = price, ColorHex = colorHex, MarkerType = type });
+    }
+
+    private static void PopulateUserFacingSummary(
+        StrategyOutputViewModel output,
+        double previousHolding,
+        double scoreTargetHolding,
+        double rawScore,
+        bool isOverheat)
+    {
+        var holdingChange = output.ExecutedHolding - previousHolding;
+        var direction = holdingChange > ComparisonEpsilon ? "增加" :
+            holdingChange < -ComparisonEpsilon ? "降低" : "維持";
+        output.PositionPlanText = $"模擬持股：{previousHolding:F0}% → {output.ExecutedHolding:F0}%（{direction} {Math.Abs(holdingChange):F0}%）";
+
+        if (output.GlobalDecision == "BUY_LINEAR")
+            output.DecisionSummary = "分數與趨勢轉強，採分批加碼，不一次投入。";
+        else if (output.GlobalDecision == "REDUCE_LINEAR")
+            output.DecisionSummary = "分數轉弱，先分批降低部位，保留後續觀察空間。";
+        else if (output.GlobalDecision == "EXIT_OVERHEAT")
+            output.DecisionSummary = "大跌風險偏高，優先降部位控制風險。";
+        else
+            output.DecisionSummary = "訊號尚未達到調整門檻，先維持目前模擬部位。";
+
+        output.KeyReasons.Clear();
+        output.KeyReasons.Add($"綜合分數 {output.FinalScore} 分（今日原始 {rawScore:F0}；技術 {output.TechScore:F0}、籌碼 {output.ChipScore:F0}）");
+        output.KeyReasons.Add($"20 日乖離 {output.Bias20:P1}；量能為 20 日均量的 {output.VolumeRatio:F2} 倍");
+        if (isOverheat)
+            output.KeyReasons.Add("風險警示：系統偵測到高檔／大跌風險，目標持股已受限。");
+        else
+            output.KeyReasons.Add($"分數對應的理論持股為 {scoreTargetHolding:F0}%，再套用緩衝規則後執行 {output.ExecutedHolding:F0}%。");
     }
 
     private static double CalculateBias20(double currentPrice, double? ma20)

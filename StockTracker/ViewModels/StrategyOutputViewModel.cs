@@ -19,6 +19,8 @@ namespace StockTracker.ViewModels
         private double _chipScore;
         private double _volumeRatio;
         private double _bias20;
+        private string _decisionSummary;
+        private string _positionPlanText;
 
         public StrategyOutputViewModel()
         {
@@ -33,6 +35,8 @@ namespace StockTracker.ViewModels
             _stageLabel = "線性倉位｜空倉 0%";
             _description = "尚未觸發策略事件，部位維持鎖定。";
             _actionColor = "#A0A0A0";
+            _decisionSummary = "等待足夠資料後再評估。";
+            _positionPlanText = "模擬持股：0%";
         }
 
         public string GlobalDecision
@@ -106,7 +110,22 @@ namespace StockTracker.ViewModels
         }
 
         public ObservableCollection<string> Reasons { get; }
+        public ObservableCollection<string> KeyReasons { get; } = new ObservableCollection<string>();
         public ObservableCollection<ChartMarker> ChartMarkers { get; }
+
+        /// <summary>Short, user-facing explanation of the current decision.</summary>
+        public string DecisionSummary
+        {
+            get => _decisionSummary;
+            set { _decisionSummary = value; OnPropertyChanged(); }
+        }
+
+        /// <summary>Plain-language simulated position change.</summary>
+        public string PositionPlanText
+        {
+            get => _positionPlanText;
+            set { _positionPlanText = value; OnPropertyChanged(); }
+        }
 
         /// <summary>最終平滑分數 (0~100)。</summary>
         public int FinalScore
