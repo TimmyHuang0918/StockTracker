@@ -526,5 +526,13 @@ namespace StockTracker
                 rankingWindow.Show();
             }
         }
+
+        private void btnPortfolio_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                new PortfolioWindow(vm) { Owner = this }.Show();
+            }
+        }
     }
 }

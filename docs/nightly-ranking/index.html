@@ -85,6 +85,16 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
 .tag-list{display:flex;flex-wrap:wrap;gap:6px;}
 .tag-chip{background:rgba(31,111,235,0.15);color:#58a6ff;border:1px solid rgba(31,111,235,0.3);border-radius:12px;padding:4px 12px;font-size:12px;font-weight:600;}
 .inst-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
+.portfolio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px;}
+.portfolio-grid label,.holding-form label{display:block;color:var(--text-muted);font-size:12px;font-weight:600;margin-bottom:5px;}
+.portfolio-grid input,.holding-form input{box-sizing:border-box;width:100%;}
+.portfolio-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;}
+.portfolio-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0;}
+.portfolio-stat{background:rgba(139,148,158,.1);border-radius:6px;padding:10px;}.portfolio-stat span{display:block;color:var(--text-muted);font-size:12px;}.portfolio-stat strong{font-size:18px;}
+.holding-form{display:grid;grid-template-columns:1.1fr .8fr .9fr auto;gap:10px;align-items:end;margin:12px 0;}
+.portfolio-table{width:100%;border-collapse:collapse;font-size:13px;}.portfolio-table th,.portfolio-table td{padding:9px 7px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;}.portfolio-table th:first-child,.portfolio-table td:first-child,.portfolio-table th:nth-child(2),.portfolio-table td:nth-child(2),.portfolio-table th:last-child,.portfolio-table td:last-child{text-align:left;}.portfolio-note{color:var(--text-muted);font-size:12px;margin:6px 0;}
+.recommend-buy{color:var(--rise);font-weight:700}.recommend-sell{color:var(--fall);font-weight:700}.recommend-hold{color:#ffa657;font-weight:700}.portfolio-guidance{min-width:230px;white-space:normal;line-height:1.45}.portfolio-guidance small{display:block;color:var(--text-muted);margin-top:2px}.portfolio-error{color:var(--fall);font-size:12px;}
+@media(max-width:720px){.holding-form{grid-template-columns:1fr 1fr}.holding-form button{grid-column:span 2}.portfolio-table{font-size:12px;}}
 </style>
 </head>
 <body>
@@ -116,6 +126,34 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
 <div class='filter-group'><label>連續天數條件</label><div class='row-inputs'><input id='minConDays' type='number' step='1' placeholder='天數' /><input id='minConScore' type='number' step='1' placeholder='分數' value='60' /></div></div>
 <div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>
 </div>
+</div>
+<div class="panel" id="portfolioPanel">
+  <h3 style='margin:0 0 6px;font-size:18px;'>💼 我的投資組合</h3>
+  <div class='portfolio-note'>持股資料只儲存在此瀏覽器。系統會用本頁最新股價與評分產生再平衡參考，並非交易指令。</div>
+  <div class='portfolio-grid'>
+    <div><label for='cashInput'>可用現金（元）</label><input id='cashInput' type='number' min='0' step='1000' value='0'></div>
+    <div><label for='cashReserveInput'>最低保留現金比例（%）</label><input id='cashReserveInput' type='number' min='0' max='100' step='1' value='15'></div>
+    <div><label for='singleLimitInput'>單一持股上限（%）</label><input id='singleLimitInput' type='number' min='1' max='100' step='1' value='10'></div>
+  </div>
+  <div class='portfolio-actions'>
+    <button id='btnSavePortfolio' class='btn-csv'>儲存設定</button><button id='btnDownloadTemplate' class='btn-csv'>下載 CSV 範本</button>
+    <label class='btn-csv' for='holdingCsvFile' style='cursor:pointer;'>匯入 CSV</label><input id='holdingCsvFile' type='file' accept='.csv,text/csv' hidden>
+    <span id='portfolioMessage' class='portfolio-note'></span>
+  </div>
+  <div class='holding-form'>
+    <div><label for='holdingSymbol'>股票代號</label><input id='holdingSymbol' placeholder='例如 2330'></div>
+    <div><label for='holdingQuantity'>持有股數</label><input id='holdingQuantity' type='number' min='1' step='1' placeholder='1000'></div>
+    <div><label for='holdingCost'>平均成本</label><input id='holdingCost' type='number' min='0' step='0.01' placeholder='980'></div>
+    <button id='btnAddHolding' class='btn-csv'>新增／更新持股</button>
+  </div>
+  <div id='portfolioError' class='portfolio-error'></div>
+  <div class='portfolio-summary'>
+    <div class='portfolio-stat'><span>股票市值</span><strong id='portfolioStockValue'>—</strong></div>
+    <div class='portfolio-stat'><span>總資產</span><strong id='portfolioTotalValue'>—</strong></div>
+    <div class='portfolio-stat'><span>現金比率</span><strong id='portfolioCashRatio'>—</strong></div>
+    <div class='portfolio-stat'><span>已持有檔數</span><strong id='portfolioHoldingCount'>0</strong></div>
+  </div>
+  <div style='overflow:auto;'><table class='portfolio-table'><thead><tr><th>代號／名稱</th><th>股數</th><th>成本</th><th>現價</th><th>持股損益</th><th>今日漲跌</th><th>現值</th><th>目前權重</th><th>分數／風險</th><th>明確建議</th><th>目標權重</th><th>參考交易金額</th><th></th></tr></thead><tbody id='portfolioBody'></tbody></table></div>
 </div>
 <div id='hero0050Card' class='hero-card' style='display:none;'>
 <div class='hero-header'>
@@ -746,6 +784,113 @@ document.getElementById('btnDownloadCsv').addEventListener('click', () => {
   link.click();
   URL.revokeObjectURL(link.href);
 });
+const portfolioStorageKey = 'stockTrackerPortfolio.v1';
+let portfolio = { cash: 0, cashReserve: 15, singleLimit: 10, holdings: [] };
+const money = value => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(value || 0);
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' })[c]); }
+function findStock(symbol) { return rawData.find(stock => stock.symbol === String(symbol).trim()); }
+function loadPortfolio() {
+  try { const saved = JSON.parse(localStorage.getItem(portfolioStorageKey)); if (saved && Array.isArray(saved.holdings)) portfolio = { ...portfolio, ...saved }; } catch (_) { /* Ignore malformed browser data. */ }
+  $('cashInput').value = portfolio.cash || 0; $('cashReserveInput').value = portfolio.cashReserve ?? 15; $('singleLimitInput').value = portfolio.singleLimit ?? 10;
+}
+function savePortfolio(showMessage = true) {
+  portfolio.cash = Math.max(0, Number($('cashInput').value) || 0);
+  portfolio.cashReserve = Math.min(100, Math.max(0, Number($('cashReserveInput').value) || 0));
+  portfolio.singleLimit = Math.min(100, Math.max(1, Number($('singleLimitInput').value) || 10));
+  localStorage.setItem(portfolioStorageKey, JSON.stringify(portfolio));
+  if (showMessage) $('portfolioMessage').textContent = '已儲存在此瀏覽器';
+  renderPortfolio();
+}
+function targetWeight(stock) {
+  if (!stock) return 0;
+  if (stock.score >= 85 && stock.crash <= 30) return Math.min(portfolio.singleLimit, 10);
+  if (stock.score >= 75 && stock.crash <= 35) return Math.min(portfolio.singleLimit, 7);
+  if (stock.score >= 65 && stock.crash <= 45) return Math.min(portfolio.singleLimit, 4);
+  return 0;
+}
+function portfolioDecision(stock, currentWeight, currentValue, total) {
+  const target = targetWeight(stock);
+  const difference = total * (target / 100) - currentValue;
+  if (!stock) return { action: '找不到評分資料', className: 'recommend-hold', target: 0, amount: 0 };
+  if (stock.score < 65 || stock.crash > 45) return { action: '減碼／檢討', className: 'recommend-sell', target, amount: 0 };
+  if (currentWeight > portfolio.singleLimit) return { action: '減碼至上限', className: 'recommend-sell', target: portfolio.singleLimit, amount: 0 };
+  if (currentWeight + 0.5 < target) return { action: '可分批加碼', className: 'recommend-buy', target, amount: difference };
+  return { action: '持有觀察', className: 'recommend-hold', target, amount: difference };
+}
+function renderPortfolio() {
+  const rows = portfolio.holdings.map(holding => ({ holding, stock: findStock(holding.symbol) }));
+  const stockValue = rows.reduce((sum, row) => sum + (row.stock ? row.stock.price * row.holding.quantity : 0), 0);
+  const total = stockValue + portfolio.cash;
+  const cashRatio = total ? portfolio.cash / total * 100 : 0;
+  $('portfolioStockValue').textContent = money(stockValue); $('portfolioTotalValue').textContent = money(total);
+  $('portfolioCashRatio').textContent = `${cashRatio.toFixed(1)}%`; $('portfolioHoldingCount').textContent = portfolio.holdings.length;
+  const reserveAmount = total * portfolio.cashReserve / 100;
+  const availableToBuy = Math.max(0, portfolio.cash - reserveAmount);
+  $('portfolioBody').innerHTML = rows.length ? rows.map(({ holding, stock }) => {
+    const value = stock ? stock.price * holding.quantity : 0;
+    const weight = total ? value / total * 100 : 0;
+    const result = portfolioDecision(stock, weight, value, total);
+    let trade = result.amount;
+    if (trade > 0) trade = Math.min(trade, availableToBuy);
+    if (result.action.includes('減碼')) trade = total * (result.target / 100) - value;
+    const shares = stock ? Math.floor(Math.abs(trade) / stock.price) : 0;
+    let guidance = '';
+    if (!stock) guidance = `<strong>先加入追蹤</strong><small>目前找不到價格與評分，無法產生交易建議。</small>`;
+    else if (result.action.includes('減碼')) guidance = `<strong>${result.action}</strong><small>目前權重 ${weight.toFixed(1)}%，目標 ${result.target.toFixed(1)}%；參考減少約 ${shares.toLocaleString()} 股。</small>`;
+    else if (result.action.includes('加碼')) guidance = `<strong>分批買入約 ${shares.toLocaleString()} 股</strong><small>分數 ${stock.score}、風險 ${stock.crash}，且仍低於 ${result.target.toFixed(1)}% 目標；保留現金後最多動用 ${money(availableToBuy)}。</small>`;
+    else guidance = `<strong>暫不交易，持有觀察</strong><small>目前權重 ${weight.toFixed(1)}%，接近目標 ${result.target.toFixed(1)}%；下次評分或價格更新後再檢視。</small>`;
+    const name = stock ? ` ${escapeHtml(stock.name)}` : '（頁面沒有此代號）';
+    const profitPercent = stock && holding.averageCost > 0 ? (stock.price / holding.averageCost - 1) * 100 : 0;
+    const profitClass = profitPercent > 0 ? 'recommend-buy' : profitPercent < 0 ? 'recommend-sell' : '';
+    const dailyClass = stock && stock.chg > 0 ? 'recommend-buy' : stock && stock.chg < 0 ? 'recommend-sell' : '';
+    return `<tr data-holding-symbol='${escapeHtml(holding.symbol)}' style='cursor:${stock ? 'pointer' : 'default'}'><td>${escapeHtml(holding.symbol)}${name}</td><td>${holding.quantity.toLocaleString()}</td><td>${holding.averageCost.toFixed(2)}</td><td>${stock ? stock.price.toFixed(2) : '—'}</td><td class='${profitClass}'>${stock ? `${profitPercent >= 0 ? '+' : ''}${profitPercent.toFixed(2)}%` : '—'}</td><td class='${dailyClass}'>${stock ? `${stock.chg >= 0 ? '+' : ''}${stock.chg.toFixed(2)}%` : '—'}</td><td>${stock ? money(value) : '—'}</td><td>${weight.toFixed(1)}%</td><td>${stock ? `${stock.score}／${stock.crash}` : '—'}</td><td class='portfolio-guidance ${result.className}'>${guidance}</td><td>${result.target.toFixed(1)}%</td><td>${stock ? (trade >= 0 ? '+' : '') + money(trade) : '—'}</td><td><button class='btn-csv' data-remove-holding='${escapeHtml(holding.symbol)}'>移除</button></td></tr>`;
+  }).join('') : `<tr><td colspan='13' class='portfolio-note'>尚未輸入持股。你可手動新增，或匯入 symbol,quantity,averageCost 的 CSV。</td></tr>`;
+  document.querySelectorAll('[data-holding-symbol]').forEach(row => row.addEventListener('click', event => {
+    if (event.target.closest('button')) return;
+    const stock = findStock(row.dataset.holdingSymbol); if (stock) showStockDetail(stock);
+  }));
+  document.querySelectorAll('[data-remove-holding]').forEach(button => button.addEventListener('click', () => {
+    portfolio.holdings = portfolio.holdings.filter(holding => holding.symbol !== button.dataset.removeHolding); savePortfolio(false);
+  }));
+}
+function addOrUpdateHolding(symbol, quantity, averageCost) {
+  symbol = String(symbol || '').trim(); quantity = Number(quantity); averageCost = Number(averageCost);
+  if (!/^\d{4,6}$/.test(symbol) || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(averageCost) || averageCost < 0) throw new Error('請填寫有效的股票代號、正整數股數與非負平均成本。');
+  const index = portfolio.holdings.findIndex(holding => holding.symbol === symbol);
+  const item = { symbol, quantity: Math.round(quantity), averageCost };
+  if (index >= 0) portfolio.holdings[index] = item; else portfolio.holdings.push(item);
+}
+function parseHoldingsCsv(text) {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (!lines.length) throw new Error('CSV 檔沒有可匯入的資料。');
+  const header = lines[0].split(',').map(value => value.trim().toLowerCase());
+  const symbolIndex = header.findIndex(value => ['symbol','股票代號','代號'].includes(value));
+  const quantityIndex = header.findIndex(value => ['quantity','股數'].includes(value));
+  const costIndex = header.findIndex(value => ['averagecost','average_cost','成本均價','平均成本'].includes(value));
+  if (symbolIndex < 0 || quantityIndex < 0 || costIndex < 0) throw new Error('CSV 欄位需包含 symbol、quantity、averageCost。');
+  const imported = [];
+  lines.slice(1).forEach((line, rowIndex) => {
+    const values = line.split(',').map(value => value.trim().replace(/^"|"$/g, ''));
+    try { addOrUpdateHolding(values[symbolIndex], values[quantityIndex].replace(/,/g, ''), values[costIndex].replace(/,/g, '')); imported.push(rowIndex); }
+    catch (_) { throw new Error(`第 ${rowIndex + 2} 列資料格式不正確。`); }
+  });
+  if (!imported.length) throw new Error('CSV 中沒有持股資料。');
+}
+$('btnSavePortfolio').addEventListener('click', () => savePortfolio());
+$('btnAddHolding').addEventListener('click', () => {
+  try { addOrUpdateHolding($('holdingSymbol').value, $('holdingQuantity').value, $('holdingCost').value); $('portfolioError').textContent = ''; $('holdingSymbol').value = ''; $('holdingQuantity').value = ''; $('holdingCost').value = ''; savePortfolio(); }
+  catch (error) { $('portfolioError').textContent = error.message; }
+});
+$('holdingCsvFile').addEventListener('change', event => {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader(); reader.onload = () => { try { parseHoldingsCsv(reader.result); $('portfolioError').textContent = ''; savePortfolio(false); $('portfolioMessage').textContent = `已匯入 ${file.name}`; } catch (error) { $('portfolioError').textContent = error.message; } }; reader.readAsText(file, 'utf-8'); event.target.value = '';
+});
+$('btnDownloadTemplate').addEventListener('click', () => {
+  const blob = new Blob(['symbol,quantity,averageCost\r\n2330,1000,980\r\n0050,3000,190\r\n'], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'StockTracker_Holdings_Template.csv'; link.click(); URL.revokeObjectURL(link.href);
+});
+loadPortfolio();
+renderPortfolio();
 renderBatch();
 </script>
 </body></html>

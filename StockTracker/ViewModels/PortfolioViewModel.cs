@@ -1,0 +1,159 @@
+using Microsoft.Win32;
+using Newtonsoft.Json;
+using StockTracker.Models;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Windows.Input;
+using System.Windows.Media;
+
+namespace StockTracker.ViewModels
+{
+    public sealed class PortfolioHoldingViewModel : ViewModelBase
+    {
+        public PortfolioHoldingViewModel(PortfolioHolding holding) { Holding = holding; }
+        public PortfolioHolding Holding { get; }
+        public string Symbol => Holding.Symbol;
+        public int Quantity => Holding.Quantity;
+        public decimal AverageCost => Holding.AverageCost;
+        public string Name { get; private set; } = "尚未訂閱／無資料";
+        public decimal LatestPrice { get; private set; }
+        public decimal MarketValue => LatestPrice * Quantity;
+        public double Weight { get; private set; }
+        public int Score { get; private set; }
+        public int Risk { get; private set; }
+        public double ProfitPercentage { get; private set; }
+        public decimal TodayChangePercentage { get; private set; }
+        public string Recommendation { get; private set; } = "等待資料";
+        public string Guidance { get; private set; } = "等待資料";
+        public Brush RecommendationBrush { get; private set; } = Brushes.Gray;
+        public double TargetWeight { get; private set; }
+        public decimal SuggestedTradeAmount { get; private set; }
+
+        public void Refresh(StockViewModel stock, decimal totalAssets, double positionLimit, decimal availableToBuy)
+        {
+            Name = stock?.Name ?? "尚未訂閱／無資料";
+            LatestPrice = stock?.LatestPrice ?? 0;
+            Score = stock?.StrategyOutput?.FinalScore ?? 0;
+            Risk = stock?.CurrentCrashRiskScore ?? 0;
+            ProfitPercentage = LatestPrice > 0 && AverageCost > 0 ? (double)((LatestPrice / AverageCost - 1m) * 100m) : 0;
+            TodayChangePercentage = stock?.ChangePercent ?? 0;
+            Weight = totalAssets == 0 ? 0 : (double)(MarketValue / totalAssets * 100m);
+            TargetWeight = Score >= 85 && Risk <= 30 ? Math.Min(positionLimit, 10) : Score >= 75 && Risk <= 35 ? Math.Min(positionLimit, 7) : Score >= 65 && Risk <= 45 ? Math.Min(positionLimit, 4) : 0;
+            var targetValue = totalAssets * (decimal)(TargetWeight / 100d);
+            SuggestedTradeAmount = targetValue - MarketValue;
+            if (stock == null || LatestPrice <= 0) { Recommendation = "先加入追蹤"; RecommendationBrush = Brushes.Gray; SuggestedTradeAmount = 0; Guidance = "找不到即時價格與評分，先將此股票加入主畫面追蹤清單。"; }
+            else if (Score < 65 || Risk > 45) { Recommendation = "減碼／檢討"; RecommendationBrush = Brushes.IndianRed; Guidance = $"分數 {Score}、風險 {Risk}；不新增部位，參考調整至 {TargetWeight:F1}% 目標權重。"; }
+            else if (Weight > positionLimit) { Recommendation = "減碼至上限"; RecommendationBrush = Brushes.IndianRed; TargetWeight = positionLimit; SuggestedTradeAmount = totalAssets * (decimal)(TargetWeight / 100d) - MarketValue; Guidance = $"目前權重 {Weight:F1}% 超過 {positionLimit:F1}% 上限；參考減少約 {Math.Floor(Math.Abs(SuggestedTradeAmount) / LatestPrice):N0} 股。"; }
+            else if (Weight + 0.5 < TargetWeight && availableToBuy > 0) { Recommendation = "分批加碼"; RecommendationBrush = Brushes.SeaGreen; SuggestedTradeAmount = Math.Min(SuggestedTradeAmount, availableToBuy); Guidance = $"分數 {Score}、風險 {Risk}，低於 {TargetWeight:F1}% 目標；參考分批買入約 {Math.Floor(SuggestedTradeAmount / LatestPrice):N0} 股。"; }
+            else { Recommendation = "暫不交易"; RecommendationBrush = Brushes.DarkOrange; Guidance = $"目前權重 {Weight:F1}% 接近 {TargetWeight:F1}% 目標；等待下一次評分或價格更新再檢視。"; }
+            foreach (var property in new[] { nameof(Name), nameof(LatestPrice), nameof(MarketValue), nameof(Weight), nameof(Score), nameof(Risk), nameof(ProfitPercentage), nameof(TodayChangePercentage), nameof(Recommendation), nameof(Guidance), nameof(RecommendationBrush), nameof(TargetWeight), nameof(SuggestedTradeAmount) }) OnPropertyChanged(property);
+        }
+    }
+
+    public sealed class PortfolioViewModel : ViewModelBase
+    {
+        private readonly ObservableCollection<StockViewModel> _stocks;
+        private readonly string _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "portfolio.json");
+        private PortfolioSettings _settings = new PortfolioSettings();
+        private string _symbolInput;
+        private string _quantityInput;
+        private string _averageCostInput;
+        private string _statusMessage;
+
+        public PortfolioViewModel(ObservableCollection<StockViewModel> stocks)
+        {
+            _stocks = stocks;
+            Holdings = new ObservableCollection<PortfolioHoldingViewModel>();
+            AddHoldingCommand = new RelayCommand(_ => AddHolding());
+            RemoveHoldingCommand = new RelayCommand(item => RemoveHolding(item as PortfolioHoldingViewModel));
+            ImportCsvCommand = new RelayCommand(_ => ImportCsv());
+            RefreshCommand = new RelayCommand(_ => Refresh());
+            SaveCommand = new RelayCommand(_ => Save());
+            Load();
+        }
+
+        public ObservableCollection<PortfolioHoldingViewModel> Holdings { get; }
+        public ICommand AddHoldingCommand { get; }
+        public ICommand RemoveHoldingCommand { get; }
+        public ICommand ImportCsvCommand { get; }
+        public ICommand RefreshCommand { get; }
+        public ICommand SaveCommand { get; }
+        public decimal Cash { get => _settings.Cash; set { _settings.Cash = Math.Max(0, value); OnPropertyChanged(); Refresh(); } }
+        public double CashReservePercentage { get => _settings.CashReservePercentage; set { _settings.CashReservePercentage = Math.Max(0, Math.Min(100, value)); OnPropertyChanged(); Refresh(); } }
+        public double SinglePositionLimitPercentage { get => _settings.SinglePositionLimitPercentage; set { _settings.SinglePositionLimitPercentage = Math.Max(1, Math.Min(100, value)); OnPropertyChanged(); Refresh(); } }
+        public string SymbolInput { get => _symbolInput; set { _symbolInput = value; OnPropertyChanged(); } }
+        public string QuantityInput { get => _quantityInput; set { _quantityInput = value; OnPropertyChanged(); } }
+        public string AverageCostInput { get => _averageCostInput; set { _averageCostInput = value; OnPropertyChanged(); } }
+        public string StatusMessage { get => _statusMessage; private set { _statusMessage = value; OnPropertyChanged(); } }
+        public decimal StockMarketValue => Holdings.Sum(x => x.MarketValue);
+        public decimal TotalAssets => StockMarketValue + Cash;
+        public double CashRatio => TotalAssets == 0 ? 0 : (double)(Cash / TotalAssets * 100m);
+        public StockViewModel FindStock(string symbol) => _stocks.FirstOrDefault(stock => stock.Symbol == symbol);
+
+        private void Load()
+        {
+            try
+            {
+                if (File.Exists(_filePath)) _settings = JsonConvert.DeserializeObject<PortfolioSettings>(File.ReadAllText(_filePath)) ?? new PortfolioSettings();
+            }
+            catch { StatusMessage = "無法讀取既有投資組合，已使用空白資料。"; _settings = new PortfolioSettings(); }
+            foreach (var holding in _settings.Holdings ?? new List<PortfolioHolding>()) Holdings.Add(new PortfolioHoldingViewModel(holding));
+            OnPropertyChanged(nameof(Cash)); OnPropertyChanged(nameof(CashReservePercentage)); OnPropertyChanged(nameof(SinglePositionLimitPercentage));
+            Refresh();
+        }
+
+        private void AddHolding()
+        {
+            var symbol = (SymbolInput ?? string.Empty).Trim();
+            if (!System.Text.RegularExpressions.Regex.IsMatch(symbol, "^\\d{4,6}$") || !int.TryParse(QuantityInput, out var quantity) || quantity <= 0 || !decimal.TryParse(AverageCostInput, NumberStyles.Number, CultureInfo.CurrentCulture, out var cost) || cost < 0)
+            { StatusMessage = "請輸入有效的股票代號、股數與平均成本。"; return; }
+            var existing = _settings.Holdings.FirstOrDefault(x => x.Symbol == symbol);
+            if (existing != null) { existing.Quantity = quantity; existing.AverageCost = cost; var vm = Holdings.First(x => x.Holding == existing); Holdings.Remove(vm); }
+            else { existing = new PortfolioHolding { Symbol = symbol, Quantity = quantity, AverageCost = cost }; _settings.Holdings.Add(existing); }
+            Holdings.Add(new PortfolioHoldingViewModel(existing));
+            SymbolInput = QuantityInput = AverageCostInput = string.Empty; StatusMessage = "持股已新增／更新。"; Save();
+        }
+
+        private void RemoveHolding(PortfolioHoldingViewModel holding)
+        {
+            if (holding == null) return;
+            _settings.Holdings.Remove(holding.Holding); Holdings.Remove(holding); StatusMessage = "持股已移除。"; Save();
+        }
+
+        private void ImportCsv()
+        {
+            var dialog = new OpenFileDialog { Filter = "CSV 檔案 (*.csv)|*.csv|所有檔案 (*.*)|*.*" };
+            if (dialog.ShowDialog() != true) return;
+            try
+            {
+                var lines = File.ReadAllLines(dialog.FileName).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+                var header = lines.FirstOrDefault()?.TrimStart('\uFEFF').Split(',').Select(x => x.Trim().ToLowerInvariant()).ToArray() ?? new string[0];
+                var s = Array.IndexOf(header, "symbol"); var q = Array.IndexOf(header, "quantity"); var c = Array.IndexOf(header, "averagecost");
+                if (s < 0 || q < 0 || c < 0) throw new InvalidDataException("CSV 欄位需為 symbol,quantity,averageCost。");
+                foreach (var line in lines.Skip(1)) { var v = line.Split(','); if (v.Length <= Math.Max(s, Math.Max(q, c))) continue; SymbolInput = v[s].Trim(); QuantityInput = v[q].Trim(); AverageCostInput = v[c].Trim(); AddHolding(); }
+                StatusMessage = $"已匯入 {Path.GetFileName(dialog.FileName)}。"; Save();
+            }
+            catch (Exception ex) { StatusMessage = $"匯入失敗：{ex.Message}"; }
+        }
+
+        private void Save()
+        {
+            try { Directory.CreateDirectory(Path.GetDirectoryName(_filePath)); File.WriteAllText(_filePath, JsonConvert.SerializeObject(_settings, Formatting.Indented)); StatusMessage = "已儲存至本機。"; }
+            catch (Exception ex) { StatusMessage = $"儲存失敗：{ex.Message}"; }
+            Refresh();
+        }
+
+        private void Refresh()
+        {
+            var stockValue = Holdings.Sum(x => { var stock = _stocks.FirstOrDefault(s => s.Symbol == x.Symbol); return (stock?.LatestPrice ?? 0) * x.Quantity; });
+            var total = stockValue + Cash;
+            var available = Math.Max(0, Cash - total * (decimal)(CashReservePercentage / 100d));
+            foreach (var holding in Holdings) holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), total, SinglePositionLimitPercentage, available);
+            OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio));
+        }
+    }
+}

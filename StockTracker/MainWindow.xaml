@@ -113,6 +113,7 @@
                 <TextBlock  Text="{Binding NewSymbolRelativeName}" Foreground="Gray" FontSize="18" Margin="12" RenderTransformOrigin="-1.52,0.529" />
                 <Button Content="訂閱" Name="btnSubscribe" Width="80" Margin="8" Click="btnSubscribe_Click" />
                 <Button Content="取消訂閱" Width="90" Margin="8" Click="btnUnsubscribe_Click"/>
+                <Button Content="我的投資組合" Width="100" Margin="8" Click="btnPortfolio_Click"/>
                 <Button Content="全市場推薦掃描" Width="100" Margin="8" Background="SteelBlue" Foreground="White" Click="btnScanAll_Click"/>
             </StackPanel>
         </DockPanel>

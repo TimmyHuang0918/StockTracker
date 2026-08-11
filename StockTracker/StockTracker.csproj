@@ -219,6 +219,7 @@
     </Compile>
     <Compile Include="Models\ChartMarker.cs" />
     <Compile Include="Models\HoldingPoint.cs" />
+    <Compile Include="Models\PortfolioHolding.cs" />
     <Compile Include="RankingWindow.xaml.cs">
       <DependentUpon>RankingWindow.xaml</DependentUpon>
     </Compile>
@@ -240,6 +241,7 @@
     </Compile>
     <Compile Include="ViewModels\LoginViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
+    <Compile Include="ViewModels\PortfolioViewModel.cs" />
     <Compile Include="ViewModels\RankingViewModel.cs" />
     <Compile Include="ViewModels\RelayCommand.cs" />
     <Compile Include="ViewModels\StockViewModel.cs" />
@@ -252,6 +254,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="PortfolioWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -259,6 +264,9 @@
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="PortfolioWindow.xaml.cs">
+      <DependentUpon>PortfolioWindow.xaml</DependentUpon>
     </Compile>
     <Page Include="RankingWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
