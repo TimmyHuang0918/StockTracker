@@ -25,6 +25,7 @@ namespace StockTracker.ViewModels
         public double Weight { get; private set; }
         public int Score { get; private set; }
         public int Risk { get; private set; }
+        public string ScoreRiskText => $"{Score} / {Risk}";
         public double ProfitPercentage { get; private set; }
         public decimal TodayChangePercentage { get; private set; }
         public string Recommendation { get; private set; } = "等待資料";
@@ -33,7 +34,7 @@ namespace StockTracker.ViewModels
         public double TargetWeight { get; private set; }
         public decimal SuggestedTradeAmount { get; private set; }
 
-        public void Refresh(StockViewModel stock, decimal totalAssets, double positionLimit, decimal availableToBuy)
+        public void Refresh(StockViewModel stock, decimal totalAssets, double positionLimit, decimal availableToBuy, double targetWeight)
         {
             Name = stock?.Name ?? "尚未訂閱／無資料";
             LatestPrice = stock?.LatestPrice ?? 0;
@@ -42,15 +43,15 @@ namespace StockTracker.ViewModels
             ProfitPercentage = LatestPrice > 0 && AverageCost > 0 ? (double)((LatestPrice / AverageCost - 1m) * 100m) : 0;
             TodayChangePercentage = stock?.ChangePercent ?? 0;
             Weight = totalAssets == 0 ? 0 : (double)(MarketValue / totalAssets * 100m);
-            TargetWeight = Score >= 85 && Risk <= 30 ? Math.Min(positionLimit, 10) : Score >= 75 && Risk <= 35 ? Math.Min(positionLimit, 7) : Score >= 65 && Risk <= 45 ? Math.Min(positionLimit, 4) : 0;
+            TargetWeight = Math.Max(0, Math.Min(positionLimit, targetWeight));
             var targetValue = totalAssets * (decimal)(TargetWeight / 100d);
             SuggestedTradeAmount = targetValue - MarketValue;
             if (stock == null || LatestPrice <= 0) { Recommendation = "先加入追蹤"; RecommendationBrush = Brushes.Gray; SuggestedTradeAmount = 0; Guidance = "找不到即時價格與評分，先將此股票加入主畫面追蹤清單。"; }
-            else if (Score < 65 || Risk > 45) { Recommendation = "減碼／檢討"; RecommendationBrush = Brushes.IndianRed; Guidance = $"分數 {Score}、風險 {Risk}；不新增部位，參考調整至 {TargetWeight:F1}% 目標權重。"; }
+            else if (TargetWeight <= 0) { Recommendation = "減碼／檢討"; RecommendationBrush = Brushes.IndianRed; Guidance = $"分數 {Score}、風險 {Risk} 未達納入動態配置的門檻；不新增部位，參考調整至 0%。"; }
             else if (Weight > positionLimit) { Recommendation = "減碼至上限"; RecommendationBrush = Brushes.IndianRed; TargetWeight = positionLimit; SuggestedTradeAmount = totalAssets * (decimal)(TargetWeight / 100d) - MarketValue; Guidance = $"目前權重 {Weight:F1}% 超過 {positionLimit:F1}% 上限；參考減少約 {Math.Floor(Math.Abs(SuggestedTradeAmount) / LatestPrice):N0} 股。"; }
-            else if (Weight + 0.5 < TargetWeight && availableToBuy > 0) { Recommendation = "分批加碼"; RecommendationBrush = Brushes.SeaGreen; SuggestedTradeAmount = Math.Min(SuggestedTradeAmount, availableToBuy); Guidance = $"分數 {Score}、風險 {Risk}，低於 {TargetWeight:F1}% 目標；參考分批買入約 {Math.Floor(SuggestedTradeAmount / LatestPrice):N0} 股。"; }
+            else if (Weight + 0.5 < TargetWeight && availableToBuy > 0) { Recommendation = "分批加碼"; RecommendationBrush = Brushes.SeaGreen; SuggestedTradeAmount = Math.Min(SuggestedTradeAmount, availableToBuy); Guidance = $"分數 {Score}、風險 {Risk}，依合格持股的相對配置分數分配至 {TargetWeight:F1}%；參考分批買入約 {Math.Floor(SuggestedTradeAmount / LatestPrice):N0} 股。"; }
             else { Recommendation = "暫不交易"; RecommendationBrush = Brushes.DarkOrange; Guidance = $"目前權重 {Weight:F1}% 接近 {TargetWeight:F1}% 目標；等待下一次評分或價格更新再檢視。"; }
-            foreach (var property in new[] { nameof(Name), nameof(LatestPrice), nameof(MarketValue), nameof(Weight), nameof(Score), nameof(Risk), nameof(ProfitPercentage), nameof(TodayChangePercentage), nameof(Recommendation), nameof(Guidance), nameof(RecommendationBrush), nameof(TargetWeight), nameof(SuggestedTradeAmount) }) OnPropertyChanged(property);
+            foreach (var property in new[] { nameof(Name), nameof(LatestPrice), nameof(MarketValue), nameof(Weight), nameof(Score), nameof(Risk), nameof(ScoreRiskText), nameof(ProfitPercentage), nameof(TodayChangePercentage), nameof(Recommendation), nameof(Guidance), nameof(RecommendationBrush), nameof(TargetWeight), nameof(SuggestedTradeAmount) }) OnPropertyChanged(property);
         }
     }
 
@@ -152,8 +153,36 @@ namespace StockTracker.ViewModels
             var stockValue = Holdings.Sum(x => { var stock = _stocks.FirstOrDefault(s => s.Symbol == x.Symbol); return (stock?.LatestPrice ?? 0) * x.Quantity; });
             var total = stockValue + Cash;
             var available = Math.Max(0, Cash - total * (decimal)(CashReservePercentage / 100d));
-            foreach (var holding in Holdings) holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), total, SinglePositionLimitPercentage, available);
+            var targets = CalculateDynamicTargets();
+            foreach (var holding in Holdings) holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), total, SinglePositionLimitPercentage, available, targets.TryGetValue(holding, out var target) ? target : 0);
             OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio));
+        }
+
+        private Dictionary<PortfolioHoldingViewModel, double> CalculateDynamicTargets()
+        {
+            var targets = Holdings.ToDictionary(holding => holding, _ => 0d);
+            var active = Holdings
+                .Select(holding => new { Holding = holding, Stock = _stocks.FirstOrDefault(stock => stock.Symbol == holding.Symbol) })
+                .Where(item => item.Stock != null && item.Stock.LatestPrice > 0 && item.Stock.StrategyOutput.FinalScore >= 65 && item.Stock.CurrentCrashRiskScore <= 45)
+                .Select(item => new { item.Holding, Signal = item.Stock.StrategyOutput.FinalScore * Math.Max(0.1, 1d - item.Stock.CurrentCrashRiskScore / 100d) })
+                .ToList();
+            var remainingBudget = Math.Max(0, 100d - CashReservePercentage);
+            var cap = SinglePositionLimitPercentage;
+
+            while (active.Count > 0 && remainingBudget > 0.0001)
+            {
+                var totalSignal = active.Sum(item => item.Signal);
+                var capped = active.Where(item => remainingBudget * item.Signal / totalSignal > cap).ToList();
+                if (capped.Count == 0)
+                {
+                    foreach (var item in active) targets[item.Holding] = remainingBudget * item.Signal / totalSignal;
+                    break;
+                }
+
+                foreach (var item in capped) { targets[item.Holding] = cap; remainingBudget -= cap; active.Remove(item); }
+            }
+
+            return targets;
         }
     }
 }

@@ -8,6 +8,7 @@
             <conv:InverseBoolConverter x:Key="InverseBoolConverter"/>
             <conv:MathConverter x:Key="MathConverter"/>
             <conv:BoolToExpandArrowConverter x:Key="BoolToExpandArrowConverter"/>
+            <conv:ValueSignBrushConverter x:Key="ValueSignBrushConverter"/>
             <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 
             <!-- 全域顏色 -->

@@ -213,6 +213,7 @@
     <Compile Include="Converters\BoolToExpandArrowConverter.cs" />
     <Compile Include="Converters\InverseBoolConverter.cs" />
     <Compile Include="Converters\MathConverter.cs" />
+    <Compile Include="Converters\ValueSignBrushConverter.cs" />
     <Compile Include="Converters\MathConverter.cs" />
     <Compile Include="LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
