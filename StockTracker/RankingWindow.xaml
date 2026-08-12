@@ -150,16 +150,41 @@
 
         <Border Grid.Row="2" Margin="0,0,0,10" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="6">
             <StackPanel>
-                <WrapPanel Margin="0,0,0,10">
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                <WrapPanel Grid.Column="0" VerticalAlignment="Center">
                     <Button Content="{Binding ControlPanelToggleText}" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding ToggleControlPanelCommand}"/>
                     <Button Content="手動更新網站" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding PublishWebsiteCommand}"/>
                     <Button Content="Export CSV" Width ="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding ToggleExportCsvCommand}" />
                     <TextBlock Text="通知 Email 清單" VerticalAlignment="Center" Margin="4,0,8,0" />
                     <TextBox Text="{Binding NotificationEmailList, UpdateSourceTrigger=PropertyChanged}" Width="420" Height="30" VerticalContentAlignment="Center" />
                 </WrapPanel>
+                    <Border Grid.Column="1" Width="176" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" CornerRadius="6" Padding="8" Margin="10,0,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="74" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Viewbox Width="70" Height="70" Grid.Column="0">
+                                <Grid Width="160" Height="160">
+                                    <Path Data="{Binding MarketBreadth.AdvancingArc}" Stroke="IndianRed" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                    <Path Data="{Binding MarketBreadth.DecliningArc}" Stroke="MediumSeaGreen" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                    <Path Data="{Binding MarketBreadth.UnchangedArc}" Stroke="#8b949e" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                    <TextBlock Text="{Binding MarketBreadth.AdvanceRatioPercent, StringFormat={}{0:F0}%}" FontSize="32" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+                            </Viewbox>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="&#24066;&#22580;&#24291;&#24230;" FontSize="12" Foreground="#8b949e" />
+                                <TextBlock Text="{Binding MarketBreadth.MarketTone}" FontSize="16" FontWeight="Bold" Foreground="{Binding MarketBreadth.MarketToneBrush}" />
+                                <TextBlock Text="{Binding MarketBreadth.AdvancingCount, StringFormat=&#8593; {0:N0}}" FontSize="11" Foreground="IndianRed" />
+                                <TextBlock Text="{Binding MarketBreadth.DecliningCount, StringFormat=&#8595; {0:N0}}" FontSize="11" Foreground="MediumSeaGreen" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
 
                 <StackPanel Visibility="{Binding ControlPanelVisibility}">
-                <Border Width="220" HorizontalAlignment="Left" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,10">
+                <Border Visibility="Collapsed" Width="220" HorizontalAlignment="Left" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,10">
                     <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="&#24066;&#22580;&#24291;&#24230;" FontSize="16" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" />
                         <TextBlock Text="&#26412;&#27425;&#36617;&#20837;&#27161;&#30340;" FontSize="10" Foreground="#8b949e" HorizontalAlignment="Center" />
@@ -181,6 +206,25 @@
                     </StackPanel>
                 </Border>
                 <WrapPanel Margin="0,0,0,10">
+                    <Border Visibility="Collapsed" Width="190" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,10">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="&#24066;&#22580;&#24291;&#24230;" FontSize="14" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" />
+                            <Grid Width="128" Height="128" Margin="0,5,0,4">
+                                <Path Data="{Binding MarketBreadth.AdvancingArc}" Stroke="IndianRed" StrokeThickness="14" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                <Path Data="{Binding MarketBreadth.DecliningArc}" Stroke="MediumSeaGreen" StrokeThickness="14" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                <Path Data="{Binding MarketBreadth.UnchangedArc}" Stroke="#8b949e" StrokeThickness="14" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding MarketBreadth.MarketTone}" FontSize="14" FontWeight="Bold" Foreground="{Binding MarketBreadth.MarketToneBrush}" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding MarketBreadth.AdvanceRatioPercent, StringFormat={}{0:F0}%}" FontSize="19" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding MarketBreadth.AdvancingCount, StringFormat=↑ {0:N0}}" Foreground="IndianRed" FontSize="11" FontWeight="SemiBold" Margin="3,0" />
+                                <TextBlock Text="{Binding MarketBreadth.DecliningCount, StringFormat=↓ {0:N0}}" Foreground="MediumSeaGreen" FontSize="11" FontWeight="SemiBold" Margin="3,0" />
+                                <TextBlock Text="{Binding MarketBreadth.UnchangedCount, StringFormat=— {0:N0}}" Foreground="#8b949e" FontSize="11" FontWeight="SemiBold" Margin="3,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                     <Border Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,10">
                         <StackPanel>
                             <TextBlock Text="掃描與顯示" FontWeight="SemiBold" Margin="0,0,0,8" />
