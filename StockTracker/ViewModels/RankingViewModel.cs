@@ -24,6 +24,34 @@ namespace StockTracker.ViewModels
         public int Score { get; set; }
     }
 
+    /// <summary>
+    /// Breadth of the currently scanned universe.  It is intentionally not
+    /// labelled as an official market index because it only reflects symbols
+    /// that were successfully loaded by this application.
+    /// </summary>
+    public sealed class MarketBreadthSnapshot
+    {
+        public int TotalCount { get; set; }
+        public int AdvancingCount { get; set; }
+        public int DecliningCount { get; set; }
+        public int UnchangedCount { get; set; }
+        public decimal AverageChangePercent { get; set; }
+
+        public decimal AdvanceRatioPercent =>
+            AdvancingCount + DecliningCount == 0
+                ? 0m
+                : AdvancingCount * 100m / (AdvancingCount + DecliningCount);
+
+        public string MarketTone =>
+            AdvancingCount > DecliningCount ? "偏多" :
+            DecliningCount > AdvancingCount ? "偏空" : "中性";
+
+        public System.Windows.Media.Brush MarketToneBrush =>
+            AdvancingCount > DecliningCount ? System.Windows.Media.Brushes.IndianRed :
+            DecliningCount > AdvancingCount ? System.Windows.Media.Brushes.MediumSeaGreen :
+            System.Windows.Media.Brushes.Gray;
+    }
+
     public class RankedStock
     {
         public int Rank { get; set; }
@@ -450,6 +478,8 @@ namespace StockTracker.ViewModels
         }
 
         public bool Has0050Data => Stock0050 != null;
+
+        public MarketBreadthSnapshot MarketBreadth => CreateMarketBreadth(RankedStocks);
 
         public ICommand ClearFiltersCommand { get; }
         public ICommand ApplyStrongMomentumFilterCommand { get; }
@@ -974,6 +1004,7 @@ namespace StockTracker.ViewModels
                     UpdateStrategyHoldingOptions(loaded);
                     UpdateSuggestionOptions(loaded);
                     Stock0050 = loaded.FirstOrDefault(s => s.Symbol == "0050");
+                    RefreshMarketBreadth();
                     ProgressText = $"已載入上次儲存的排行 ({loaded.Count} 筆)";
                 }
                 else
@@ -1191,6 +1222,7 @@ namespace StockTracker.ViewModels
         public string BuildRankingWebsiteHtml()
         {
             var exportStocks = GetCurrentViewStocks();
+            var marketBreadth = CreateMarketBreadth(RankedStocks);
             var latestScoreDate = exportStocks
                 .Where(s => s.ScoreDate != DateTime.MinValue)
                 .Select(s => (DateTime?)s.ScoreDate.Date)
@@ -1379,6 +1411,7 @@ namespace StockTracker.ViewModels
             html.AppendLine(".btn-csv:hover{background:var(--primary-hover);}");
 
             html.AppendLine(".panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
+            html.AppendLine(".breadth-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}.breadth-stat{background:#21262d;border:1px solid var(--border);border-radius:8px;padding:12px;}.breadth-label{color:var(--text-muted);font-size:12px;margin-bottom:4px;}.breadth-value{color:#fff;font-size:22px;font-weight:700;}.breadth-note{margin:12px 0 0;color:var(--text-muted);font-size:12px;}");
             html.AppendLine(".hero-card{background:linear-gradient(135deg, #1f2937 0%, #111827 100%);border:2px solid #2563eb;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 8px 24px rgba(37,99,235,0.2);}");
             html.AppendLine(".hero-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:16px;}");
             html.AppendLine(".hero-title{flex:1;min-width:200px;}");
@@ -1454,7 +1487,7 @@ namespace StockTracker.ViewModels
             html.AppendLine(".tag-list{display:flex;flex-wrap:wrap;gap:6px;}");
             html.AppendLine(".tag-chip{background:rgba(31,111,235,0.15);color:#58a6ff;border:1px solid rgba(31,111,235,0.3);border-radius:12px;padding:4px 12px;font-size:12px;font-weight:600;}");
             html.AppendLine(".inst-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}");
-            html.AppendLine(".portfolio-panel{margin:18px 0;}.portfolio-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}.portfolio-head h3{margin:0;color:#f0f6fc;}.portfolio-muted{color:var(--text-muted);font-size:12px;line-height:1.6;}.portfolio-controls{display:grid;grid-template-columns:repeat(6,minmax(100px,1fr));gap:10px;align-items:end;}.portfolio-controls label{display:block;color:var(--text-muted);font-size:11px;margin-bottom:5px;}.portfolio-controls input{width:100%;box-sizing:border-box;}.portfolio-actions{display:flex;gap:8px;flex-wrap:wrap;}.portfolio-button{border:1px solid #30363d;background:#21262d;color:#c9d1d9;border-radius:7px;padding:8px 10px;cursor:pointer;}.portfolio-button.primary{background:#1f6feb;border-color:#388bfd;color:#fff;}.portfolio-summary{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin:16px 0;}.portfolio-stat{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;}.portfolio-stat span{display:block;color:#8b949e;font-size:11px;margin-bottom:5px;}.portfolio-stat strong{font-size:17px;color:#f0f6fc;}.portfolio-table{width:100%;border-collapse:collapse;font-size:13px;}.portfolio-table th,.portfolio-table td{padding:10px 8px;border-bottom:1px solid #21262d;text-align:right;white-space:nowrap;}.portfolio-table th{color:#8b949e;font-size:11px;}.portfolio-table th:first-child,.portfolio-table td:first-child{text-align:left;}.portfolio-row{cursor:pointer;}.portfolio-row:hover{background:#21262d;}.portfolio-advice{font-weight:600;}.portfolio-empty{padding:22px;text-align:center;color:#8b949e;}@media(max-width:768px){.portfolio-controls{grid-template-columns:1fr 1fr;}.portfolio-summary{grid-template-columns:1fr 1fr;}.portfolio-head{flex-direction:column;}.portfolio-table-wrap{overflow-x:auto;}}");
+            html.AppendLine(".portfolio-panel{position:fixed;z-index:50;top:76px;right:0;bottom:0;width:min(760px,calc(100vw - 24px));margin:0;border-radius:12px 0 0 0;overflow-y:auto;transform:translateX(100%);transition:transform .22s ease;box-shadow:-12px 0 28px rgba(0,0,0,.35);}.portfolio-panel.is-open{transform:translateX(0);}.portfolio-toggle{position:absolute;top:18px;left:-46px;width:46px;height:48px;border:1px solid var(--border);border-right:0;border-radius:9px 0 0 9px;background:#1f6feb;color:#fff;font-size:24px;cursor:pointer;box-shadow:-4px 2px 10px rgba(0,0,0,.25);}.portfolio-toggle:hover{background:#388bfd;}.portfolio-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}.portfolio-head h3{margin:0;color:#f0f6fc;}.portfolio-muted{color:var(--text-muted);font-size:12px;line-height:1.6;}.portfolio-controls{display:grid;grid-template-columns:repeat(3,minmax(100px,1fr));gap:10px;align-items:end;}.portfolio-controls label{display:block;color:var(--text-muted);font-size:11px;margin-bottom:5px;}.portfolio-controls input{width:100%;box-sizing:border-box;}.portfolio-actions{display:flex;gap:8px;flex-wrap:wrap;}.portfolio-button{border:1px solid #30363d;background:#21262d;color:#c9d1d9;border-radius:7px;padding:8px 10px;cursor:pointer;}.portfolio-button.primary{background:#1f6feb;border-color:#388bfd;color:#fff;}.portfolio-summary{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px;margin:16px 0;}.portfolio-stat{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;}.portfolio-stat span{display:block;color:#8b949e;font-size:11px;margin-bottom:5px;}.portfolio-stat strong{font-size:17px;color:#f0f6fc;}.portfolio-table{width:100%;border-collapse:collapse;font-size:13px;}.portfolio-table th,.portfolio-table td{padding:10px 8px;border-bottom:1px solid #21262d;text-align:right;white-space:nowrap;}.portfolio-table th{color:#8b949e;font-size:11px;}.portfolio-table th:first-child,.portfolio-table td:first-child{text-align:left;}.portfolio-row{cursor:pointer;}.portfolio-row:hover{background:#21262d;}.portfolio-advice{font-weight:600;}.portfolio-empty{padding:22px;text-align:center;color:#8b949e;}@media(max-width:768px){.portfolio-panel{top:60px;width:calc(100vw - 12px);}.portfolio-controls{grid-template-columns:1fr 1fr;}.portfolio-summary{grid-template-columns:1fr 1fr;}.portfolio-head{flex-direction:column;}.portfolio-table-wrap{overflow-x:auto;}}");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
@@ -1489,6 +1522,20 @@ namespace StockTracker.ViewModels
             html.AppendLine("<div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
+
+            html.AppendLine("<section class='panel' aria-label='Market breadth'>");
+            html.AppendLine("<h3 style='margin:0 0 6px;font-size:18px;color:#fff;'>&#24066;&#22580;&#24291;&#24230;&#20736;&#34920;&#26495;</h3>");
+            html.AppendLine("<p class='muted'>&#20197;&#26412;&#27425;&#24050;&#36617;&#20837;&#30340;&#27161;&#30340;&#35336;&#31639;&#65292;&#19981;&#20195;&#34920;&#23448;&#26041;&#21152;&#27402;&#25351;&#25976;&#12290;</p>");
+            html.AppendLine("<div class='breadth-grid'>");
+            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#19978;&#28450;&#23478;&#25976;</div><div class='breadth-value rise'>{marketBreadth.AdvancingCount:N0}</div></div>");
+            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#19979;&#36300;&#23478;&#25976;</div><div class='breadth-value fall'>{marketBreadth.DecliningCount:N0}</div></div>");
+            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#24179;&#30436;&#23478;&#25976;</div><div class='breadth-value flat'>{marketBreadth.UnchangedCount:N0}</div></div>");
+            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#19978;&#28450;&#27604;&#29575;</div><div class='breadth-value'>{marketBreadth.AdvanceRatioPercent:F1}%</div></div>");
+            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#24179;&#22343;&#28450;&#36300;</div><div class='breadth-value {ResolveValueColorClass((double)marketBreadth.AverageChangePercent)}'>{marketBreadth.AverageChangePercent:+0.00;-0.00;0.00}%</div></div>");
+            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#24066;&#22580;&#27683;&#27675;</div><div class='breadth-value {ResolveValueColorClass(marketBreadth.AdvancingCount - marketBreadth.DecliningCount)}'>{marketBreadth.MarketTone}</div></div>");
+            html.AppendLine("</div>");
+            html.AppendLine($"<p class='breadth-note'>&#32013;&#35336; {marketBreadth.TotalCount:N0} &#27284;&#27161;&#30340;&#12290;&#19978;&#28450;&#27604;&#29575;&#28858;&#19978;&#28450;&#23478;&#25976; / (&#19978;&#28450;&#23478;&#25976; + &#19979;&#36300;&#23478;&#25976;)</p>");
+            html.AppendLine("</section>");
 
             // 0050 Market Leader Summary Card
             html.AppendLine("<div id='hero0050Card' class='hero-card' style='display:none;'>");
@@ -1624,6 +1671,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("</div>");
             html.AppendLine("</div>");
             html.AppendLine("<div class='panel portfolio-panel' id='portfolioPanel'>");
+            html.AppendLine("  <button class='portfolio-toggle' id='btnPortfolioToggle' type='button' aria-label='&#38283;&#21855;&#25105;&#30340;&#25237;&#36039;&#32068;&#21512;' aria-expanded='false'>&#8592;</button>");
             html.AppendLine("  <div class='portfolio-head'><div><h3>&#25105;&#30340;&#25237;&#36039;&#32068;&#21512;</h3><div class='portfolio-muted'>&#36664;&#20837;&#25345;&#32929;&#33287;&#29694;&#37329;&#65292;&#20381;&#35413;&#20998;&#25976;&#12289;&#39080;&#38522;&#33287;&#21934;&#19968;&#25345;&#32929;&#19978;&#38480;&#35657;&#31639;&#21205;&#24907;&#30446;&#27161;&#27402;&#37325;&#12290;&#40670;&#36984;&#32929;&#31080;&#21487;&#38283;&#21855;&#35413;&#32048;&#31680;&#12290;</div></div><div class='portfolio-actions'><button class='portfolio-button' id='btnPortfolioCsv' type='button'>&#21295;&#20837; CSV</button><button class='portfolio-button' id='btnPortfolioClear' type='button'>&#28165;&#38500;&#25345;&#32929;</button></div></div>");
             html.AppendLine("  <input id='portfolioCsvInput' type='file' accept='.csv,text/csv' style='display:none;'>");
             html.AppendLine("  <div class='portfolio-controls'><div><label>&#32929;&#31080;&#20195;&#34399;</label><input id='portfolioSymbol' placeholder='2330'></div><div><label>&#25345;&#32929;&#25976;</label><input id='portfolioShares' type='number' min='0' step='1' placeholder='1000'></div><div><label>&#24179;&#22343;&#25104;&#26412;</label><input id='portfolioCost' type='number' min='0' step='0.01' placeholder='1000'></div><div><label>&#29694;&#37329;</label><input id='portfolioCash' type='number' min='0' step='1' placeholder='0'></div><div><label>&#29694;&#37329;&#20445;&#30041; %</label><input id='portfolioReserve' type='number' min='0' max='100' step='1' value='10'></div><div><label>&#21934;&#19968;&#25345;&#32929;&#19978;&#38480; %</label><input id='portfolioLimit' type='number' min='1' max='100' step='1' value='20'></div></div>");
@@ -1651,7 +1699,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("function portfolioColor(value){return value>0?'var(--rise)':value<0?'var(--fall)':'var(--flat)';}");
             html.AppendLine("function portfolioPercent(value){return (value>=0?'+':'')+value.toFixed(2)+'%';}");
             html.AppendLine("function renderPortfolio(){portfolio.cash=Math.max(0,portfolioNumber($('portfolioCash').value));portfolio.reserve=Math.min(100,Math.max(0,portfolioNumber($('portfolioReserve').value)));portfolio.limit=Math.min(100,Math.max(1,portfolioNumber($('portfolioLimit').value)));const items=portfolio.holdings.map(h=>({symbol:String(h.symbol||'').toUpperCase(),shares:Math.max(0,portfolioNumber(h.shares)),cost:Math.max(0,portfolioNumber(h.cost)),stock:findPortfolioStock(h.symbol)}));const marketValue=items.reduce((sum,x)=>sum+(x.stock?x.shares*x.stock.price:0),0);const total=marketValue+portfolio.cash;const targets=calculatePortfolioTargets(items,portfolio.reserve,portfolio.limit);const eligible=items.filter(x=>targets.has(x.symbol)).length;$('portfolioRuleText').textContent='合格標準：分數 ≥ 65、風險 ≤ 45；投資額度 '+(100-portfolio.reserve).toFixed(0)+'%，單一上限 '+portfolio.limit.toFixed(0)+'%。';$('portfolioSummary').innerHTML=`<div class='portfolio-stat'><span>股票市值</span><strong>${marketValue.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div><div class='portfolio-stat'><span>現金</span><strong>${portfolio.cash.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div><div class='portfolio-stat'><span>現金比重</span><strong>${total?((portfolio.cash/total)*100).toFixed(1):'0.0'}%</strong></div><div class='portfolio-stat'><span>符合配置條件</span><strong>${eligible} 檔</strong></div>`;const body=$('portfolioBody');body.innerHTML='';if(!items.length){body.innerHTML='<tr><td colspan=8 class=portfolio-empty>尚未輸入持股。可逐筆新增，或以 CSV 匯入「代號,股數,平均成本」。</td></tr>';return;}items.forEach(x=>{const stock=x.stock,mv=stock?x.shares*stock.price:0,pnl=stock&&x.cost?((stock.price-x.cost)/x.cost*100):0,actual=total?mv/total*100:0,target=targets.get(x.symbol)||0;let advice='未納入配置';if(stock&&target>actual+1)advice='可考慮加碼';else if(stock&&actual>target+1)advice='建議減碼';else if(stock&&target>0)advice='維持觀察';else if(stock)advice='分數或風險未達標';const tr=document.createElement('tr');tr.className='portfolio-row';tr.innerHTML=`<td><strong>${x.symbol}</strong> ${stock?decodeHtmlEntities(stock.name):'<span class=portfolio-muted>排名中無資料</span>'}</td><td>${stock?stock.price.toFixed(2):'—'}</td><td style='color:${stock?portfolioColor(stock.chg):'var(--flat)'}'>${stock?portfolioPercent(stock.chg):'—'}</td><td style='color:${portfolioColor(pnl)}'>${stock?portfolioPercent(pnl):'—'}</td><td>${actual.toFixed(1)}%</td><td>${target.toFixed(1)}%</td><td class='portfolio-advice'>${advice}</td><td><button class='portfolio-button' type='button'>刪除</button></td>`;if(stock)tr.addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')showStockDetail(stock);});tr.querySelector('button').addEventListener('click',()=>{portfolio.holdings=portfolio.holdings.filter(h=>String(h.symbol).toUpperCase()!==x.symbol);savePortfolio();renderPortfolio();});body.appendChild(tr);});savePortfolio();}");
-            html.AppendLine("function initPortfolio(){ $('portfolioCash').value=portfolio.cash;$('portfolioReserve').value=portfolio.reserve;$('portfolioLimit').value=portfolio.limit;['portfolioCash','portfolioReserve','portfolioLimit'].forEach(id=>$(id).addEventListener('input',renderPortfolio));$('btnPortfolioSave').addEventListener('click',()=>{const symbol=$('portfolioSymbol').value.trim().toUpperCase(),shares=portfolioNumber($('portfolioShares').value),cost=portfolioNumber($('portfolioCost').value);if(!symbol||shares<=0||cost<=0){alert('請填寫股票代號、持股數與平均成本。');return;}const index=portfolio.holdings.findIndex(h=>String(h.symbol).toUpperCase()===symbol);const holding={symbol,shares,cost};if(index>=0)portfolio.holdings[index]=holding;else portfolio.holdings.push(holding);$('portfolioSymbol').value='';$('portfolioShares').value='';$('portfolioCost').value='';savePortfolio();renderPortfolio();});$('btnPortfolioClear').addEventListener('click',()=>{if(confirm('確定清除所有持股？')){portfolio.holdings=[];savePortfolio();renderPortfolio();}});$('btnPortfolioCsv').addEventListener('click',()=>$('portfolioCsvInput').click());$('portfolioCsvInput').addEventListener('change',event=>{const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{const rows=String(reader.result||'').replace(/^\\uFEFF/,'').split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);let added=0;rows.forEach(row=>{const part=row.split(',').map(x=>x.trim().replace(/^\\\"|\\\"$/g,''));if(!/^\\d{4,6}$/.test(part[0]))return;const shares=portfolioNumber(part[1]),cost=portfolioNumber(part[2]);if(shares<=0||cost<=0)return;const index=portfolio.holdings.findIndex(h=>String(h.symbol).toUpperCase()===part[0]);const holding={symbol:part[0],shares,cost};if(index>=0)portfolio.holdings[index]=holding;else portfolio.holdings.push(holding);added++;});savePortfolio();renderPortfolio();alert('已匯入 '+added+' 筆持股。');event.target.value='';};reader.readAsText(file,'utf-8');});renderPortfolio();}");
+            html.AppendLine("function initPortfolio(){const panel=$('portfolioPanel'),toggle=$('btnPortfolioToggle');const setPortfolioOpen=open=>{panel.classList.toggle('is-open',open);toggle.innerHTML=open?'&#8594;':'&#8592;';toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'&#25910;&#21512;&#25105;&#30340;&#25237;&#36039;&#32068;&#21512;':'&#38283;&#21855;&#25105;&#30340;&#25237;&#36039;&#32068;&#21512;');};toggle.addEventListener('click',()=>setPortfolioOpen(!panel.classList.contains('is-open')));$('portfolioCash').value=portfolio.cash;$('portfolioReserve').value=portfolio.reserve;$('portfolioLimit').value=portfolio.limit;['portfolioCash','portfolioReserve','portfolioLimit'].forEach(id=>$(id).addEventListener('input',renderPortfolio));$('btnPortfolioSave').addEventListener('click',()=>{const symbol=$('portfolioSymbol').value.trim().toUpperCase(),shares=portfolioNumber($('portfolioShares').value),cost=portfolioNumber($('portfolioCost').value);if(!symbol||shares<=0||cost<=0){alert('請填寫股票代號、持股數與平均成本。');return;}const index=portfolio.holdings.findIndex(h=>String(h.symbol).toUpperCase()===symbol);const holding={symbol,shares,cost};if(index>=0)portfolio.holdings[index]=holding;else portfolio.holdings.push(holding);$('portfolioSymbol').value='';$('portfolioShares').value='';$('portfolioCost').value='';savePortfolio();renderPortfolio();});$('btnPortfolioClear').addEventListener('click',()=>{if(confirm('確定清除所有持股？')){portfolio.holdings=[];savePortfolio();renderPortfolio();}});$('btnPortfolioCsv').addEventListener('click',()=>$('portfolioCsvInput').click());$('portfolioCsvInput').addEventListener('change',event=>{const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{const rows=String(reader.result||'').replace(/^\\uFEFF/,'').split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);let added=0;rows.forEach(row=>{const part=row.split(',').map(x=>x.trim().replace(/^\\\"|\\\"$/g,''));if(!/^\\d{4,6}$/.test(part[0]))return;const shares=portfolioNumber(part[1]),cost=portfolioNumber(part[2]);if(shares<=0||cost<=0)return;const index=portfolio.holdings.findIndex(h=>String(h.symbol).toUpperCase()===part[0]);const holding={symbol:part[0],shares,cost};if(index>=0)portfolio.holdings[index]=holding;else portfolio.holdings.push(holding);added++;});savePortfolio();renderPortfolio();alert('已匯入 '+added+' 筆持股。');event.target.value='';};reader.readAsText(file,'utf-8');});renderPortfolio();}");
             html.AppendLine("initPortfolio();");
             html.AppendLine("function populate0050Hero() {");
             html.AppendLine("  if (!stock0050Data) { $('hero0050Card').style.display='none'; return; }");
@@ -2218,6 +2266,7 @@ namespace StockTracker.ViewModels
             _isScanning = true;
             CommandManager.InvalidateRequerySuggested();
             RankedStocks.Clear();
+            RefreshMarketBreadth();
 
             try
             {
@@ -2476,6 +2525,7 @@ namespace StockTracker.ViewModels
                 UpdateStrategyHoldingOptions(results);
                 UpdateSuggestionOptions(results);
                 Stock0050 = results.FirstOrDefault(r => r.Symbol == "0050");
+                RefreshMarketBreadth();
                 SaveRankingToDb(results);
 
                 ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票";
@@ -2949,6 +2999,27 @@ namespace StockTracker.ViewModels
         private static string HtmlEncode(string value)
         {
             return WebUtility.HtmlEncode(value ?? string.Empty);
+        }
+
+        private static MarketBreadthSnapshot CreateMarketBreadth(IEnumerable<RankedStock> stocks)
+        {
+            var source = (stocks ?? Enumerable.Empty<RankedStock>()).ToList();
+            var advancing = source.Count(s => s.ChangePercent > 0m);
+            var declining = source.Count(s => s.ChangePercent < 0m);
+
+            return new MarketBreadthSnapshot
+            {
+                TotalCount = source.Count,
+                AdvancingCount = advancing,
+                DecliningCount = declining,
+                UnchangedCount = source.Count - advancing - declining,
+                AverageChangePercent = source.Count == 0 ? 0m : source.Average(s => s.ChangePercent)
+            };
+        }
+
+        private void RefreshMarketBreadth()
+        {
+            OnPropertyChanged(nameof(MarketBreadth));
         }
 
         private static string ResolveValueColorClass(double value)
