@@ -50,6 +50,40 @@ namespace StockTracker.ViewModels
             AdvancingCount > DecliningCount ? System.Windows.Media.Brushes.IndianRed :
             DecliningCount > AdvancingCount ? System.Windows.Media.Brushes.MediumSeaGreen :
             System.Windows.Media.Brushes.Gray;
+
+        public System.Windows.Media.Geometry AdvancingArc => CreateDonutArc(0m, AdvancingCount);
+        public System.Windows.Media.Geometry DecliningArc => CreateDonutArc(AdvancingCount, DecliningCount);
+        public System.Windows.Media.Geometry UnchangedArc => CreateDonutArc(AdvancingCount + DecliningCount, UnchangedCount);
+
+        private System.Windows.Media.Geometry CreateDonutArc(decimal precedingCount, decimal segmentCount)
+        {
+            if (TotalCount <= 0 || segmentCount <= 0)
+                return System.Windows.Media.Geometry.Empty;
+
+            const double center = 80d;
+            const double radius = 60d;
+            const double gapDegrees = 2d;
+            var startAngle = -90d + (double)(precedingCount / TotalCount * 360m) + gapDegrees / 2d;
+            var sweepAngle = Math.Max(0d, (double)(segmentCount / TotalCount * 360m) - gapDegrees);
+            var endAngle = startAngle + sweepAngle;
+            var start = PointOnCircle(center, radius, startAngle);
+            var end = PointOnCircle(center, radius, endAngle);
+            var figure = new System.Windows.Media.PathFigure { StartPoint = start };
+            figure.Segments.Add(new System.Windows.Media.ArcSegment(
+                end,
+                new System.Windows.Size(radius, radius),
+                0d,
+                sweepAngle > 180d,
+                System.Windows.Media.SweepDirection.Clockwise,
+                true));
+            return new System.Windows.Media.PathGeometry(new[] { figure });
+        }
+
+        private static System.Windows.Point PointOnCircle(double center, double radius, double angleDegrees)
+        {
+            var radians = angleDegrees * Math.PI / 180d;
+            return new System.Windows.Point(center + radius * Math.Cos(radians), center + radius * Math.Sin(radians));
+        }
     }
 
     public class RankedStock
@@ -1411,7 +1445,7 @@ namespace StockTracker.ViewModels
             html.AppendLine(".btn-csv:hover{background:var(--primary-hover);}");
 
             html.AppendLine(".panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
-            html.AppendLine(".breadth-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}.breadth-stat{background:#21262d;border:1px solid var(--border);border-radius:8px;padding:12px;}.breadth-label{color:var(--text-muted);font-size:12px;margin-bottom:4px;}.breadth-value{color:#fff;font-size:22px;font-weight:700;}.breadth-note{margin:12px 0 0;color:var(--text-muted);font-size:12px;}");
+            html.AppendLine(".breadth-card{width:220px;padding:14px;margin:0 0 16px auto;text-align:center;}.breadth-title{margin:0 0 2px;color:#fff;font-size:15px;}.breadth-subtitle{margin:0;color:var(--text-muted);font-size:10px;}.breadth-donut{width:132px;height:132px;border-radius:50%;margin:12px auto;display:grid;place-items:center;position:relative;}.breadth-donut::after{content:'';position:absolute;inset:17px;background:var(--panel-bg);border-radius:50%;}.breadth-center{position:relative;z-index:1;display:flex;flex-direction:column;line-height:1.2;}.breadth-tone{font-size:16px;font-weight:700;}.breadth-ratio{font-size:21px;font-weight:700;color:#fff;}.breadth-counts{display:flex;justify-content:center;gap:9px;font-size:12px;font-weight:600;}.breadth-average{margin:8px 0 0;font-size:12px;color:var(--text-muted);}.breadth-note{margin:8px 0 0;color:var(--text-muted);font-size:10px;line-height:1.4;}");
             html.AppendLine(".hero-card{background:linear-gradient(135deg, #1f2937 0%, #111827 100%);border:2px solid #2563eb;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 8px 24px rgba(37,99,235,0.2);}");
             html.AppendLine(".hero-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:16px;}");
             html.AppendLine(".hero-title{flex:1;min-width:200px;}");
@@ -1523,18 +1557,15 @@ namespace StockTracker.ViewModels
             html.AppendLine("</div>");
             html.AppendLine("</div>");
 
-            html.AppendLine("<section class='panel' aria-label='Market breadth'>");
-            html.AppendLine("<h3 style='margin:0 0 6px;font-size:18px;color:#fff;'>&#24066;&#22580;&#24291;&#24230;&#20736;&#34920;&#26495;</h3>");
-            html.AppendLine("<p class='muted'>&#20197;&#26412;&#27425;&#24050;&#36617;&#20837;&#30340;&#27161;&#30340;&#35336;&#31639;&#65292;&#19981;&#20195;&#34920;&#23448;&#26041;&#21152;&#27402;&#25351;&#25976;&#12290;</p>");
-            html.AppendLine("<div class='breadth-grid'>");
-            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#19978;&#28450;&#23478;&#25976;</div><div class='breadth-value rise'>{marketBreadth.AdvancingCount:N0}</div></div>");
-            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#19979;&#36300;&#23478;&#25976;</div><div class='breadth-value fall'>{marketBreadth.DecliningCount:N0}</div></div>");
-            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#24179;&#30436;&#23478;&#25976;</div><div class='breadth-value flat'>{marketBreadth.UnchangedCount:N0}</div></div>");
-            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#19978;&#28450;&#27604;&#29575;</div><div class='breadth-value'>{marketBreadth.AdvanceRatioPercent:F1}%</div></div>");
-            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#24179;&#22343;&#28450;&#36300;</div><div class='breadth-value {ResolveValueColorClass((double)marketBreadth.AverageChangePercent)}'>{marketBreadth.AverageChangePercent:+0.00;-0.00;0.00}%</div></div>");
-            html.AppendLine($"<div class='breadth-stat'><div class='breadth-label'>&#24066;&#22580;&#27683;&#27675;</div><div class='breadth-value {ResolveValueColorClass(marketBreadth.AdvancingCount - marketBreadth.DecliningCount)}'>{marketBreadth.MarketTone}</div></div>");
-            html.AppendLine("</div>");
-            html.AppendLine($"<p class='breadth-note'>&#32013;&#35336; {marketBreadth.TotalCount:N0} &#27284;&#27161;&#30340;&#12290;&#19978;&#28450;&#27604;&#29575;&#28858;&#19978;&#28450;&#23478;&#25976; / (&#19978;&#28450;&#23478;&#25976; + &#19979;&#36300;&#23478;&#25976;)</p>");
+            var advancePercent = marketBreadth.TotalCount == 0 ? 0m : marketBreadth.AdvancingCount * 100m / marketBreadth.TotalCount;
+            var declinePercent = marketBreadth.TotalCount == 0 ? 0m : marketBreadth.DecliningCount * 100m / marketBreadth.TotalCount;
+            html.AppendLine("<section class='panel breadth-card' aria-label='Market breadth'>");
+            html.AppendLine("<h3 class='breadth-title'>&#24066;&#22580;&#24291;&#24230;</h3>");
+            html.AppendLine("<p class='breadth-subtitle'>&#26412;&#27425;&#36617;&#20837;&#27161;&#30340;</p>");
+            html.AppendLine($"<div class='breadth-donut' style='background:conic-gradient(var(--rise) 0 {advancePercent:F3}%,var(--fall) {advancePercent:F3}% {advancePercent + declinePercent:F3}%,var(--flat) {advancePercent + declinePercent:F3}% 100%);'><div class='breadth-center'><span class='breadth-tone {ResolveValueColorClass(marketBreadth.AdvancingCount - marketBreadth.DecliningCount)}'>{marketBreadth.MarketTone}</span><span class='breadth-ratio'>{marketBreadth.AdvanceRatioPercent:F0}%</span></div></div>");
+            html.AppendLine($"<div class='breadth-counts'><span class='rise'>&#8593; {marketBreadth.AdvancingCount:N0}</span><span class='fall'>&#8595; {marketBreadth.DecliningCount:N0}</span><span class='flat'>&#8212; {marketBreadth.UnchangedCount:N0}</span></div>");
+            html.AppendLine($"<p class='breadth-average'>&#24179;&#22343; <span class='{ResolveValueColorClass((double)marketBreadth.AverageChangePercent)}'>{marketBreadth.AverageChangePercent:+0.00;-0.00;0.00}%</span></p>");
+            html.AppendLine($"<p class='breadth-note'>&#20849; {marketBreadth.TotalCount:N0} &#27284;&#65307;&#19978;&#28450;&#27604;&#29575;&#19981;&#21547;&#24179;&#30436;</p>");
             html.AppendLine("</section>");
 
             // 0050 Market Leader Summary Card

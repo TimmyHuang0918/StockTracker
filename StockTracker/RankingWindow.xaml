@@ -26,17 +26,31 @@
                 </StackPanel>
             </Border>
 
-            <Border Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,10,0,0">
-                <StackPanel>
+            <Border Width="220" HorizontalAlignment="Right" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,10,0,0">
+                <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="&#24066;&#22580;&#24291;&#24230;&#20736;&#34920;&#26495;" FontSize="16" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,3" />
-                    <TextBlock Text="&#20197;&#26412;&#27425;&#24050;&#36617;&#20837;&#30340;&#27161;&#30340;&#35336;&#31639;&#65292;&#19981;&#20195;&#34920;&#23448;&#26041;&#21152;&#27402;&#25351;&#25976;&#12290;" FontSize="11" Foreground="#8b949e" Margin="0,0,0,10" />
-                    <UniformGrid Columns="6">
-                        <StackPanel><TextBlock Text="&#19978;&#28450;&#23478;&#25976;" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.AdvancingCount}" FontSize="19" FontWeight="Bold" Foreground="IndianRed" /></StackPanel>
-                        <StackPanel><TextBlock Text="&#19979;&#36300;&#23478;&#25976;" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.DecliningCount}" FontSize="19" FontWeight="Bold" Foreground="MediumSeaGreen" /></StackPanel>
-                        <StackPanel><TextBlock Text="&#24179;&#30436;&#23478;&#25976;" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.UnchangedCount}" FontSize="19" FontWeight="Bold" Foreground="#8b949e" /></StackPanel>
-                        <StackPanel><TextBlock Text="&#19978;&#28450;&#27604;&#29575;" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.AdvanceRatioPercent, StringFormat={}{0:F1}%}" FontSize="19" FontWeight="Bold" Foreground="White" /></StackPanel>
-                        <StackPanel><TextBlock Text="&#24179;&#22343;&#28450;&#36300;" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.AverageChangePercent, StringFormat={}{0:+0.00;-0.00;0.00}%}" FontSize="19" FontWeight="Bold" Foreground="{Binding MarketBreadth.MarketToneBrush}" /></StackPanel>
-                        <StackPanel><TextBlock Text="&#24066;&#22580;&#27683;&#27675;" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.MarketTone}" FontSize="19" FontWeight="Bold" Foreground="{Binding MarketBreadth.MarketToneBrush}" /></StackPanel>
+                    <Grid Width="160" Height="160" Margin="0,8,0,6">
+                        <Path Data="{Binding MarketBreadth.AdvancingArc}" Stroke="IndianRed" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path Data="{Binding MarketBreadth.DecliningArc}" Stroke="MediumSeaGreen" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path Data="{Binding MarketBreadth.UnchangedArc}" Stroke="#8b949e" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding MarketBreadth.MarketTone}" FontSize="16" FontWeight="Bold" Foreground="{Binding MarketBreadth.MarketToneBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding MarketBreadth.AdvanceRatioPercent, StringFormat={}{0:F0}%}" FontSize="22" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding MarketBreadth.AdvancingCount, StringFormat=↑ {0:N0}}" Foreground="IndianRed" FontWeight="SemiBold" Margin="4,0" />
+                        <TextBlock Text="{Binding MarketBreadth.DecliningCount, StringFormat=↓ {0:N0}}" Foreground="MediumSeaGreen" FontWeight="SemiBold" Margin="4,0" />
+                        <TextBlock Text="{Binding MarketBreadth.UnchangedCount, StringFormat=— {0:N0}}" Foreground="#8b949e" FontWeight="SemiBold" Margin="4,0" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding MarketBreadth.AverageChangePercent, StringFormat=平均 {0:+0.00;-0.00;0.00}%}" FontSize="11" Foreground="{Binding MarketBreadth.MarketToneBrush}" HorizontalAlignment="Center" Margin="0,6,0,0" />
+                    <UniformGrid Columns="6" Visibility="Collapsed">
+                        <StackPanel><TextBlock Text="上漲家數" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.AdvancingCount}" FontSize="19" FontWeight="Bold" Foreground="IndianRed" /></StackPanel>
+                        <StackPanel><TextBlock Text="下跌家數" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.DecliningCount}" FontSize="19" FontWeight="Bold" Foreground="MediumSeaGreen" /></StackPanel>
+                        <StackPanel><TextBlock Text="平盤家數" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.UnchangedCount}" FontSize="19" FontWeight="Bold" Foreground="#8b949e" /></StackPanel>
+                        <StackPanel><TextBlock Text="上漲比例" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.AdvanceRatioPercent, StringFormat={}{0:F1}%}" FontSize="19" FontWeight="Bold" Foreground="White" /></StackPanel>
+                        <StackPanel><TextBlock Text="平均漲跌" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.AverageChangePercent, StringFormat={}{0:+0.00;-0.00;0.00}%}" FontSize="19" FontWeight="Bold" Foreground="{Binding MarketBreadth.MarketToneBrush}" /></StackPanel>
+                        <StackPanel><TextBlock Text="市場氣氛" FontSize="11" Foreground="#8b949e" /><TextBlock Text="{Binding MarketBreadth.MarketTone}" FontSize="19" FontWeight="Bold" Foreground="{Binding MarketBreadth.MarketToneBrush}" /></StackPanel>
                     </UniformGrid>
                 </StackPanel>
             </Border>
