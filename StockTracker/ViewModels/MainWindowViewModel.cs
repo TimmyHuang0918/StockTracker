@@ -626,8 +626,18 @@ namespace StockTracker.ViewModels
             {
                 File.Copy(groupCatalogPath, Path.Combine(docsFolder, "stock-groups.json"), true);
             }
+            var themeStatusPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "theme-status.json");
+            if (File.Exists(themeStatusPath))
+            {
+                File.Copy(themeStatusPath, Path.Combine(docsFolder, "theme-status.json"), true);
+            }
 
-            if (!RunGitCommand(repoRoot, "add docs/nightly-ranking/index.html docs/nightly-ranking/stock-groups.json", out gitOutput))
+            var gitAddArguments = "add docs/nightly-ranking/index.html docs/nightly-ranking/stock-groups.json";
+            if (File.Exists(themeStatusPath))
+            {
+                gitAddArguments += " docs/nightly-ranking/theme-status.json";
+            }
+            if (!RunGitCommand(repoRoot, gitAddArguments, out gitOutput))
             {
                 SystemMessage = "網站發佈失敗（git add）: " + gitOutput;
                 return string.Empty;

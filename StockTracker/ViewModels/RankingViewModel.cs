@@ -112,6 +112,8 @@ namespace StockTracker.ViewModels
         public string Name { get; set; }
         public decimal LatestPrice { get; set; }
         public decimal ChangePercent { get; set; }
+        public decimal ChangePercent5D { get; set; }
+        public decimal VolumeRatio20D { get; set; }
         public int Score { get; set; }
         public DateTime ScoreDate { get; set; }
         public int CrashRiskScore { get; set; }
@@ -246,6 +248,7 @@ namespace StockTracker.ViewModels
     {
         private readonly CapitalApiService _apiService;
         private readonly StockGroupCatalog _stockGroupCatalog = new StockGroupCatalog();
+        private readonly ThemeStatusService _themeStatusService;
         private readonly MainWindowViewModel _mainViewModel;
         private readonly string _dbPath;
         private readonly string _notificationEmailListPath;
@@ -282,16 +285,21 @@ namespace StockTracker.ViewModels
         private string _scoreDay3Header = "D3";
         private string _scoreDay4Header = "D4";
         private RankedStock _stock0050;
+        private IReadOnlyList<ThemeStatus> _themeStatuses = Array.Empty<ThemeStatus>();
+        private string _selectedMarketGroup;
 
         public RankingViewModel(CapitalApiService apiService, MainWindowViewModel mainViewModel)
         {
             _apiService = apiService;
             _mainViewModel = mainViewModel;
+            _themeStatusService = new ThemeStatusService(_stockGroupCatalog);
             _dbPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "Ranking.db");
             _notificationEmailListPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "RankingEmailList.txt");
             EnsureDatabase();
             StartScanningCommand = new RelayCommand(async _ => await ScanAllStocksAsync(), _ => !_isScanning);
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
+            FilterMarketGroupCommand = new RelayCommand(group => SelectedMarketGroup = group as string);
+            ClearMarketGroupFilterCommand = new RelayCommand(_ => SelectedMarketGroup = null);
             ApplyStrongMomentumFilterCommand = new RelayCommand(_ => ApplyStrongMomentumFilter());
             ApplyLowPriceHighScoreFilterCommand = new RelayCommand(_ => ApplyLowPriceHighScoreFilter());
             ApplyInstitutionalMomentumFilterCommand = new RelayCommand(_ => ApplyInstitutionalMomentumFilter());
@@ -536,8 +544,29 @@ namespace StockTracker.ViewModels
         public MarketBreadthSnapshot MarketBreadth => CreateMarketBreadth(RankedStocks);
         public IReadOnlyList<MarketGroupSnapshot> MarketGroups => CreateMarketGroups(RankedStocks, _stockGroupCatalog);
         public IReadOnlyList<MarketGroupSnapshot> TopMarketGroups => MarketGroups.Where(x => x.TotalCount >= 3).Take(12).ToList();
+        public IReadOnlyList<ThemeStatus> ThemeStatuses
+        {
+            get => _themeStatuses;
+            private set { _themeStatuses = value ?? Array.Empty<ThemeStatus>(); OnPropertyChanged(); }
+        }
+
+        public string SelectedMarketGroup
+        {
+            get => _selectedMarketGroup;
+            set
+            {
+                _selectedMarketGroup = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsMarketGroupFilterActive));
+                _rankedStocksView?.Refresh();
+            }
+        }
+
+        public bool IsMarketGroupFilterActive => !string.IsNullOrWhiteSpace(SelectedMarketGroup);
 
         public ICommand ClearFiltersCommand { get; }
+        public ICommand FilterMarketGroupCommand { get; }
+        public ICommand ClearMarketGroupFilterCommand { get; }
         public ICommand ApplyStrongMomentumFilterCommand { get; }
         public ICommand ApplyLowPriceHighScoreFilterCommand { get; }
         public ICommand ApplyInstitutionalMomentumFilterCommand { get; }
@@ -551,6 +580,12 @@ namespace StockTracker.ViewModels
             if (item is RankedStock stock)
             {
                 if (stock.Rank > TopCount) return false;
+
+                if (IsMarketGroupFilterActive && !_stockGroupCatalog.GetGroups(stock.Symbol)
+                    .Any(group => string.Equals(group, SelectedMarketGroup, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return false;
+                }
 
                 if (!string.IsNullOrWhiteSpace(SearchText) &&
                     !stock.Symbol.Contains(SearchText) &&
@@ -1283,6 +1318,7 @@ namespace StockTracker.ViewModels
                 .Where(x => x.TotalCount >= 3)
                 .Take(12)
                 .ToList();
+            var themeStatusByName = ThemeStatuses.ToDictionary(x => x.Theme, StringComparer.OrdinalIgnoreCase);
             var latestScoreDate = exportStocks
                 .Where(s => s.ScoreDate != DateTime.MinValue)
                 .Select(s => (DateTime?)s.ScoreDate.Date)
@@ -1595,7 +1631,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("</section>");
 
             html.AppendLine("<section class='panel' style='margin:0 0 16px;'>");
-            html.AppendLine("<div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;'><h3 style='margin:0'>&#26063;&#32676;&#27683;&#27675;</h3><span class='muted'>&#20197;&#26412;&#27425;&#36617;&#20837;&#27161;&#30340;&#24452;&#32317;</span></div>");
+            html.AppendLine("<div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;'><h3 style='margin:0'>&#26063;&#32676;&#27683;&#27675;</h3><span id='activeGroupFilter' class='muted'></span><button id='clearGroupFilter' type='button' class='btn-csv' style='padding:5px 8px'>&#39023;&#31034;&#20840;&#37096;</button></div>");
             if (marketGroups.Count == 0)
             {
                 html.AppendLine("<p class='muted' style='margin:0'>&#26283;&#28961;&#21487;&#29992;&#26063;&#32676;&#36039;&#26009;</p>");
@@ -1606,7 +1642,12 @@ namespace StockTracker.ViewModels
                 foreach (var group in marketGroups)
                 {
                     var toneClass = ResolveValueColorClass((double)group.AverageChangePercent);
-                    html.AppendLine($"<div style='border:1px solid var(--border);border-radius:8px;padding:10px;background:rgba(139,148,158,.06)'><div style='display:flex;justify-content:space-between;gap:8px'><strong>{HtmlEncode(group.GroupName)}</strong><span class='{toneClass}'>{group.Tone}</span></div><div style='font-size:20px;font-weight:700;margin:6px 0' class='{toneClass}'>{group.AverageChangePercent:+0.00;-0.00;0.00}%</div><div class='muted' style='font-size:12px'>&#19978;&#28450; {group.AdvancingCount:N0} / &#19979;&#36300; {group.DecliningCount:N0} / &#20849; {group.TotalCount:N0}</div><div class='muted' style='font-size:12px;margin-top:3px'>&#19978;&#28450;&#29575; {group.AdvanceRatioPercent:F0}%</div></div>");
+                    themeStatusByName.TryGetValue(group.GroupName, out var status);
+                    var label = status?.MarketStatus ?? group.Tone;
+                    var extra = status == null
+                        ? string.Empty
+                        : $"<div class='muted' style='font-size:12px;margin-top:3px'>&#36817;5&#26085; {status.AverageChange5D:+0.00;-0.00;0.00}%&#65307;&#37327;&#33021; {status.AverageVolumeRatio20D:F2}x</div>";
+                    html.AppendLine($"<button type='button' class='group-filter' data-group='{HtmlEncode(group.GroupName)}' style='text-align:left;color:inherit;border:1px solid var(--border);border-radius:8px;padding:10px;background:rgba(139,148,158,.06);cursor:pointer'><div style='display:flex;justify-content:space-between;gap:8px'><strong>{HtmlEncode(group.GroupName)}</strong><span class='{toneClass}'>{label}</span></div><div style='font-size:20px;font-weight:700;margin:6px 0' class='{toneClass}'>{group.AverageChangePercent:+0.00;-0.00;0.00}%</div><div class='muted' style='font-size:12px'>&#19978;&#28450; {group.AdvancingCount:N0} / &#19979;&#36300; {group.DecliningCount:N0} / &#20849; {group.TotalCount:N0}</div><div class='muted' style='font-size:12px;margin-top:3px'>&#19978;&#28450;&#29575; {group.AdvanceRatioPercent:F0}%</div>{extra}</button>");
                 }
                 html.AppendLine("</div>");
             }
@@ -1760,6 +1801,8 @@ namespace StockTracker.ViewModels
             // 將原生 Stock JSON 埋在 JS 變數中
             html.AppendLine("<script>");
             html.AppendLine($"const rawData = {stockDataJson};");
+            html.AppendLine("let groupMappingBySymbol=new Map();let selectedMarketGroup='';");
+            html.AppendLine("fetch('./stock-groups.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).then(rows=>{groupMappingBySymbol=new Map(rows.map(x=>[String(x.symbol),x]));document.querySelectorAll('.group-filter').forEach(button=>button.addEventListener('click',()=>{selectedMarketGroup=button.dataset.group||'';applyFilter();document.getElementById('activeGroupFilter').textContent=selectedMarketGroup?'目前族群：'+selectedMarketGroup:'';}));document.getElementById('clearGroupFilter').addEventListener('click',()=>{selectedMarketGroup='';applyFilter();document.getElementById('activeGroupFilter').textContent='';});}).catch(()=>{});");
             html.AppendLine($"const kLineData0050 = {kLineData0050Json};");
             html.AppendLine($"const stock0050Data = {stock0050Json};");
             html.AppendLine("const table=document.getElementById('rankingTable');const tbody=document.getElementById('tbody');const container=document.getElementById('tableContainer');const $=id=>document.getElementById(id);");
@@ -2244,6 +2287,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;");
 
             html.AppendLine("  filteredData = rawData.filter(item => {");
+            html.AppendLine("    if(selectedMarketGroup){const mapping=groupMappingBySymbol.get(String(item.symbol));const groups=mapping?[mapping.industry,...(mapping.themes||[])]:[];if(!groups.includes(selectedMarketGroup))return false;}");
             html.AppendLine("    if(top!==null&&item.rank>top) return false;");
             html.AppendLine("    if(kw&&!item.searchKey.includes(kw)) return false;");
             html.AppendLine("    if(!passRange(item.price,minPrice,maxPrice)) return false;");
@@ -2513,6 +2557,15 @@ namespace StockTracker.ViewModels
                             var avgVolume20 = enrichedCandles.Count == 0
                                 ? (double?)null
                                 : enrichedCandles.Skip(Math.Max(0, enrichedCandles.Count - 20)).Average(x => (double)x.Volume);
+                            var close5DaysAgo = enrichedCandles.Count > 5
+                                ? (double?)enrichedCandles[enrichedCandles.Count - 6].Close
+                                : null;
+                            var changePercent5D = close5DaysAgo.HasValue && close5DaysAgo.Value > 0d
+                                ? (dummyVm.LatestPrice - (decimal)close5DaysAgo.Value) / (decimal)close5DaysAgo.Value * 100m
+                                : 0m;
+                            var volumeRatio20D = latestVolume.HasValue && avgVolume20.HasValue && avgVolume20.Value > 0d
+                                ? (decimal)(latestVolume.Value / avgVolume20.Value)
+                                : 0m;
                             var latestCandle = enrichedCandles.Count > 0 ? enrichedCandles.Last() : null;
                             var latestOpenPrice = latestCandle != null ? (double?)latestCandle.Open : null;
                             var strategyOutput = recentAnalysis.LatestStrategyOutput;
@@ -2555,6 +2608,8 @@ namespace StockTracker.ViewModels
                                     Name = name,
                                     LatestPrice = dummyVm.LatestPrice,
                                     ChangePercent = dummyVm.ChangePercent,
+                                    ChangePercent5D = changePercent5D,
+                                    VolumeRatio20D = volumeRatio20D,
                                     Score = latestScore,
                                     ScoreDate = scoreDate,
                                     CrashRiskScore = latestRecommendation.CrashRiskScore,
@@ -2612,6 +2667,19 @@ namespace StockTracker.ViewModels
                 UpdateStrategyHoldingOptions(results);
                 UpdateSuggestionOptions(results);
                 Stock0050 = results.FirstOrDefault(r => r.Symbol == "0050");
+                var statusDate = results.Where(r => r.ScoreDate != DateTime.MinValue)
+                    .Select(r => r.ScoreDate)
+                    .DefaultIfEmpty(DateTime.Today)
+                    .Max();
+                ThemeStatuses = _themeStatusService.BuildAndSave(
+                    results.Select(r => new ThemeStockMetric
+                    {
+                        Symbol = r.Symbol,
+                        Change1D = r.ChangePercent,
+                        Change5D = r.ChangePercent5D,
+                        VolumeRatio20D = r.VolumeRatio20D
+                    }),
+                    statusDate);
                 RefreshMarketBreadth();
                 SaveRankingToDb(results);
 
@@ -2943,6 +3011,7 @@ namespace StockTracker.ViewModels
                 _requireScoreTrendUp = false;
                 _minConsecutiveDays = 0;
                 _minConsecutiveScore = 60;
+                _selectedMarketGroup = null;
             });
         }
 
@@ -3026,6 +3095,8 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(RequireScoreTrendUp));
             OnPropertyChanged(nameof(MinConsecutiveDays));
             OnPropertyChanged(nameof(MinConsecutiveScore));
+            OnPropertyChanged(nameof(SelectedMarketGroup));
+            OnPropertyChanged(nameof(IsMarketGroupFilterActive));
             _rankedStocksView.Refresh();
         }
 

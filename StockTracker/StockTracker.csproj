@@ -227,6 +227,7 @@
     <Compile Include="Services\AdvancedTradingStrategyEngine.cs" />
     <Compile Include="Services\CapitalApiService.cs" />
     <Compile Include="Services\StockGroupCatalog.cs" />
+    <Compile Include="Services\ThemeStatusService.cs" />
     <Compile Include="Services\DailyPriceFetcher.cs" />
     <Compile Include="Services\DailyPriceRepository.cs" />
     <Compile Include="Services\InstitutionalDataFetcher.cs" />
@@ -280,6 +281,7 @@
   <ItemGroup>
     <Compile Include="Models\StockModel.cs" />
     <Compile Include="Models\StockGroupEntry.cs" />
+    <Compile Include="Models\ThemeStatus.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
