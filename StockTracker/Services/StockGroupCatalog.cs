@@ -39,6 +39,16 @@ namespace StockTracker.Services
             return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
+        public IReadOnlyList<string> GetCoreGroups(string symbol)
+        {
+            var entry = Find(symbol);
+            if (entry == null || !entry.Enabled) return Array.Empty<string>();
+            var result = new List<string>();
+            if (!string.IsNullOrWhiteSpace(entry.Industry)) result.Add(entry.Industry);
+            if (entry.CoreThemes != null) result.AddRange(entry.CoreThemes.Where(x => !string.IsNullOrWhiteSpace(x)));
+            return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
         public int SynchronizeDiscoveredStocks(IEnumerable<KeyValuePair<string, string>> stocks)
         {
             var added = 0;
@@ -52,6 +62,7 @@ namespace StockTracker.Services
                     Name = stock.Value?.Trim() ?? string.Empty,
                     Industry = "待分類",
                     Themes = new List<string>(),
+                    CoreThemes = new List<string>(),
                     Enabled = true,
                     Source = "needs_review"
                 };

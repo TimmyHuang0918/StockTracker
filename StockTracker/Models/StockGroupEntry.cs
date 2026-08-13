@@ -12,6 +12,12 @@ namespace StockTracker.Models
         public string Name { get; set; }
         public string Industry { get; set; }
         public List<string> Themes { get; set; } = new List<string>();
+        /// <summary>
+        /// Themes for which this stock is a core constituent.  Themes remains the
+        /// complete membership list so the UI can still show extended supply-chain
+        /// members when a user filters a group.
+        /// </summary>
+        public List<string> CoreThemes { get; set; } = new List<string>();
         public bool Enabled { get; set; } = true;
         public string Source { get; set; }
     }

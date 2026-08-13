@@ -25,7 +25,7 @@ namespace StockTracker.Services
             var grouped = new Dictionary<string, List<ThemeStockMetric>>(StringComparer.OrdinalIgnoreCase);
             foreach (var metric in metrics ?? Enumerable.Empty<ThemeStockMetric>())
             {
-                foreach (var group in _catalog.GetGroups(metric.Symbol)
+                foreach (var group in _catalog.GetCoreGroups(metric.Symbol)
                     .Where(x => !string.Equals(x, "待分類", StringComparison.OrdinalIgnoreCase))
                     .Distinct(StringComparer.OrdinalIgnoreCase))
                 {

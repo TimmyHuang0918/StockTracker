@@ -3184,7 +3184,7 @@ namespace StockTracker.ViewModels
             var grouped = new Dictionary<string, List<RankedStock>>(StringComparer.OrdinalIgnoreCase);
             foreach (var stock in stocks ?? Enumerable.Empty<RankedStock>())
             {
-                foreach (var group in catalog.GetGroups(stock.Symbol)
+                foreach (var group in catalog.GetCoreGroups(stock.Symbol)
                     .Where(x => !string.Equals(x, "\u5F85\u5206\u985E", StringComparison.OrdinalIgnoreCase))
                     .Distinct(StringComparer.OrdinalIgnoreCase))
                 {
