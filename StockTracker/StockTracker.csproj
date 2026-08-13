@@ -226,6 +226,7 @@
     </Compile>
     <Compile Include="Services\AdvancedTradingStrategyEngine.cs" />
     <Compile Include="Services\CapitalApiService.cs" />
+    <Compile Include="Services\StockGroupCatalog.cs" />
     <Compile Include="Services\DailyPriceFetcher.cs" />
     <Compile Include="Services\DailyPriceRepository.cs" />
     <Compile Include="Services\InstitutionalDataFetcher.cs" />
@@ -278,6 +279,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Models\StockModel.cs" />
+    <Compile Include="Models\StockGroupEntry.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -304,6 +306,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <Content Include="Data\stock-groups.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

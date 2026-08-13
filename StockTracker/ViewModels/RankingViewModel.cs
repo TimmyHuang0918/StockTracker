@@ -86,6 +86,25 @@ namespace StockTracker.ViewModels
         }
     }
 
+    /// <summary>Aggregated atmosphere for one official industry or theme.</summary>
+    public sealed class MarketGroupSnapshot
+    {
+        public string GroupName { get; set; }
+        public int TotalCount { get; set; }
+        public int AdvancingCount { get; set; }
+        public int DecliningCount { get; set; }
+        public decimal AverageChangePercent { get; set; }
+
+        public decimal AdvanceRatioPercent =>
+            AdvancingCount + DecliningCount == 0
+                ? 0m
+                : AdvancingCount * 100m / (AdvancingCount + DecliningCount);
+
+        public string Tone =>
+            AdvancingCount > DecliningCount ? "\u504F\u591A" :
+            DecliningCount > AdvancingCount ? "\u504F\u7A7A" : "\u5206\u6B67";
+    }
+
     public class RankedStock
     {
         public int Rank { get; set; }
@@ -226,6 +245,7 @@ namespace StockTracker.ViewModels
     public class RankingViewModel : ViewModelBase
     {
         private readonly CapitalApiService _apiService;
+        private readonly StockGroupCatalog _stockGroupCatalog = new StockGroupCatalog();
         private readonly MainWindowViewModel _mainViewModel;
         private readonly string _dbPath;
         private readonly string _notificationEmailListPath;
@@ -514,6 +534,8 @@ namespace StockTracker.ViewModels
         public bool Has0050Data => Stock0050 != null;
 
         public MarketBreadthSnapshot MarketBreadth => CreateMarketBreadth(RankedStocks);
+        public IReadOnlyList<MarketGroupSnapshot> MarketGroups => CreateMarketGroups(RankedStocks, _stockGroupCatalog);
+        public IReadOnlyList<MarketGroupSnapshot> TopMarketGroups => MarketGroups.Where(x => x.TotalCount >= 3).Take(12).ToList();
 
         public ICommand ClearFiltersCommand { get; }
         public ICommand ApplyStrongMomentumFilterCommand { get; }
@@ -1257,6 +1279,10 @@ namespace StockTracker.ViewModels
         {
             var exportStocks = GetCurrentViewStocks();
             var marketBreadth = CreateMarketBreadth(RankedStocks);
+            var marketGroups = CreateMarketGroups(RankedStocks, _stockGroupCatalog)
+                .Where(x => x.TotalCount >= 3)
+                .Take(12)
+                .ToList();
             var latestScoreDate = exportStocks
                 .Where(s => s.ScoreDate != DateTime.MinValue)
                 .Select(s => (DateTime?)s.ScoreDate.Date)
@@ -1566,6 +1592,24 @@ namespace StockTracker.ViewModels
             html.AppendLine($"<div class='breadth-counts'><span class='rise'>&#8593; {marketBreadth.AdvancingCount:N0}</span><span class='fall'>&#8595; {marketBreadth.DecliningCount:N0}</span><span class='flat'>&#8212; {marketBreadth.UnchangedCount:N0}</span></div>");
             html.AppendLine($"<p class='breadth-average'>&#24179;&#22343; <span class='{ResolveValueColorClass((double)marketBreadth.AverageChangePercent)}'>{marketBreadth.AverageChangePercent:+0.00;-0.00;0.00}%</span></p>");
             html.AppendLine($"<p class='breadth-note'>&#20849; {marketBreadth.TotalCount:N0} &#27284;&#65307;&#19978;&#28450;&#27604;&#29575;&#19981;&#21547;&#24179;&#30436;</p>");
+            html.AppendLine("</section>");
+
+            html.AppendLine("<section class='panel' style='margin:0 0 16px;'>");
+            html.AppendLine("<div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;'><h3 style='margin:0'>&#26063;&#32676;&#27683;&#27675;</h3><span class='muted'>&#20197;&#26412;&#27425;&#36617;&#20837;&#27161;&#30340;&#24452;&#32317;</span></div>");
+            if (marketGroups.Count == 0)
+            {
+                html.AppendLine("<p class='muted' style='margin:0'>&#26283;&#28961;&#21487;&#29992;&#26063;&#32676;&#36039;&#26009;</p>");
+            }
+            else
+            {
+                html.AppendLine("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;'>");
+                foreach (var group in marketGroups)
+                {
+                    var toneClass = ResolveValueColorClass((double)group.AverageChangePercent);
+                    html.AppendLine($"<div style='border:1px solid var(--border);border-radius:8px;padding:10px;background:rgba(139,148,158,.06)'><div style='display:flex;justify-content:space-between;gap:8px'><strong>{HtmlEncode(group.GroupName)}</strong><span class='{toneClass}'>{group.Tone}</span></div><div style='font-size:20px;font-weight:700;margin:6px 0' class='{toneClass}'>{group.AverageChangePercent:+0.00;-0.00;0.00}%</div><div class='muted' style='font-size:12px'>&#19978;&#28450; {group.AdvancingCount:N0} / &#19979;&#36300; {group.DecliningCount:N0} / &#20849; {group.TotalCount:N0}</div><div class='muted' style='font-size:12px;margin-top:3px'>&#19978;&#28450;&#29575; {group.AdvanceRatioPercent:F0}%</div></div>");
+                }
+                html.AppendLine("</div>");
+            }
             html.AppendLine("</section>");
 
             // 0050 Market Leader Summary Card
@@ -2321,6 +2365,17 @@ namespace StockTracker.ViewModels
 
                 ProgressText = $"找到 {distinctSymbols.Count} 檔 4 碼股票，開始分析...";
 
+                // Capital API remains the only source for the stock universe and
+                // all market values. This creates a local classification record
+                // for every discovered symbol that has not been curated yet.
+                var groupCatalog = new StockGroupCatalog();
+                var discoveredStocks = distinctSymbols.Select(symbol =>
+                {
+                    var stockInfo = _apiService.GetRelativeStockMessage(symbol);
+                    return new KeyValuePair<string, string>(symbol, stockInfo.bstrStockName);
+                });
+                groupCatalog.SynchronizeDiscoveredStocks(discoveredStocks);
+
                 int totalChecked = 0;
 
                 int scanBarCount;
@@ -3049,9 +3104,47 @@ namespace StockTracker.ViewModels
             };
         }
 
+        private static IReadOnlyList<MarketGroupSnapshot> CreateMarketGroups(
+            IEnumerable<RankedStock> stocks,
+            StockGroupCatalog catalog)
+        {
+            if (catalog == null) return Array.Empty<MarketGroupSnapshot>();
+
+            var grouped = new Dictionary<string, List<RankedStock>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var stock in stocks ?? Enumerable.Empty<RankedStock>())
+            {
+                foreach (var group in catalog.GetGroups(stock.Symbol)
+                    .Where(x => !string.Equals(x, "\u5F85\u5206\u985E", StringComparison.OrdinalIgnoreCase))
+                    .Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    if (!grouped.TryGetValue(group, out var members))
+                    {
+                        members = new List<RankedStock>();
+                        grouped[group] = members;
+                    }
+                    members.Add(stock);
+                }
+            }
+
+            return grouped.Select(pair => new MarketGroupSnapshot
+                {
+                    GroupName = pair.Key,
+                    TotalCount = pair.Value.Count,
+                    AdvancingCount = pair.Value.Count(x => x.ChangePercent > 0m),
+                    DecliningCount = pair.Value.Count(x => x.ChangePercent < 0m),
+                    AverageChangePercent = pair.Value.Count == 0 ? 0m : pair.Value.Average(x => x.ChangePercent)
+                })
+                .OrderByDescending(x => x.AverageChangePercent)
+                .ThenByDescending(x => x.AdvanceRatioPercent)
+                .ThenByDescending(x => x.TotalCount)
+                .ToList();
+        }
+
         private void RefreshMarketBreadth()
         {
             OnPropertyChanged(nameof(MarketBreadth));
+            OnPropertyChanged(nameof(MarketGroups));
+            OnPropertyChanged(nameof(TopMarketGroups));
         }
 
         private static string ResolveValueColorClass(double value)

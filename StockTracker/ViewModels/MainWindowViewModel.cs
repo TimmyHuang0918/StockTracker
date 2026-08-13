@@ -621,8 +621,13 @@ namespace StockTracker.ViewModels
             Directory.CreateDirectory(docsFolder);
             var targetFile = Path.Combine(docsFolder, "index.html");
             File.Copy(htmlFilePath, targetFile, true);
+            var groupCatalogPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "stock-groups.json");
+            if (File.Exists(groupCatalogPath))
+            {
+                File.Copy(groupCatalogPath, Path.Combine(docsFolder, "stock-groups.json"), true);
+            }
 
-            if (!RunGitCommand(repoRoot, "add docs/nightly-ranking/index.html", out gitOutput))
+            if (!RunGitCommand(repoRoot, "add docs/nightly-ranking/index.html docs/nightly-ranking/stock-groups.json", out gitOutput))
             {
                 SystemMessage = "網站發佈失敗（git add）: " + gitOutput;
                 return string.Empty;
