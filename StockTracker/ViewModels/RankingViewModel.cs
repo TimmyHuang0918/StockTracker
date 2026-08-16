@@ -306,8 +306,9 @@ namespace StockTracker.ViewModels
             _apiService = apiService;
             _mainViewModel = mainViewModel;
             _themeStatusService = new ThemeStatusService(_stockGroupCatalog);
-            _dbPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "Ranking.db");
-            _notificationEmailListPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "RankingEmailList.txt");
+            var historyDirectory = AppDataPathService.GetT86HistoryDirectory();
+            _dbPath = System.IO.Path.Combine(historyDirectory, "Ranking.db");
+            _notificationEmailListPath = System.IO.Path.Combine(historyDirectory, "RankingEmailList.txt");
             EnsureDatabase();
             StartScanningCommand = new RelayCommand(async _ => await ScanAllStocksAsync(), _ => !_isScanning);
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());

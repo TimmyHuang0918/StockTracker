@@ -225,6 +225,7 @@
       <DependentUpon>RankingWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Services\AdvancedTradingStrategyEngine.cs" />
+    <Compile Include="Services\AppDataPathService.cs" />
     <Compile Include="Services\CapitalApiService.cs" />
     <Compile Include="Services\StockGroupCatalog.cs" />
     <Compile Include="Services\ThemeStatusService.cs" />

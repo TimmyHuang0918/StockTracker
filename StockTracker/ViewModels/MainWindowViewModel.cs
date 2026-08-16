@@ -60,16 +60,17 @@ namespace StockTracker.ViewModels
         public MainWindowViewModel(CapitalApiService apiService)
         {
             _apiService = apiService;
-            var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_t86.db");
+            var historyDirectory = AppDataPathService.GetT86HistoryDirectory();
+            var dbPath = Path.Combine(historyDirectory, "twse_t86.db");
             _twseT86Repository = new TwseT86Repository(dbPath);
 
-            var marginDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_margin.db");
+            var marginDbPath = Path.Combine(historyDirectory, "twse_margin.db");
             _twseMarginRepository = new TwseMarginRepository(marginDbPath);
 
-            var marginMetricDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "twse_margin_metric.db");
+            var marginMetricDbPath = Path.Combine(historyDirectory, "twse_margin_metric.db");
             _twseMarginMetricRepository = new TwseMarginMetricRepository(marginMetricDbPath);
 
-            var dailyPriceDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "T86_History", "daily_price.db");
+            var dailyPriceDbPath = Path.Combine(historyDirectory, "daily_price.db");
             _dailyPriceRepository = new DailyPriceRepository(dailyPriceDbPath);
             _marginMetricCalculator = new MarginMetricCalculator();
 
