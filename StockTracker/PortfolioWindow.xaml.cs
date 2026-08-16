@@ -6,6 +6,8 @@ namespace StockTracker
 {
     public partial class PortfolioWindow : Window
     {
+        private bool _holdingDetailsVisible = true;
+
         public PortfolioWindow(MainWindowViewModel mainViewModel)
         {
             InitializeComponent();
@@ -29,6 +31,15 @@ namespace StockTracker
             var detailWindow = new StockDetailWindow { Owner = this, DataContext = detailViewModel };
             detailWindow.Closed += (_, __) => stock.DetachDetailViewModel(detailViewModel);
             detailWindow.Show();
+        }
+
+        private void ToggleHoldingDetails_Click(object sender, RoutedEventArgs e)
+        {
+            _holdingDetailsVisible = !_holdingDetailsVisible;
+            var visibility = _holdingDetailsVisible ? Visibility.Visible : Visibility.Collapsed;
+            HoldingQuantityColumn.Visibility = visibility;
+            HoldingAverageCostColumn.Visibility = visibility;
+            ToggleHoldingDetailsButton.Content = _holdingDetailsVisible ? "隱藏成本／股數" : "顯示成本／股數";
         }
     }
 }

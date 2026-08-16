@@ -103,6 +103,15 @@ namespace StockTracker.ViewModels
         public string Tone =>
             AdvancingCount > DecliningCount ? "\u504F\u591A" :
             DecliningCount > AdvancingCount ? "\u504F\u7A7A" : "\u5206\u6B67";
+
+        public string DirectionText =>
+            AverageChangePercent > 0m ? "上漲" :
+            AverageChangePercent < 0m ? "下跌" : "平盤";
+
+        public System.Windows.Media.Brush DirectionBrush =>
+            AverageChangePercent > 0m ? System.Windows.Media.Brushes.IndianRed :
+            AverageChangePercent < 0m ? System.Windows.Media.Brushes.MediumSeaGreen :
+            System.Windows.Media.Brushes.Gray;
     }
 
     public class RankedStock
@@ -277,7 +286,7 @@ namespace StockTracker.ViewModels
         private int _minConsecutiveDays;
         private int _minConsecutiveScore = 60;
         private int _topCount = 10000;
-        private bool _isControlPanelExpanded = true;
+        private bool _isControlPanelExpanded;
         private bool _isPublishingWebsite;
         private string _scoreDay0Header = "D0";
         private string _scoreDay1Header = "D1";
@@ -287,6 +296,10 @@ namespace StockTracker.ViewModels
         private RankedStock _stock0050;
         private IReadOnlyList<ThemeStatus> _themeStatuses = Array.Empty<ThemeStatus>();
         private string _selectedMarketGroup;
+        private string _groupEditorName;
+        private string _groupEditorSymbol;
+        private string _groupEditorStockName;
+        private readonly ObservableCollection<StockGroupEntry> _groupEditorStocks = new ObservableCollection<StockGroupEntry>();
 
         public RankingViewModel(CapitalApiService apiService, MainWindowViewModel mainViewModel)
         {
@@ -307,6 +320,9 @@ namespace StockTracker.ViewModels
             ToggleControlPanelCommand = new RelayCommand(_ => IsControlPanelExpanded = !IsControlPanelExpanded);
             ToggleExportCsvCommand = new RelayCommand(_ => ExportLatestRankingToXmlSaveFile());
             PublishWebsiteCommand = new RelayCommand(async _ => await PublishWebsiteByHandAsync(), _ => !_isPublishingWebsite);
+            AddStockToGroupCommand = new RelayCommand(_ => AddStockToGroup());
+            RemoveStockFromGroupCommand = new RelayCommand(entry => RemoveStockFromGroup(entry as StockGroupEntry));
+            DeleteGroupCommand = new RelayCommand(_ => DeleteGroup());
             PatternTagOptions = new ObservableCollection<string> { "全部" };
             StrategyActionOptions = new ObservableCollection<string> { "全部" };
             StrategyHoldingOptions = new ObservableCollection<string> { "全部" };
@@ -543,7 +559,32 @@ namespace StockTracker.ViewModels
 
         public MarketBreadthSnapshot MarketBreadth => CreateMarketBreadth(RankedStocks);
         public IReadOnlyList<MarketGroupSnapshot> MarketGroups => CreateMarketGroups(RankedStocks, _stockGroupCatalog);
-        public IReadOnlyList<MarketGroupSnapshot> TopMarketGroups => MarketGroups.Where(x => x.TotalCount >= 3).Take(12).ToList();
+        public IReadOnlyList<MarketGroupSnapshot> TopMarketGroups => MarketGroups;
+        public IReadOnlyList<string> GroupEditorGroups => _stockGroupCatalog.GetGroupNames();
+        public ObservableCollection<StockGroupEntry> GroupEditorStocks => _groupEditorStocks;
+
+        public string GroupEditorName
+        {
+            get => _groupEditorName;
+            set
+            {
+                _groupEditorName = value;
+                OnPropertyChanged();
+                RefreshGroupEditorStocks();
+            }
+        }
+
+        public string GroupEditorSymbol
+        {
+            get => _groupEditorSymbol;
+            set { _groupEditorSymbol = value; OnPropertyChanged(); }
+        }
+
+        public string GroupEditorStockName
+        {
+            get => _groupEditorStockName;
+            set { _groupEditorStockName = value; OnPropertyChanged(); }
+        }
         public IReadOnlyList<ThemeStatus> ThemeStatuses
         {
             get => _themeStatuses;
@@ -574,6 +615,9 @@ namespace StockTracker.ViewModels
         public ICommand ToggleControlPanelCommand { get; }
         public ICommand ToggleExportCsvCommand { get; }
         public ICommand PublishWebsiteCommand { get; }
+        public ICommand AddStockToGroupCommand { get; }
+        public ICommand RemoveStockFromGroupCommand { get; }
+        public ICommand DeleteGroupCommand { get; }
 
         private bool FilterRankedStocks(object item)
         {
@@ -1315,8 +1359,6 @@ namespace StockTracker.ViewModels
             var exportStocks = GetCurrentViewStocks();
             var marketBreadth = CreateMarketBreadth(RankedStocks);
             var marketGroups = CreateMarketGroups(RankedStocks, _stockGroupCatalog)
-                .Where(x => x.TotalCount >= 3)
-                .Take(12)
                 .ToList();
             var themeStatusByName = ThemeStatuses.ToDictionary(x => x.Theme, StringComparer.OrdinalIgnoreCase);
             var latestScoreDate = exportStocks
@@ -1560,7 +1602,7 @@ namespace StockTracker.ViewModels
             html.AppendLine(".font-mono{font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,monospace;}");
             html.AppendLine(".badge{display:inline-block;padding:2px 6px;border-radius:4px;font-weight:600;font-size:12px;}");
             html.AppendLine(".score-badge{background:rgba(31,111,235,0.15);color:#58a6ff;}");
-            html.AppendLine(".rise{color:var(--rise);font-weight:600;}");
+            html.AppendLine(".rise{color:var(--rise);font-weight:600;}.group-filter:has(.rise){border-color:var(--rise)!important;background:rgba(255,69,58,.14)!important;box-shadow:inset 4px 0 0 var(--rise);}.group-filter:has(.fall){border-color:var(--fall)!important;background:rgba(50,215,75,.14)!important;box-shadow:inset 4px 0 0 var(--fall);}");
             html.AppendLine(".fall{color:var(--fall);font-weight:600;}");
             html.AppendLine(".flat{color:var(--flat);}");
             html.AppendLine(".modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;}");
@@ -1638,7 +1680,7 @@ namespace StockTracker.ViewModels
             }
             else
             {
-                html.AppendLine("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;'>");
+                html.AppendLine("<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;max-height:180px;overflow-y:auto;padding-right:6px;'>");
                 foreach (var group in marketGroups)
                 {
                     var toneClass = ResolveValueColorClass((double)group.AverageChangePercent);
@@ -1820,6 +1862,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("function initPortfolio(){const panel=$('portfolioPanel'),toggle=$('btnPortfolioToggle');const setPortfolioOpen=open=>{panel.classList.toggle('is-open',open);document.body.classList.toggle('portfolio-open',open);toggle.innerHTML=open?'&#25105;&#30340;&#25345;&#32929; &#8594;':'&#25105;&#30340;&#25345;&#32929; &#8592;';toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'&#25910;&#21512;&#25105;&#30340;&#25237;&#36039;&#32068;&#21512;':'&#38283;&#21855;&#25105;&#30340;&#25237;&#36039;&#32068;&#21512;');};toggle.addEventListener('click',()=>setPortfolioOpen(!panel.classList.contains('is-open')));$('portfolioCash').value=portfolio.cash;$('portfolioReserve').value=portfolio.reserve;$('portfolioLimit').value=portfolio.limit;['portfolioCash','portfolioReserve','portfolioLimit'].forEach(id=>$(id).addEventListener('input',renderPortfolio));$('btnPortfolioSave').addEventListener('click',()=>{const symbol=$('portfolioSymbol').value.trim().toUpperCase(),shares=portfolioNumber($('portfolioShares').value),cost=portfolioNumber($('portfolioCost').value);if(!symbol||shares<=0||cost<=0){alert('請填寫股票代號、持股數與平均成本。');return;}const index=portfolio.holdings.findIndex(h=>String(h.symbol).toUpperCase()===symbol);const holding={symbol,shares,cost};if(index>=0)portfolio.holdings[index]=holding;else portfolio.holdings.push(holding);$('portfolioSymbol').value='';$('portfolioShares').value='';$('portfolioCost').value='';savePortfolio();renderPortfolio();});$('btnPortfolioClear').addEventListener('click',()=>{if(confirm('確定清除所有持股？')){portfolio.holdings=[];savePortfolio();renderPortfolio();}});$('btnPortfolioCsv').addEventListener('click',()=>$('portfolioCsvInput').click());$('portfolioCsvInput').addEventListener('change',event=>{const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{const rows=String(reader.result||'').replace(/^\\uFEFF/,'').split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);let added=0;rows.forEach(row=>{const part=row.split(',').map(x=>x.trim().replace(/^\\\"|\\\"$/g,''));if(!/^\\d{4,6}$/.test(part[0]))return;const shares=portfolioNumber(part[1]),cost=portfolioNumber(part[2]);if(shares<=0||cost<=0)return;const index=portfolio.holdings.findIndex(h=>String(h.symbol).toUpperCase()===part[0]);const holding={symbol:part[0],shares,cost};if(index>=0)portfolio.holdings[index]=holding;else portfolio.holdings.push(holding);added++;});savePortfolio();renderPortfolio();alert('已匯入 '+added+' 筆持股。');event.target.value='';};reader.readAsText(file,'utf-8');});renderPortfolio();}");
             html.AppendLine("initPortfolio();");
             html.AppendLine("function installPortfolioPerformance(){const actions=document.querySelector('.portfolio-head .portfolio-actions');const exportButton=document.createElement('button');exportButton.className='portfolio-button';exportButton.id='btnPortfolioExportCsv';exportButton.type='button';exportButton.textContent='匯出 CSV';actions.insertBefore(exportButton,$('btnPortfolioClear'));const host=document.createElement('div');host.style.margin='14px 0';host.innerHTML=`<div style='display:grid;grid-template-columns:1.2fr .8fr 1fr auto;gap:8px;align-items:end'><div><label class='portfolio-muted'>資金日期</label><input id='cashFlowDate' type='date'></div><div><label class='portfolio-muted'>類型</label><select id='cashFlowType'><option value='deposit'>入金</option><option value='withdrawal'>出金</option></select></div><div><label class='portfolio-muted'>金額</label><input id='cashFlowAmount' type='number' min='0' step='1'></div><button class='portfolio-button primary' id='btnCashFlowAdd' type='button'>新增資金異動</button></div><div id='cashFlowHistory' class='portfolio-muted' style='margin-top:8px'></div>`;$('portfolioSummary').before(host);$('cashFlowDate').value=new Date().toISOString().slice(0,10);const baseRender=renderPortfolio;renderPortfolio=function(){baseRender();const net=portfolio.cashFlows.reduce((sum,x)=>sum+(Number(x.amount)||0),0);const market=portfolio.holdings.reduce((sum,h)=>{const stock=findPortfolioStock(h.symbol);return sum+(stock?portfolioNumber(h.shares)*stock.price:0);},0);const total=market+portfolio.cash,profit=total-net,rate=net?profit/net*100:0;$('portfolioSummary').innerHTML=`<div class='portfolio-stat'><span>總資產</span><strong>${total.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div><div class='portfolio-stat'><span>累計淨投入</span><strong>${net.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div><div class='portfolio-stat'><span>累計損益</span><strong style='color:${portfolioColor(profit)}'>${profit.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div><div class='portfolio-stat'><span>開始至今報酬率</span><strong style='color:${portfolioColor(rate)}'>${net?portfolioPercent(rate):'--'}</strong></div>`;const flows=[...portfolio.cashFlows].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5);$('cashFlowHistory').innerHTML=flows.length?flows.map((x,i)=>`<span style='margin-right:12px'>${x.date} ${Number(x.amount)>=0?'入金':'出金'} <b style='color:${portfolioColor(Number(x.amount))}'>${Math.abs(Number(x.amount)).toLocaleString()}</b> <button class='portfolio-button cash-flow-remove' data-flow='${portfolio.cashFlows.indexOf(x)}' type='button' style='padding:2px 5px'>×</button></span>`).join(''):'請先記錄初始入金；後續入金、出金也請依實際日期登錄。';savePortfolio();};$('btnCashFlowAdd').addEventListener('click',()=>{const amount=portfolioNumber($('cashFlowAmount').value),date=$('cashFlowDate').value;if(!date||amount<=0){alert('請填寫資金日期與大於 0 的金額。');return;}portfolio.cashFlows.push({date,amount:$('cashFlowType').value==='withdrawal'?-amount:amount});$('cashFlowAmount').value='';renderPortfolio();});$('cashFlowHistory').addEventListener('click',event=>{const button=event.target.closest('.cash-flow-remove');if(!button)return;portfolio.cashFlows.splice(portfolioNumber(button.dataset.flow),1);renderPortfolio();});exportButton.addEventListener('click',()=>{const rows=[['recordType','date','amount','symbol','quantity','averageCost'],...portfolio.cashFlows.map(x=>['cash_flow',x.date,x.amount,'','','']),...portfolio.holdings.map(x=>['holding','','',x.symbol,x.shares,x.cost])];const csv='\\uFEFF'+rows.map(row=>row.map(value=>'\"'+String(value).replace(/\"/g,'\"\"')+'\"').join(',')).join('\\r\\n');const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));link.download='portfolio-'+new Date().toISOString().slice(0,10)+'.csv';link.click();URL.revokeObjectURL(link.href);});renderPortfolio();}installPortfolioPerformance();");
+            html.AppendLine("function installPortfolioHoldingDetails(){const key='stockTrackerPortfolio.showHoldingDetails';let visible=localStorage.getItem(key)!=='false';const actions=document.querySelector('.portfolio-head .portfolio-actions');const button=document.createElement('button');button.className='portfolio-button';button.type='button';function sync(){button.textContent=visible?'隱藏成本／股數':'顯示成本／股數';document.querySelectorAll('.portfolio-holding-details').forEach(cell=>cell.style.display=visible?'':'none');}button.addEventListener('click',()=>{visible=!visible;localStorage.setItem(key,String(visible));sync();});actions.insertBefore(button,$('btnPortfolioClear'));const baseRender=renderPortfolio;renderPortfolio=function(){baseRender();const header=document.querySelector('.portfolio-table thead tr');if(header&&!header.querySelector('.portfolio-holding-details')){const cell=document.createElement('th');cell.className='portfolio-holding-details';cell.textContent='股數／成本';header.insertBefore(cell,header.children[1]);}document.querySelectorAll('#portfolioBody .portfolio-row').forEach(row=>{const symbol=row.querySelector('td strong')?.textContent?.trim();const holding=portfolio.holdings.find(x=>String(x.symbol).toUpperCase()===symbol);if(!holding||row.querySelector('.portfolio-holding-details'))return;const cell=document.createElement('td');cell.className='portfolio-holding-details';cell.innerHTML='<div>'+portfolioNumber(holding.shares).toLocaleString()+' 股</div><div class=portfolio-muted>成本 '+portfolioNumber(holding.cost).toLocaleString(undefined,{maximumFractionDigits:2})+'</div>';row.insertBefore(cell,row.children[1]);});sync();};renderPortfolio();}installPortfolioHoldingDetails();");
             html.AppendLine("function populate0050Hero() {");
             html.AppendLine("  if (!stock0050Data) { $('hero0050Card').style.display='none'; return; }");
             html.AppendLine("  $('hero0050Card').style.display='block';");
@@ -3211,11 +3254,69 @@ namespace StockTracker.ViewModels
                 .ToList();
         }
 
+        private void AddStockToGroup()
+        {
+            if (string.IsNullOrWhiteSpace(GroupEditorName) || string.IsNullOrWhiteSpace(GroupEditorSymbol))
+            {
+                ProgressText = "請輸入族群名稱與股票代號。";
+                return;
+            }
+
+            var symbol = GroupEditorSymbol.Trim();
+            var stockName = string.IsNullOrWhiteSpace(GroupEditorStockName)
+                ? RankedStocks.FirstOrDefault(x => string.Equals(x.Symbol, symbol, StringComparison.OrdinalIgnoreCase))?.Name
+                : GroupEditorStockName.Trim();
+            if (!_stockGroupCatalog.AddStockToGroup(GroupEditorName, symbol, stockName))
+            {
+                ProgressText = "族群不可為「待分類」。";
+                return;
+            }
+
+            GroupEditorSymbol = string.Empty;
+            GroupEditorStockName = string.Empty;
+            RefreshGroupEditorStocks();
+            RefreshMarketBreadth();
+            ProgressText = "已更新本機族群清單；手動更新網站時會一併發佈。";
+        }
+
+        private void RemoveStockFromGroup(StockGroupEntry entry)
+        {
+            if (entry == null || string.IsNullOrWhiteSpace(GroupEditorName)) return;
+            if (_stockGroupCatalog.RemoveStockFromGroup(GroupEditorName, entry.Symbol))
+            {
+                RefreshGroupEditorStocks();
+                RefreshMarketBreadth();
+                ProgressText = "已從本機族群移除股票。";
+            }
+        }
+
+        private void DeleteGroup()
+        {
+            if (string.IsNullOrWhiteSpace(GroupEditorName)) return;
+            if (_stockGroupCatalog.DeleteGroup(GroupEditorName))
+            {
+                GroupEditorName = string.Empty;
+                OnPropertyChanged(nameof(GroupEditorGroups));
+                RefreshMarketBreadth();
+                ProgressText = "已刪除本機族群及其股票關聯。";
+            }
+        }
+
+        private void RefreshGroupEditorStocks()
+        {
+            _groupEditorStocks.Clear();
+            foreach (var entry in _stockGroupCatalog.GetEntriesForGroup(GroupEditorName))
+            {
+                _groupEditorStocks.Add(entry);
+            }
+        }
+
         private void RefreshMarketBreadth()
         {
             OnPropertyChanged(nameof(MarketBreadth));
             OnPropertyChanged(nameof(MarketGroups));
             OnPropertyChanged(nameof(TopMarketGroups));
+            OnPropertyChanged(nameof(GroupEditorGroups));
         }
 
         private static string ResolveValueColorClass(double value)

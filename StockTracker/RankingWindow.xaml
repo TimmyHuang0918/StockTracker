@@ -64,16 +64,17 @@
                     <Button DockPanel.Dock="Right" Content="&#39023;&#31034;&#20840;&#37096;" Padding="8,3" Command="{Binding ClearMarketGroupFilterCommand}" Visibility="{Binding IsMarketGroupFilterActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedMarketGroup}" Foreground="#8b949e" Margin="0,3,8,0" />
                 </DockPanel>
+                <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding TopMarketGroups}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="172" Background="#21262d" BorderBrush="#30363d" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,8,8">
+                            <Border Width="172" Background="#21262d" BorderBrush="{Binding DirectionBrush}" BorderThickness="2" CornerRadius="4" Padding="8" Margin="0,0,8,8">
                                 <StackPanel>
-                                    <DockPanel><TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" Foreground="White" /><TextBlock Text="{Binding Tone}" DockPanel.Dock="Right" Foreground="#8b949e" /></DockPanel>
-                                    <TextBlock Text="{Binding AverageChangePercent, StringFormat={}{0:+0.00;-0.00;0.00}%}" FontSize="18" FontWeight="Bold" Foreground="White" Margin="0,4,0,2" />
+                                    <DockPanel><TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" Foreground="White" /><TextBlock Text="{Binding DirectionText}" DockPanel.Dock="Right" Foreground="{Binding DirectionBrush}" FontWeight="Bold" /></DockPanel>
+                                    <TextBlock Text="{Binding AverageChangePercent, StringFormat={}{0:+0.00;-0.00;0.00}%}" FontSize="18" FontWeight="Bold" Foreground="{Binding DirectionBrush}" Margin="0,4,0,2" />
                                     <TextBlock Text="{Binding AdvancingCount, StringFormat=&#19978;&#28450; {0:N0}}" FontSize="11" Foreground="IndianRed" />
                                     <TextBlock Text="{Binding DecliningCount, StringFormat=&#19979;&#36300; {0:N0}}" FontSize="11" Foreground="MediumSeaGreen" />
                                     <TextBlock Text="{Binding AdvanceRatioPercent, StringFormat=&#19978;&#28450;&#29575; {0:F0}%}" FontSize="11" Foreground="#8b949e" />
@@ -83,6 +84,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                </ScrollViewer>
             </StackPanel>
         </Border>
 
@@ -279,6 +281,45 @@
                         </StackPanel>
                     </Border>
                 </WrapPanel>
+
+                <Border Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                            <TextBlock Text="本機族群維護" FontWeight="SemiBold" />
+                            <Button DockPanel.Dock="Right" Content="刪除目前族群" Padding="8,3" Command="{Binding DeleteGroupCommand}" />
+                            <TextBlock DockPanel.Dock="Right" Text="僅桌面版可編輯；網站僅供瀏覽。" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,12,0" />
+                        </DockPanel>
+                        <WrapPanel Margin="0,0,0,8">
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="族群名稱" Margin="0,0,0,4" />
+                                <ComboBox ItemsSource="{Binding GroupEditorGroups}" IsEditable="True" Text="{Binding GroupEditorName, UpdateSourceTrigger=PropertyChanged}" Width="180" Height="28" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="股票代號" Margin="0,0,0,4" />
+                                <TextBox Text="{Binding GroupEditorSymbol, UpdateSourceTrigger=PropertyChanged}" Width="100" Height="28" VerticalContentAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="股票名稱（選填）" Margin="0,0,0,4" />
+                                <TextBox Text="{Binding GroupEditorStockName, UpdateSourceTrigger=PropertyChanged}" Width="150" Height="28" VerticalContentAlignment="Center" />
+                            </StackPanel>
+                            <Button Content="新增股票至族群" Width="120" Height="30" Margin="0,20,0,0" Command="{Binding AddStockToGroupCommand}" />
+                        </WrapPanel>
+                        <DataGrid ItemsSource="{Binding GroupEditorStocks}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" Height="150" HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="代號" Binding="{Binding Symbol}" Width="100" />
+                                <DataGridTextColumn Header="名稱" Binding="{Binding Name}" Width="180" />
+                                <DataGridTextColumn Header="產業" Binding="{Binding Industry}" Width="180" />
+                                <DataGridTemplateColumn Header="操作" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="移除股票" Padding="6,2" Command="{Binding DataContext.RemoveStockFromGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
 
                 <WrapPanel Margin="0,0,0,10">
                     <Border Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,10">
