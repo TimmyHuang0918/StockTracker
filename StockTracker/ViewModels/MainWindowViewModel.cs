@@ -612,7 +612,9 @@ namespace StockTracker.ViewModels
                 return string.Empty;
             }
 
-            if (!RunGitCommand(repoRoot, $"pull --rebase origin {branch}", out gitOutput))
+            // Publishing can be initiated while unrelated local work is still open.
+            // Let Git temporarily stash that work instead of rejecting the sync outright.
+            if (!RunGitCommand(repoRoot, $"pull --rebase --autostash origin {branch}", out gitOutput))
             {
                 SystemMessage = "網站發佈失敗（pull --rebase）: " + gitOutput;
                 return string.Empty;
@@ -661,7 +663,7 @@ namespace StockTracker.ViewModels
                 if (!pushSucceeded)
                 {
                     RunGitCommand(repoRoot, "fetch origin", out _);
-                    RunGitCommand(repoRoot, $"pull --rebase origin {branch}", out _);
+                    RunGitCommand(repoRoot, $"pull --rebase --autostash origin {branch}", out _);
                     Task.Delay(retryDelays[i]).Wait();
                 }
             }
