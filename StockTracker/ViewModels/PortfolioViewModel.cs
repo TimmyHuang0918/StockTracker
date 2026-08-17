@@ -196,13 +196,73 @@ namespace StockTracker.ViewModels
             try
             {
                 var lines = File.ReadAllLines(dialog.FileName).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
-                var header = lines.FirstOrDefault()?.TrimStart('\uFEFF').Split(',').Select(x => x.Trim().ToLowerInvariant()).ToArray() ?? new string[0];
+                var header = ParseCsvRow(lines.FirstOrDefault()?.TrimStart('\uFEFF') ?? string.Empty).Select(x => x.Trim().ToLowerInvariant()).ToArray();
                 var s = Array.IndexOf(header, "symbol"); var q = Array.IndexOf(header, "quantity"); var c = Array.IndexOf(header, "averagecost");
+                var type = Array.IndexOf(header, "recordtype"); var date = Array.IndexOf(header, "date"); var amount = Array.IndexOf(header, "amount");
                 if (s < 0 || q < 0 || c < 0) throw new InvalidDataException("CSV 欄位需為 symbol,quantity,averageCost。");
-                foreach (var line in lines.Skip(1)) { var v = line.Split(','); if (v.Length <= Math.Max(s, Math.Max(q, c))) continue; SymbolInput = v[s].Trim(); QuantityInput = v[q].Trim(); AverageCostInput = v[c].Trim(); AddHolding(); }
-                StatusMessage = $"已匯入 {Path.GetFileName(dialog.FileName)}。"; Save();
+                var importedHoldings = 0;
+                var importedCashFlows = 0;
+                foreach (var line in lines.Skip(1))
+                {
+                    var values = ParseCsvRow(line);
+                    var recordType = type >= 0 && values.Count > type ? values[type].Trim().ToLowerInvariant() : "holding";
+                    if (recordType == "cash_flow")
+                    {
+                        if (date < 0 || amount < 0 || values.Count <= Math.Max(date, amount)
+                            || !DateTime.TryParseExact(values[date].Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var cashFlowDate)
+                            || !decimal.TryParse(values[amount].Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var cashFlowAmount)) continue;
+                        if (_settings.CashFlows.Any(x => x.Date.Date == cashFlowDate.Date && x.Amount == cashFlowAmount)) continue;
+                        var cashFlow = new PortfolioCashFlow { Date = cashFlowDate.Date, Amount = cashFlowAmount };
+                        _settings.CashFlows.Add(cashFlow);
+                        CashFlows.Insert(0, new PortfolioCashFlowViewModel(cashFlow));
+                        importedCashFlows++;
+                        continue;
+                    }
+                    if (recordType != "holding" || values.Count <= Math.Max(s, Math.Max(q, c))) continue;
+                    var symbol = values[s].Trim().ToUpperInvariant();
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(symbol, "^\\d{4,6}$")
+                        || !int.TryParse(values[q].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var quantity) || quantity <= 0
+                        || !decimal.TryParse(values[c].Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var averageCost) || averageCost < 0) continue;
+                    var existing = _settings.Holdings.FirstOrDefault(x => x.Symbol == symbol);
+                    if (existing != null)
+                    {
+                        existing.Quantity = quantity;
+                        existing.AverageCost = averageCost;
+                        var existingViewModel = Holdings.FirstOrDefault(x => x.Holding == existing);
+                        if (existingViewModel != null) Holdings.Remove(existingViewModel);
+                    }
+                    else
+                    {
+                        existing = new PortfolioHolding { Symbol = symbol, Quantity = quantity, AverageCost = averageCost };
+                        _settings.Holdings.Add(existing);
+                    }
+                    Holdings.Add(new PortfolioHoldingViewModel(existing));
+                    importedHoldings++;
+                }
+                StatusMessage = $"已匯入 {Path.GetFileName(dialog.FileName)}：{importedHoldings} 筆持股、{importedCashFlows} 筆資金異動。";
+                Save();
             }
             catch (Exception ex) { StatusMessage = $"匯入失敗：{ex.Message}"; }
+        }
+
+        private static List<string> ParseCsvRow(string line)
+        {
+            var values = new List<string>();
+            var value = new System.Text.StringBuilder();
+            var quoted = false;
+            for (var index = 0; index < line.Length; index++)
+            {
+                var character = line[index];
+                if (character == '"')
+                {
+                    if (quoted && index + 1 < line.Length && line[index + 1] == '"') { value.Append('"'); index++; }
+                    else quoted = !quoted;
+                }
+                else if (character == ',' && !quoted) { values.Add(value.ToString()); value.Clear(); }
+                else value.Append(character);
+            }
+            values.Add(value.ToString());
+            return values;
         }
 
         private void ExportCsv()
