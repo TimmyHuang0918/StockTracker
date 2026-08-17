@@ -66,13 +66,17 @@
             </Grid.RowDefinitions>
 
         <Border Grid.Column="0" Grid.RowSpan="2" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="10" CornerRadius="6" Margin="0,0,10,0">
-            <StackPanel>
-                <DockPanel Margin="0,0,0,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <DockPanel Grid.Row="0" Margin="0,0,0,8">
                     <TextBlock Text="&#26063;&#32676;&#27683;&#27675;" FontSize="16" FontWeight="SemiBold" Foreground="White" />
                     <Button DockPanel.Dock="Right" Content="&#39023;&#31034;&#20840;&#37096;" Padding="8,3" Command="{Binding ClearMarketGroupFilterCommand}" Visibility="{Binding IsMarketGroupFilterActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedMarketGroup}" Foreground="#8b949e" Margin="0,3,8,0" />
                 </DockPanel>
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding TopMarketGroups}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -90,7 +94,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 </ScrollViewer>
-            </StackPanel>
+            </Grid>
         </Border>
 
         <!-- 0050 Market Leader Summary Card - Compact Version -->
