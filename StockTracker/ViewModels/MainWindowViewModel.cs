@@ -1289,7 +1289,22 @@ namespace StockTracker.ViewModels
 
         public async Task<IReadOnlyDictionary<string, TwseT86History>> LoadAllTwseT86HistoriesForScanAsync(DateTime? startDate = null)
         {
-            var latestRecords = await _twseT86Repository.LoadByDateAsync(LatestRankingDate == DateTime.MinValue ? DateTime.Today : LatestRankingDate);
+            // Initial page loading is asynchronous.  A scan started immediately after login can
+            // otherwise query today's (often non-trading) date and receive an empty universe.
+            var queryDate = LatestRankingDate;
+            if (queryDate == DateTime.MinValue)
+            {
+                var latestDates = _twseT86Repository.GetLatestTradeDates(1);
+                queryDate = latestDates.Count > 0 ? latestDates[0] : DateTime.Today;
+            }
+
+            var latestRecords = await _twseT86Repository.LoadByDateAsync(queryDate);
+            if (latestRecords.Count == 0)
+            {
+                var latestDates = _twseT86Repository.GetLatestTradeDates(1);
+                if (latestDates.Count > 0)
+                    latestRecords = await _twseT86Repository.LoadByDateAsync(latestDates[0]);
+            }
             var allSymbols = latestRecords
                 .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol))
                 .Select(x => x.Symbol)

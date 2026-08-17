@@ -2845,48 +2845,40 @@ namespace StockTracker.ViewModels
 
         private static long ResolveThreeMajorNetByDate(TwseT86History t86History, DateTime targetDate)
         {
-            if (t86History == null || t86History.RecordsByDate == null || t86History.RecordsByDate.Count == 0)
-            {
-                return 0;
-            }
-
-            TwseT86Record exactRecord;
-            if (t86History.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
-            {
-                return exactRecord.ThreeMajorNet;
-            }
-
-            return 0;
+            return ResolveInstitutionalRecord(t86History, targetDate)?.ThreeMajorNet ?? 0;
         }
 
         private static long ResolveForeignNetByDate(TwseT86History t86History, DateTime targetDate)
         {
-            if (t86History == null || t86History.RecordsByDate == null || t86History.RecordsByDate.Count == 0)
-                return 0;
-            TwseT86Record exactRecord;
-            if (t86History.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
-                return exactRecord.ForeignNet;
-            return 0;
+            return ResolveInstitutionalRecord(t86History, targetDate)?.ForeignNet ?? 0;
         }
 
         private static long ResolveDealerNetByDate(TwseT86History t86History, DateTime targetDate)
         {
-            if (t86History == null || t86History.RecordsByDate == null || t86History.RecordsByDate.Count == 0)
-                return 0;
-            TwseT86Record exactRecord;
-            if (t86History.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
-                return exactRecord.DealerNet;
-            return 0;
+            return ResolveInstitutionalRecord(t86History, targetDate)?.DealerNet ?? 0;
         }
 
         private static long ResolveInvestmentTrustNetByDate(TwseT86History t86History, DateTime targetDate)
         {
-            if (t86History == null || t86History.RecordsByDate == null || t86History.RecordsByDate.Count == 0)
-                return 0;
+            return ResolveInstitutionalRecord(t86History, targetDate)?.InvestmentTrustNet ?? 0;
+        }
+
+        private static TwseT86Record ResolveInstitutionalRecord(TwseT86History history, DateTime targetDate)
+        {
+            if (history?.RecordsByDate == null || history.RecordsByDate.Count == 0)
+                return null;
+
             TwseT86Record exactRecord;
-            if (t86History.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
-                return exactRecord.InvestmentTrustNet;
-            return 0;
+            if (history.RecordsByDate.TryGetValue(targetDate.Date, out exactRecord) && exactRecord != null)
+                return exactRecord;
+
+            // Market data and the official institutional report can arrive on different dates.
+            // Preserve the latest known value instead of presenting a misleading zero.
+            return history.RecordsByDate
+                .Where(x => x.Key.Date <= targetDate.Date && x.Value != null)
+                .OrderByDescending(x => x.Key)
+                .Select(x => x.Value)
+                .FirstOrDefault();
         }
 
         private static string SerializeRecentScores(IEnumerable<RankedStockScorePoint> recentScores)
