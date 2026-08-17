@@ -79,7 +79,7 @@ namespace StockTracker.ViewModels
 
         public PortfolioViewModel(ObservableCollection<StockViewModel> stocks)
         {
-            _stocks = stocks;
+            _stocks = stocks ?? new ObservableCollection<StockViewModel>();
             Holdings = new ObservableCollection<PortfolioHoldingViewModel>();
             CashFlows = new ObservableCollection<PortfolioCashFlowViewModel>();
             AddHoldingCommand = new RelayCommand(_ => AddHolding());
@@ -128,8 +128,15 @@ namespace StockTracker.ViewModels
                 if (File.Exists(_filePath)) _settings = JsonConvert.DeserializeObject<PortfolioSettings>(File.ReadAllText(_filePath)) ?? new PortfolioSettings();
             }
             catch { StatusMessage = "無法讀取既有投資組合，已使用空白資料。"; _settings = new PortfolioSettings(); }
-            foreach (var holding in _settings.Holdings ?? new List<PortfolioHolding>()) Holdings.Add(new PortfolioHoldingViewModel(holding));
-            _settings.CashFlows = _settings.CashFlows ?? new List<PortfolioCashFlow>();
+            // Older or manually edited files can omit these arrays (or contain null entries).
+            // Normalize them before any subsequent add/remove/refresh operation.
+            _settings.Holdings = (_settings.Holdings ?? new List<PortfolioHolding>())
+                .Where(holding => holding != null)
+                .ToList();
+            _settings.CashFlows = (_settings.CashFlows ?? new List<PortfolioCashFlow>())
+                .Where(cashFlow => cashFlow != null)
+                .ToList();
+            foreach (var holding in _settings.Holdings) Holdings.Add(new PortfolioHoldingViewModel(holding));
             foreach (var cashFlow in _settings.CashFlows.OrderByDescending(x => x.Date)) CashFlows.Add(new PortfolioCashFlowViewModel(cashFlow));
             OnPropertyChanged(nameof(Cash)); OnPropertyChanged(nameof(CashReservePercentage)); OnPropertyChanged(nameof(SinglePositionLimitPercentage));
             Refresh();
@@ -240,7 +247,7 @@ namespace StockTracker.ViewModels
             var targets = Holdings.ToDictionary(holding => holding, _ => 0d);
             var active = Holdings
                 .Select(holding => new { Holding = holding, Stock = _stocks.FirstOrDefault(stock => stock.Symbol == holding.Symbol) })
-                .Where(item => item.Stock != null && item.Stock.LatestPrice > 0 && item.Stock.StrategyOutput.FinalScore >= 65 && item.Stock.CurrentCrashRiskScore <= 45)
+                .Where(item => item.Stock != null && item.Stock.StrategyOutput != null && item.Stock.LatestPrice > 0 && item.Stock.StrategyOutput.FinalScore >= 65 && item.Stock.CurrentCrashRiskScore <= 45)
                 .Select(item => new { item.Holding, Signal = item.Stock.StrategyOutput.FinalScore * Math.Max(0.1, 1d - item.Stock.CurrentCrashRiskScore / 100d) })
                 .ToList();
             var remainingBudget = Math.Max(0, 100d - CashReservePercentage);
