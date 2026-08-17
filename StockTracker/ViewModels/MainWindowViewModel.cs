@@ -56,6 +56,7 @@ namespace StockTracker.ViewModels
         private bool _isNightlyAutomationRunning;
         private RankingViewModel _nightlyRankingViewModel;
         private bool _nightlyCompletedToday;
+        private IReadOnlyDictionary<string, RankedStock> _latestMarketScanBySymbol = new Dictionary<string, RankedStock>(StringComparer.OrdinalIgnoreCase);
         private string SubscriptionFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "subscriptions.txt");
         public MainWindowViewModel(CapitalApiService apiService)
         {
@@ -212,6 +213,22 @@ namespace StockTracker.ViewModels
 
         public ObservableCollection<StockViewModel> Stocks { get; }
         public CapitalApiService ApiService => _apiService;
+        public event EventHandler MarketScanUpdated;
+
+        public RankedStock FindLatestMarketScanStock(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol)) return null;
+            return _latestMarketScanBySymbol.TryGetValue(symbol.Trim(), out var stock) ? stock : null;
+        }
+
+        public void UpdateLatestMarketScan(IEnumerable<RankedStock> rankedStocks)
+        {
+            _latestMarketScanBySymbol = (rankedStocks ?? Enumerable.Empty<RankedStock>())
+                .Where(stock => stock != null && !string.IsNullOrWhiteSpace(stock.Symbol))
+                .GroupBy(stock => stock.Symbol.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            MarketScanUpdated?.Invoke(this, EventArgs.Empty);
+        }
         public IReadOnlyList<string> GlobalKLineIntervals { get; } = new[] { "日K", "5分K", "3分K", "1分K" };
         public IReadOnlyList<string> GlobalKLineCount { get; } = new[] { "30", "60", "120", "150", "240", "300" };
 

@@ -34,19 +34,19 @@ namespace StockTracker.ViewModels
         public double TargetWeight { get; private set; }
         public decimal SuggestedTradeAmount { get; private set; }
 
-        public void Refresh(StockViewModel stock, decimal totalAssets, double positionLimit, decimal availableToBuy, double targetWeight)
+        public void Refresh(StockViewModel stock, RankedStock rankedStock, decimal totalAssets, double positionLimit, decimal availableToBuy, double targetWeight)
         {
-            Name = stock?.Name ?? "尚未訂閱／無資料";
-            LatestPrice = stock?.LatestPrice ?? 0;
-            Score = stock?.StrategyOutput?.FinalScore ?? 0;
-            Risk = stock?.CurrentCrashRiskScore ?? 0;
+            Name = rankedStock?.Name ?? stock?.Name ?? "尚未訂閱／無資料";
+            LatestPrice = rankedStock?.LatestPrice ?? stock?.LatestPrice ?? 0;
+            Score = rankedStock?.Score ?? stock?.StrategyOutput?.FinalScore ?? 0;
+            Risk = rankedStock?.CrashRiskScore ?? stock?.CurrentCrashRiskScore ?? 0;
             ProfitPercentage = LatestPrice > 0 && AverageCost > 0 ? (double)((LatestPrice / AverageCost - 1m) * 100m) : 0;
-            TodayChangePercentage = stock?.ChangePercent ?? 0;
+            TodayChangePercentage = rankedStock?.ChangePercent ?? stock?.ChangePercent ?? 0;
             Weight = totalAssets == 0 ? 0 : (double)(MarketValue / totalAssets * 100m);
             TargetWeight = Math.Max(0, Math.Min(positionLimit, targetWeight));
             var targetValue = totalAssets * (decimal)(TargetWeight / 100d);
             SuggestedTradeAmount = targetValue - MarketValue;
-            if (stock == null || LatestPrice <= 0) { Recommendation = "先加入追蹤"; RecommendationBrush = Brushes.Gray; SuggestedTradeAmount = 0; Guidance = "找不到即時價格與評分，先將此股票加入主畫面追蹤清單。"; }
+            if (stock == null && rankedStock == null || LatestPrice <= 0) { Recommendation = "等待掃描資料"; RecommendationBrush = Brushes.Gray; SuggestedTradeAmount = 0; Guidance = "找不到最新全市場掃描資料；完成掃描後會自動更新。"; }
             else if (TargetWeight <= 0) { Recommendation = "減碼／檢討"; RecommendationBrush = Brushes.IndianRed; Guidance = $"分數 {Score}、風險 {Risk} 未達納入動態配置的門檻；不新增部位，參考調整至 0%。"; }
             else if (Weight > positionLimit) { Recommendation = "減碼至上限"; RecommendationBrush = Brushes.IndianRed; TargetWeight = positionLimit; SuggestedTradeAmount = totalAssets * (decimal)(TargetWeight / 100d) - MarketValue; Guidance = $"目前權重 {Weight:F1}% 超過 {positionLimit:F1}% 上限；參考減少約 {Math.Floor(Math.Abs(SuggestedTradeAmount) / LatestPrice):N0} 股。"; }
             else if (Weight + 0.5 < TargetWeight && availableToBuy > 0) { Recommendation = "分批加碼"; RecommendationBrush = Brushes.SeaGreen; SuggestedTradeAmount = Math.Min(SuggestedTradeAmount, availableToBuy); Guidance = $"分數 {Score}、風險 {Risk}，依合格持股的相對配置分數分配至 {TargetWeight:F1}%；參考分批買入約 {Math.Floor(SuggestedTradeAmount / LatestPrice):N0} 股。"; }
@@ -67,6 +67,7 @@ namespace StockTracker.ViewModels
     public sealed class PortfolioViewModel : ViewModelBase
     {
         private readonly ObservableCollection<StockViewModel> _stocks;
+        private readonly MainWindowViewModel _mainViewModel;
         private readonly string _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "portfolio.json");
         private PortfolioSettings _settings = new PortfolioSettings();
         private string _symbolInput;
@@ -77,9 +78,10 @@ namespace StockTracker.ViewModels
         private string _cashFlowType = "Deposit";
         private string _cashFlowAmountInput;
 
-        public PortfolioViewModel(ObservableCollection<StockViewModel> stocks)
+        public PortfolioViewModel(ObservableCollection<StockViewModel> stocks, MainWindowViewModel mainViewModel = null)
         {
             _stocks = stocks ?? new ObservableCollection<StockViewModel>();
+            _mainViewModel = mainViewModel;
             Holdings = new ObservableCollection<PortfolioHoldingViewModel>();
             CashFlows = new ObservableCollection<PortfolioCashFlowViewModel>();
             AddHoldingCommand = new RelayCommand(_ => AddHolding());
@@ -91,6 +93,7 @@ namespace StockTracker.ViewModels
             RefreshCommand = new RelayCommand(_ => Refresh());
             SaveCommand = new RelayCommand(_ => Save());
             Load();
+            if (_mainViewModel != null) _mainViewModel.MarketScanUpdated += MainViewModelOnMarketScanUpdated;
         }
 
         public ObservableCollection<PortfolioHoldingViewModel> Holdings { get; }
@@ -120,6 +123,13 @@ namespace StockTracker.ViewModels
         public decimal CumulativeProfitLoss => TotalAssets - NetInvested;
         public double CumulativeReturnPercentage => NetInvested == 0 ? 0 : (double)(CumulativeProfitLoss / NetInvested * 100m);
         public StockViewModel FindStock(string symbol) => _stocks.FirstOrDefault(stock => stock.Symbol == symbol);
+
+        public void Dispose()
+        {
+            if (_mainViewModel != null) _mainViewModel.MarketScanUpdated -= MainViewModelOnMarketScanUpdated;
+        }
+
+        private void MainViewModelOnMarketScanUpdated(object sender, EventArgs eventArgs) => Refresh();
 
         private void Load()
         {
@@ -293,11 +303,15 @@ namespace StockTracker.ViewModels
 
         private void Refresh()
         {
-            var stockValue = Holdings.Sum(x => { var stock = _stocks.FirstOrDefault(s => s.Symbol == x.Symbol); return (stock?.LatestPrice ?? 0) * x.Quantity; });
+            var stockValue = Holdings.Sum(x => { var rankedStock = _mainViewModel?.FindLatestMarketScanStock(x.Symbol); var stock = _stocks.FirstOrDefault(s => s.Symbol == x.Symbol); return (rankedStock?.LatestPrice ?? stock?.LatestPrice ?? 0) * x.Quantity; });
             var total = stockValue + Cash;
             var available = Math.Max(0, Cash - total * (decimal)(CashReservePercentage / 100d));
             var targets = CalculateDynamicTargets();
-            foreach (var holding in Holdings) holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), total, SinglePositionLimitPercentage, available, targets.TryGetValue(holding, out var target) ? target : 0);
+            foreach (var holding in Holdings)
+            {
+                var rankedStock = _mainViewModel?.FindLatestMarketScanStock(holding.Symbol);
+                holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), rankedStock, total, SinglePositionLimitPercentage, available, targets.TryGetValue(holding, out var target) ? target : 0);
+            }
             OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio));
             OnPropertyChanged(nameof(NetInvested)); OnPropertyChanged(nameof(CumulativeProfitLoss)); OnPropertyChanged(nameof(CumulativeReturnPercentage));
         }
@@ -306,9 +320,11 @@ namespace StockTracker.ViewModels
         {
             var targets = Holdings.ToDictionary(holding => holding, _ => 0d);
             var active = Holdings
-                .Select(holding => new { Holding = holding, Stock = _stocks.FirstOrDefault(stock => stock.Symbol == holding.Symbol) })
-                .Where(item => item.Stock != null && item.Stock.StrategyOutput != null && item.Stock.LatestPrice > 0 && item.Stock.StrategyOutput.FinalScore >= 65 && item.Stock.CurrentCrashRiskScore <= 45)
-                .Select(item => new { item.Holding, Signal = item.Stock.StrategyOutput.FinalScore * Math.Max(0.1, 1d - item.Stock.CurrentCrashRiskScore / 100d) })
+                .Select(holding => new { Holding = holding, Stock = _stocks.FirstOrDefault(stock => stock.Symbol == holding.Symbol), RankedStock = _mainViewModel?.FindLatestMarketScanStock(holding.Symbol) })
+                .Where(item => (item.RankedStock?.LatestPrice ?? item.Stock?.LatestPrice ?? 0) > 0
+                    && (item.RankedStock?.Score ?? item.Stock?.StrategyOutput?.FinalScore ?? 0) >= 65
+                    && (item.RankedStock?.CrashRiskScore ?? item.Stock?.CurrentCrashRiskScore ?? 100) <= 45)
+                .Select(item => new { item.Holding, Signal = (item.RankedStock?.Score ?? item.Stock?.StrategyOutput?.FinalScore ?? 0) * Math.Max(0.1, 1d - (item.RankedStock?.CrashRiskScore ?? item.Stock?.CurrentCrashRiskScore ?? 100) / 100d) })
                 .ToList();
             var remainingBudget = Math.Max(0, 100d - CashReservePercentage);
             var cap = SinglePositionLimitPercentage;

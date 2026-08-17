@@ -2746,6 +2746,7 @@ namespace StockTracker.ViewModels
                     statusDate);
                 RefreshMarketBreadth();
                 SaveRankingToDb(results);
+                _mainViewModel?.UpdateLatestMarketScan(results);
 
                 ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票";
             }

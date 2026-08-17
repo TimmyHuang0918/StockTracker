@@ -7,11 +7,14 @@ namespace StockTracker
     public partial class PortfolioWindow : Window
     {
         private bool _holdingDetailsVisible = true;
+        private readonly PortfolioViewModel _portfolioViewModel;
 
         public PortfolioWindow(MainWindowViewModel mainViewModel)
         {
             InitializeComponent();
-            DataContext = new PortfolioViewModel(mainViewModel.Stocks);
+            _portfolioViewModel = new PortfolioViewModel(mainViewModel.Stocks, mainViewModel);
+            DataContext = _portfolioViewModel;
+            Closed += (_, __) => _portfolioViewModel.Dispose();
         }
 
         private void HoldingGrid_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
