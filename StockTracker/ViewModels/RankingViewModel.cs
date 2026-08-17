@@ -1590,10 +1590,8 @@ namespace StockTracker.ViewModels
             html.AppendLine(".hero-suggestion .suggestion-title{color:#10b981;font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:8px;}");
             html.AppendLine(".hero-suggestion .suggestion-content{color:#fff;font-size:15px;line-height:1.6;}");
             html.AppendLine(".rank-badge{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:6px 12px;border-radius:6px;font-size:16px;font-weight:700;display:inline-block;}");
-            html.AppendLine(".filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px;}");
-            html.AppendLine(".filter-group{display:flex;flex-direction:column;gap:4px;}");
-            html.AppendLine(".filter-group.row-inputs{flex-direction:row;align-items:center;gap:8px;}");
-            html.AppendLine(".filter-group.row-inputs input{width:100%;}");
+            html.AppendLine(".filter-breadth-layout{display:flex;align-items:stretch;gap:8px;margin-bottom:16px;}.filter-panel{flex:1;margin:0;padding:10px;min-width:0;}.filter-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;}.filter-group{display:flex;flex-direction:column;gap:3px;min-width:0;}.filter-panel label{font-size:9px;line-height:1.2;white-space:nowrap;}.filter-panel input,.filter-panel select{min-width:0;padding:4px 7px;font-size:11px;border-radius:4px;}");
+            html.AppendLine(".filter-group>.row-inputs{display:flex;align-items:center;gap:6px;min-width:0;}.filter-group>.row-inputs input{width:100%;min-width:0;}");
             html.AppendLine(".checkbox-group{flex-direction:row;align-items:center;gap:8px;padding-top:20px;}");
             html.AppendLine("label{font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;}");
             html.AppendLine("input,select{background:#21262d;color:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;width:100%;transition:border-color 0.2s;}");
@@ -1611,7 +1609,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;top:0;z-index:2;user-select:none;}");
 
             html.AppendLine("@media(max-width:768px){");
-            html.AppendLine("  .header-bar{flex-direction:column;align-items:stretch;gap:12px;}.header-title{padding-right:0;}.breadth-card{position:static;width:142px;margin:0 0 12px auto;}");
+            html.AppendLine("  .header-bar{flex-direction:column;align-items:stretch;gap:12px;}.header-title{padding-right:0;}.filter-breadth-layout{display:block;}.filter-panel{margin-bottom:12px;}.breadth-card{position:static;width:142px;margin:0 0 12px auto;}");
             html.AppendLine("  .btn-csv{justify-content:center;width:100%;}");
             html.AppendLine("  .filter-grid{grid-template-columns:1fr 1fr;}");
             html.AppendLine("  .checkbox-group{padding-top:0;}");
@@ -1660,7 +1658,8 @@ namespace StockTracker.ViewModels
             html.AppendLine("  </div>");
             html.AppendLine("</div>");
 
-            html.AppendLine("<div class=\"panel\">");
+            html.AppendLine("<div class='filter-breadth-layout'>");
+            html.AppendLine("<div class=\"panel filter-panel\">");
             html.AppendLine("<div class='filter-grid'>");
             html.AppendLine("<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/建議/策略' /></div>");
             html.AppendLine("<div class='filter-group'><label>Top 數量</label><input id='topCount' type='number' min='1' placeholder='100' /></div>");
@@ -1691,6 +1690,7 @@ namespace StockTracker.ViewModels
             html.AppendLine($"<p class='breadth-average'>&#24179;&#22343; <span class='{ResolveValueColorClass((double)marketBreadth.AverageChangePercent)}'>{marketBreadth.AverageChangePercent:+0.00;-0.00;0.00}%</span></p>");
             html.AppendLine($"<p class='breadth-note'>&#20849; {marketBreadth.TotalCount:N0} &#27284;&#65307;&#19978;&#28450;&#27604;&#29575;&#19981;&#21547;&#24179;&#30436;</p>");
             html.AppendLine("</section>");
+            html.AppendLine("</div>");
 
             html.AppendLine("<section class='panel' style='margin:0 0 16px;'>");
             html.AppendLine("<div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;'><h3 style='margin:0'>&#26063;&#32676;&#27683;&#27675;</h3><span id='activeGroupFilter' class='muted'></span><button id='clearGroupFilter' type='button' class='btn-csv' style='padding:5px 8px'>&#39023;&#31034;&#20840;&#37096;</button></div>");

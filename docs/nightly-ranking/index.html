@@ -37,10 +37,8 @@ h2{margin:0 0 4px 0;font-size:22px;font-weight:600;color:#fff;}
 .hero-suggestion .suggestion-title{color:#10b981;font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:8px;}
 .hero-suggestion .suggestion-content{color:#fff;font-size:15px;line-height:1.6;}
 .rank-badge{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:6px 12px;border-radius:6px;font-size:16px;font-weight:700;display:inline-block;}
-.filter-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:12px;}
-.filter-group{display:flex;flex-direction:column;gap:4px;}
-.filter-group.row-inputs{flex-direction:row;align-items:center;gap:8px;}
-.filter-group.row-inputs input{width:100%;}
+.filter-breadth-layout{display:flex;align-items:stretch;gap:8px;margin-bottom:16px;}.filter-panel{flex:1;margin:0;padding:10px;min-width:0;}.filter-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;}.filter-group{display:flex;flex-direction:column;gap:3px;min-width:0;}.filter-panel label{font-size:9px;line-height:1.2;white-space:nowrap;}.filter-panel input,.filter-panel select{min-width:0;padding:4px 7px;font-size:11px;border-radius:4px;}
+.filter-group>.row-inputs{display:flex;align-items:center;gap:6px;min-width:0;}.filter-group>.row-inputs input{width:100%;min-width:0;}
 .checkbox-group{flex-direction:row;align-items:center;gap:8px;padding-top:20px;}
 label{font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;}
 input,select{background:#21262d;color:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;width:100%;transition:border-color 0.2s;}
@@ -53,7 +51,7 @@ tr{content-visibility:auto;contain-intrinsic-size:38px;}
 .text-left{text-align:left;}
 th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;top:0;z-index:2;user-select:none;}
 @media(max-width:768px){
-  .header-bar{flex-direction:column;align-items:stretch;gap:12px;}.header-title{padding-right:0;}.breadth-card{position:static;width:142px;margin:0 0 12px auto;}
+  .header-bar{flex-direction:column;align-items:stretch;gap:12px;}.header-title{padding-right:0;}.filter-breadth-layout{display:block;}.filter-panel{margin-bottom:12px;}.breadth-card{position:static;width:142px;margin:0 0 12px auto;}
   .btn-csv{justify-content:center;width:100%;}
   .filter-grid{grid-template-columns:1fr 1fr;}
   .checkbox-group{padding-top:0;}
@@ -99,7 +97,8 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
     <button id='btnDownloadCsv' class='btn-csv'>💾 下載 CSV 檔</button>
   </div>
 </div>
-<div class="panel">
+<div class='filter-breadth-layout'>
+<div class="panel filter-panel">
 <div class='filter-grid'>
 <div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/建議/策略' /></div>
 <div class='filter-group'><label>Top 數量</label><input id='topCount' type='number' min='1' placeholder='100' /></div>
@@ -127,6 +126,7 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
 <p class='breadth-average'>&#24179;&#22343; <span class='rise'>+0.21%</span></p>
 <p class='breadth-note'>&#20849; 2,343 &#27284;&#65307;&#19978;&#28450;&#27604;&#29575;&#19981;&#21547;&#24179;&#30436;</p>
 </section>
+</div>
 <section class='panel' style='margin:0 0 16px;'>
 <div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;'><h3 style='margin:0'>&#26063;&#32676;&#27683;&#27675;</h3><span id='activeGroupFilter' class='muted'></span><button id='clearGroupFilter' type='button' class='btn-csv' style='padding:5px 8px'>&#39023;&#31034;&#20840;&#37096;</button></div>
 <div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;max-height:180px;overflow-y:auto;padding-right:6px;'>
