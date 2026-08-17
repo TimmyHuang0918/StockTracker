@@ -11,9 +11,6 @@
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -57,14 +54,25 @@
             </Border>
         </StackPanel>
 
-        <Border Grid.Row="1" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,10">
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="*" MinWidth="620" />
+                <ColumnDefinition Width="310" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+        <Border Grid.Column="0" Grid.RowSpan="2" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="10" CornerRadius="6" Margin="0,0,10,0">
             <StackPanel>
                 <DockPanel Margin="0,0,0,8">
                     <TextBlock Text="&#26063;&#32676;&#27683;&#27675;" FontSize="16" FontWeight="SemiBold" Foreground="White" />
                     <Button DockPanel.Dock="Right" Content="&#39023;&#31034;&#20840;&#37096;" Padding="8,3" Command="{Binding ClearMarketGroupFilterCommand}" Visibility="{Binding IsMarketGroupFilterActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedMarketGroup}" Foreground="#8b949e" Margin="0,3,8,0" />
                 </DockPanel>
-                <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding TopMarketGroups}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -86,7 +94,7 @@
         </Border>
 
         <!-- 0050 Market Leader Summary Card - Compact Version -->
-        <Border Grid.Row="2" Margin="0,0,0,10" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="12" CornerRadius="6"
+        <Border Grid.Column="1" Grid.Row="0" Margin="0,0,0,10" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="12" CornerRadius="6"
                 Visibility="{Binding Has0050Data, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -177,21 +185,18 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="3" Margin="0,0,0,10" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="12" CornerRadius="6">
+        <ScrollViewer Grid.Column="2" Grid.RowSpan="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="10,0,0,0">
+        <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="10" CornerRadius="6">
             <StackPanel>
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                <WrapPanel Grid.Column="0" VerticalAlignment="Center">
+                <StackPanel Margin="0,0,0,10">
+                <WrapPanel VerticalAlignment="Center">
                     <Button Content="{Binding ControlPanelToggleText}" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding ToggleControlPanelCommand}"/>
                     <Button Content="手動更新網站" Width="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding PublishWebsiteCommand}"/>
                     <Button Content="Export CSV" Width ="120" Height="30" HorizontalAlignment="Left" Margin="0,0,8,0" Command="{Binding ToggleExportCsvCommand}" />
                     <TextBlock Text="通知 Email 清單" VerticalAlignment="Center" Margin="4,0,8,0" />
-                    <TextBox Text="{Binding NotificationEmailList, UpdateSourceTrigger=PropertyChanged}" Width="420" Height="30" VerticalContentAlignment="Center" />
+                    <TextBox Text="{Binding NotificationEmailList, UpdateSourceTrigger=PropertyChanged}" Width="270" Height="30" VerticalContentAlignment="Center" />
                 </WrapPanel>
-                    <Border Grid.Column="1" Width="176" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" CornerRadius="6" Padding="8" Margin="10,0,0,0">
+                    <Border Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,8,0,0">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="74" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <Viewbox Width="70" Height="70" Grid.Column="0">
@@ -210,7 +215,7 @@
                             </StackPanel>
                         </Grid>
                     </Border>
-                </Grid>
+                </StackPanel>
 
                 <StackPanel Visibility="{Binding ControlPanelVisibility}">
                 <Border Visibility="Collapsed" Width="220" HorizontalAlignment="Left" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,10">
@@ -413,8 +418,9 @@
                 </StackPanel>
             </StackPanel>
         </Border>
+        </ScrollViewer>
 
-        <DataGrid Grid.Row="4" PreviewMouseDoubleClick="DataGrid_PreviewMouseDoubleClick" ItemsSource="{Binding RankedStocksView}" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single"
+        <DataGrid Grid.Column="1" Grid.Row="1" PreviewMouseDoubleClick="DataGrid_PreviewMouseDoubleClick" ItemsSource="{Binding RankedStocksView}" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single"
                   Background="{DynamicResource SurfaceBrush}" RowBackground="{DynamicResource SurfaceAltBrush}" AlternatingRowBackground="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource AppForegroundBrush}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="排名" Binding="{Binding Rank}" Width="60" />
@@ -478,5 +484,6 @@
                 </Style>
             </DataGrid.Resources>
         </DataGrid>
+        </Grid>
     </Grid>
 </Window>
