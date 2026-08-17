@@ -287,6 +287,7 @@ namespace StockTracker.ViewModels
         private int _minConsecutiveScore = 60;
         private int _topCount = 10000;
         private bool _isControlPanelExpanded;
+        private bool _isGroupEditorExpanded;
         private bool _isPublishingWebsite;
         private string _scoreDay0Header = "D0";
         private string _scoreDay1Header = "D1";
@@ -319,6 +320,7 @@ namespace StockTracker.ViewModels
             ApplyInstitutionalMomentumFilterCommand = new RelayCommand(_ => ApplyInstitutionalMomentumFilter());
             ApplyScoreReboundFilterCommand = new RelayCommand(_ => ApplyScoreReboundFilter());
             ToggleControlPanelCommand = new RelayCommand(_ => IsControlPanelExpanded = !IsControlPanelExpanded);
+            ToggleGroupEditorCommand = new RelayCommand(_ => IsGroupEditorExpanded = !IsGroupEditorExpanded);
             ToggleExportCsvCommand = new RelayCommand(_ => ExportLatestRankingToXmlSaveFile());
             PublishWebsiteCommand = new RelayCommand(async _ => await PublishWebsiteByHandAsync(), _ => !_isPublishingWebsite);
             AddStockToGroupCommand = new RelayCommand(_ => AddStockToGroup());
@@ -463,6 +465,22 @@ namespace StockTracker.ViewModels
         public System.Windows.Visibility ControlPanelVisibility => IsControlPanelExpanded ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
 
         public string ControlPanelToggleText => IsControlPanelExpanded ? "收起條件面板" : "展開條件面板";
+
+        public bool IsGroupEditorExpanded
+        {
+            get => _isGroupEditorExpanded;
+            set
+            {
+                _isGroupEditorExpanded = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(GroupEditorVisibility));
+                OnPropertyChanged(nameof(GroupEditorToggleText));
+            }
+        }
+
+        public System.Windows.Visibility GroupEditorVisibility => IsGroupEditorExpanded ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
+        public string GroupEditorToggleText => IsGroupEditorExpanded ? "收起族群維護" : "管理本機族群";
 
         public string SelectedStrategyAction
         {
@@ -614,6 +632,7 @@ namespace StockTracker.ViewModels
         public ICommand ApplyInstitutionalMomentumFilterCommand { get; }
         public ICommand ApplyScoreReboundFilterCommand { get; }
         public ICommand ToggleControlPanelCommand { get; }
+        public ICommand ToggleGroupEditorCommand { get; }
         public ICommand ToggleExportCsvCommand { get; }
         public ICommand PublishWebsiteCommand { get; }
         public ICommand AddStockToGroupCommand { get; }

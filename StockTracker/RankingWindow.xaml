@@ -71,14 +71,11 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="172" Background="#21262d" BorderBrush="{Binding DirectionBrush}" BorderThickness="2" CornerRadius="4" Padding="8" Margin="0,0,8,8">
+                            <Border Width="156" Background="#21262d" BorderBrush="{Binding DirectionBrush}" BorderThickness="2" CornerRadius="4" Padding="7,5" Margin="0,0,8,8">
                                 <StackPanel>
                                     <DockPanel><TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" Foreground="White" /><TextBlock Text="{Binding DirectionText}" DockPanel.Dock="Right" Foreground="{Binding DirectionBrush}" FontWeight="Bold" /></DockPanel>
-                                    <TextBlock Text="{Binding AverageChangePercent, StringFormat={}{0:+0.00;-0.00;0.00}%}" FontSize="18" FontWeight="Bold" Foreground="{Binding DirectionBrush}" Margin="0,4,0,2" />
-                                    <TextBlock Text="{Binding AdvancingCount, StringFormat=&#19978;&#28450; {0:N0}}" FontSize="11" Foreground="IndianRed" />
-                                    <TextBlock Text="{Binding DecliningCount, StringFormat=&#19979;&#36300; {0:N0}}" FontSize="11" Foreground="MediumSeaGreen" />
-                                    <TextBlock Text="{Binding AdvanceRatioPercent, StringFormat=&#19978;&#28450;&#29575; {0:F0}%}" FontSize="11" Foreground="#8b949e" />
-                                    <Button Content="&#31649;&#36984;&#27492;&#26063;&#32676;" Padding="6,2" Margin="0,6,0,0" Command="{Binding DataContext.FilterMarketGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding GroupName}" />
+                                    <DockPanel Margin="0,3,0,0"><TextBlock Text="{Binding AverageChangePercent, StringFormat={}{0:+0.00;-0.00;0.00}%}" FontSize="16" FontWeight="Bold" Foreground="{Binding DirectionBrush}" /><TextBlock DockPanel.Dock="Right" Text="{Binding AdvancingCount, StringFormat=↑ {0:N0}}" Foreground="IndianRed" FontSize="11" Margin="5,2,0,0" /><TextBlock DockPanel.Dock="Right" Text="{Binding DecliningCount, StringFormat=↓ {0:N0}}" Foreground="MediumSeaGreen" FontSize="11" Margin="5,2,0,0" /></DockPanel>
+                                    <Button Content="篩選此族群" FontSize="10" Padding="4,1" Margin="0,4,0,0" HorizontalAlignment="Right" Command="{Binding DataContext.FilterMarketGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding GroupName}" />
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
@@ -286,9 +283,11 @@
                     <StackPanel>
                         <DockPanel Margin="0,0,0,8">
                             <TextBlock Text="本機族群維護" FontWeight="SemiBold" />
+                            <Button DockPanel.Dock="Right" Content="{Binding GroupEditorToggleText}" Padding="8,3" Command="{Binding ToggleGroupEditorCommand}" />
                             <Button DockPanel.Dock="Right" Content="刪除目前族群" Padding="8,3" Command="{Binding DeleteGroupCommand}" />
                             <TextBlock DockPanel.Dock="Right" Text="僅桌面版可編輯；網站僅供瀏覽。" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,12,0" />
                         </DockPanel>
+                        <StackPanel Visibility="{Binding GroupEditorVisibility}">
                         <WrapPanel Margin="0,0,0,8">
                             <StackPanel Margin="0,0,10,0">
                                 <TextBlock Text="族群名稱" Margin="0,0,0,4" />
@@ -318,6 +317,7 @@
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
