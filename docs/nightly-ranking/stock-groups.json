@@ -78,7 +78,7 @@
     "Name": "台泥",
     "Industry": "水泥工業",
     "Themes": [
-      "水泥"
+      "水泥工業"
     ],
     "CoreThemes": [],
     "Enabled": true,
@@ -426,10 +426,14 @@
     "Name": "南亞",
     "Industry": "塑膠工業",
     "Themes": [
-      "塑化"
+      "塑化",
+      "PCB",
+      "PCB上游－銅箔"
     ],
     "CoreThemes": [
-      "塑化"
+      "塑化",
+      "PCB",
+      "PCB上游－銅箔"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -1452,7 +1456,7 @@
   {
     "Symbol": "1569",
     "Name": "濱川",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -1825,8 +1829,14 @@
     "Symbol": "1717",
     "Name": "長興",
     "Industry": "化學工業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "PCB",
+      "PCB上游－化學材料／薄膜"
+    ],
+    "CoreThemes": [
+      "PCB",
+      "PCB上游－化學材料／薄膜"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -2176,8 +2186,14 @@
     "Symbol": "1802",
     "Name": "台玻",
     "Industry": "玻璃陶瓷",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "PCB",
+      "PCB上游－玻纖布"
+    ],
+    "CoreThemes": [
+      "PCB",
+      "PCB上游－玻纖布"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -2242,9 +2258,14 @@
     "Name": "富喬",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB上游－玻纖布"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB上游－玻纖布"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -2838,7 +2859,7 @@
     "Name": "和泰車",
     "Industry": "汽車工業",
     "Themes": [
-      "汽車",
+      "汽車／電動車",
       "汽車／電動車"
     ],
     "CoreThemes": [
@@ -3068,7 +3089,7 @@
   {
     "Symbol": "2301",
     "Name": "光寶科",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "AI電源／機櫃"
@@ -3107,7 +3128,7 @@
   {
     "Symbol": "2305",
     "Name": "全友",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3153,12 +3174,14 @@
     "Name": "華通",
     "Industry": "電子零組件業",
     "Themes": [
+      "低軌衛星",
       "電子零組件",
-      "PCB／HDI",
-      "低軌衛星"
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "CoreThemes": [
-      "PCB／HDI"
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -3230,7 +3253,7 @@
   {
     "Symbol": "2324",
     "Name": "仁寶",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "AI伺服器",
       "電腦及週邊",
@@ -3299,7 +3322,7 @@
   {
     "Symbol": "2331",
     "Name": "精英",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3327,10 +3350,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體製造／IC"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體製造／IC"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -3374,10 +3397,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體製造／IC"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體製造／IC"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -3441,7 +3464,7 @@
   {
     "Symbol": "2352",
     "Name": "佳世達",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3452,7 +3475,7 @@
   {
     "Symbol": "2353",
     "Name": "宏碁",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "筆記型電腦／PC"
@@ -3479,16 +3502,21 @@
     "Name": "敬鵬",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
     "Symbol": "2356",
     "Name": "英業達",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "AI伺服器／整機",
@@ -3504,7 +3532,7 @@
   {
     "Symbol": "2357",
     "Name": "華碩",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "AI PC",
       "電腦及週邊",
@@ -3544,7 +3572,7 @@
   {
     "Symbol": "2362",
     "Name": "藍天",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3566,7 +3594,7 @@
   {
     "Symbol": "2364",
     "Name": "倫飛",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "筆記型電腦／PC"
@@ -3580,7 +3608,7 @@
   {
     "Symbol": "2365",
     "Name": "昆盈",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3605,13 +3633,14 @@
     "Name": "金像電",
     "Industry": "電子零組件業",
     "Themes": [
+      "電子零組件",
       "AI伺服器",
       "PCB",
-      "電子零組件",
-      "PCB／HDI"
+      "PCB製造－硬板／多層板／HDI"
     ],
     "CoreThemes": [
-      "PCB／HDI"
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -3679,7 +3708,7 @@
   {
     "Symbol": "2376",
     "Name": "技嘉",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3690,7 +3719,7 @@
   {
     "Symbol": "2377",
     "Name": "微星",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3716,7 +3745,7 @@
   {
     "Symbol": "2380",
     "Name": "虹光",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3727,7 +3756,7 @@
   {
     "Symbol": "2382",
     "Name": "廣達",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "AI伺服器",
       "電腦及週邊",
@@ -3746,12 +3775,16 @@
     "Name": "台光電",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件",
+      "低軌衛星",
       "高速材料／CCL",
-      "低軌衛星"
+      "電子零組件",
+      "PCB",
+      "PCB中游－銅箔基板（CCL）"
     ],
     "CoreThemes": [
-      "高速材料／CCL"
+      "高速材料／CCL",
+      "PCB",
+      "PCB中游－銅箔基板（CCL）"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -3770,7 +3803,7 @@
   {
     "Symbol": "2387",
     "Name": "精元",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3825,7 +3858,7 @@
   {
     "Symbol": "2395",
     "Name": "研華",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "機器人／自動化"
@@ -3839,7 +3872,7 @@
   {
     "Symbol": "2397",
     "Name": "友通",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3850,7 +3883,7 @@
   {
     "Symbol": "2399",
     "Name": "映泰",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3874,9 +3907,14 @@
     "Name": "毅嘉",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB製造－軟板（FPC）"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB製造－軟板（FPC）"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -3894,7 +3932,7 @@
   {
     "Symbol": "2405",
     "Name": "輔信",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -3919,10 +3957,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體製造／IC"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體製造／IC"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -3946,7 +3984,6 @@
     "Name": "中華電",
     "Industry": "通信網路業",
     "Themes": [
-      "防禦型",
       "電信",
       "網通"
     ],
@@ -3990,7 +4027,7 @@
   {
     "Symbol": "2417",
     "Name": "圓剛",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -4064,7 +4101,7 @@
   {
     "Symbol": "2425",
     "Name": "承啟",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -4141,7 +4178,7 @@
   {
     "Symbol": "2432",
     "Name": "倚天酷碁-創",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -4402,7 +4439,7 @@
   {
     "Symbol": "2465",
     "Name": "麗臺",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -4426,11 +4463,15 @@
     "Name": "志聖",
     "Industry": "電子零組件業",
     "Themes": [
+      "半導體設備",
       "電子零組件",
-      "半導體設備"
+      "PCB",
+      "PCB設備自動化－機械／AOI"
     ],
     "CoreThemes": [
-      "半導體設備"
+      "半導體設備",
+      "PCB",
+      "PCB設備自動化－機械／AOI"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -4665,7 +4706,7 @@
   {
     "Symbol": "2495",
     "Name": "普安",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -6181,7 +6222,7 @@
   {
     "Symbol": "3002",
     "Name": "歐格",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -6212,7 +6253,7 @@
   {
     "Symbol": "3005",
     "Name": "神基",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "筆記型電腦／PC"
@@ -6229,10 +6270,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體控制IC"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體控制IC"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -6274,7 +6315,7 @@
   {
     "Symbol": "3013",
     "Name": "晟銘電",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -6318,7 +6359,7 @@
   {
     "Symbol": "3017",
     "Name": "奇鋐",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "AI伺服器",
       "散熱",
@@ -6367,7 +6408,7 @@
   {
     "Symbol": "3022",
     "Name": "威強電",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -6554,7 +6595,6 @@
     "Industry": "電子零組件業",
     "Themes": [
       "AI伺服器",
-      "IC載板",
       "PCB",
       "電子零組件",
       "載板"
@@ -6624,10 +6664,12 @@
     "Industry": "電子零組件業",
     "Themes": [
       "電子零組件",
-      "PCB／HDI"
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "CoreThemes": [
-      "PCB／HDI"
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -6646,7 +6688,7 @@
   {
     "Symbol": "3046",
     "Name": "建碁",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -6750,7 +6792,7 @@
   {
     "Symbol": "3057",
     "Name": "喬鼎",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -6783,7 +6825,7 @@
   {
     "Symbol": "3060",
     "Name": "銘異",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -6838,7 +6880,7 @@
   {
     "Symbol": "3071",
     "Name": "協禧",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -6909,7 +6951,7 @@
   {
     "Symbol": "3088",
     "Name": "艾訊",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -7211,8 +7253,14 @@
     "Symbol": "3167",
     "Name": "大量",
     "Industry": "電機機械",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "PCB",
+      "PCB設備自動化－機械／AOI"
+    ],
+    "CoreThemes": [
+      "PCB",
+      "PCB設備自動化－機械／AOI"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -7368,7 +7416,7 @@
   {
     "Symbol": "3211",
     "Name": "順達",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -7379,7 +7427,7 @@
   {
     "Symbol": "3213",
     "Name": "茂訊",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "筆記型電腦／PC"
@@ -7504,7 +7552,7 @@
   {
     "Symbol": "3231",
     "Name": "緯創",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "AI伺服器",
       "電腦及週邊",
@@ -7588,10 +7636,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體模組／工控儲存"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體模組／工控儲存"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -7644,7 +7692,7 @@
   {
     "Symbol": "3272",
     "Name": "東碩",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -7686,7 +7734,7 @@
   {
     "Symbol": "3287",
     "Name": "廣寰科",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -7891,7 +7939,7 @@
   {
     "Symbol": "3323",
     "Name": "加百裕",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -7918,7 +7966,7 @@
   {
     "Symbol": "3325",
     "Name": "旭品",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -7971,7 +8019,7 @@
   {
     "Symbol": "3349",
     "Name": "寶德",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -8170,7 +8218,7 @@
   {
     "Symbol": "3416",
     "Name": "融程電",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -8359,7 +8407,7 @@
   {
     "Symbol": "3479",
     "Name": "安勤",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -8384,7 +8432,7 @@
   {
     "Symbol": "3483",
     "Name": "力致",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -8462,7 +8510,7 @@
   {
     "Symbol": "3494",
     "Name": "誠研",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -8548,7 +8596,7 @@
   {
     "Symbol": "3515",
     "Name": "華擎",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -8734,7 +8782,7 @@
   {
     "Symbol": "3540",
     "Name": "曜越",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -8875,9 +8923,14 @@
     "Name": "牧德",
     "Industry": "光電業",
     "Themes": [
-      "光電"
+      "光電",
+      "PCB",
+      "PCB設備自動化－機械／AOI"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB設備自動化－機械／AOI"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -8928,7 +8981,7 @@
   {
     "Symbol": "3577",
     "Name": "泓格",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -9039,7 +9092,7 @@
   {
     "Symbol": "3594",
     "Name": "磐儀",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -9126,7 +9179,7 @@
   {
     "Symbol": "3611",
     "Name": "鼎翰",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -9192,7 +9245,7 @@
   {
     "Symbol": "3625",
     "Name": "西勝",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -9276,9 +9329,14 @@
     "Name": "達邁",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB上游－化學材料／薄膜"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB上游－化學材料／薄膜"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -9296,7 +9354,7 @@
   {
     "Symbol": "3652",
     "Name": "精聯",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -9534,7 +9592,7 @@
   {
     "Symbol": "3693",
     "Name": "營邦",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -9556,7 +9614,7 @@
   {
     "Symbol": "3701",
     "Name": "大眾控",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -9612,7 +9670,7 @@
   {
     "Symbol": "3706",
     "Name": "神達",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "AI伺服器／整機"
@@ -9651,7 +9709,7 @@
   {
     "Symbol": "3709",
     "Name": "鑫聯大投控",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -9689,7 +9747,7 @@
   {
     "Symbol": "3712",
     "Name": "永崴投控",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -11688,7 +11746,7 @@
   {
     "Symbol": "4916",
     "Name": "事欣科",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -11761,7 +11819,7 @@
   {
     "Symbol": "4931",
     "Name": "新盛力",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -11805,7 +11863,7 @@
   {
     "Symbol": "4938",
     "Name": "和碩",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "AI伺服器／整機"
@@ -11925,11 +11983,15 @@
     "Name": "臻鼎-KY",
     "Industry": "電子零組件業",
     "Themes": [
+      "載板",
       "電子零組件",
-      "PCB／HDI"
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "CoreThemes": [
-      "PCB／HDI"
+      "載板",
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -11973,10 +12035,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體模組／工控儲存"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體模組／工控儲存"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -12086,9 +12148,14 @@
     "Name": "榮科",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB上游－銅箔"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB上游－銅箔"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -12306,7 +12373,7 @@
   {
     "Symbol": "5215",
     "Name": "科嘉-KY",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -12339,7 +12406,7 @@
   {
     "Symbol": "5223",
     "Name": "安力-KY",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -12496,7 +12563,7 @@
   {
     "Symbol": "5258",
     "Name": "虹堡",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -12645,13 +12712,13 @@
   {
     "Symbol": "5289",
     "Name": "宜鼎",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
-      "記憶體模組／工控儲存"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體模組／工控儲存"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -12814,9 +12881,14 @@
     "Name": "建榮",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB上游－玻纖布"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB上游－玻纖布"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -12869,10 +12941,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體製造／IC"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體製造／IC"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -12902,7 +12974,7 @@
   {
     "Symbol": "5356",
     "Name": "協益",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -12942,7 +13014,7 @@
   {
     "Symbol": "5386",
     "Name": "青雲",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -13023,7 +13095,7 @@
   {
     "Symbol": "5426",
     "Name": "振發",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -13056,7 +13128,7 @@
   {
     "Symbol": "5438",
     "Name": "東友",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -13154,7 +13226,7 @@
   {
     "Symbol": "5465",
     "Name": "富驊",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -13179,10 +13251,12 @@
     "Industry": "電子零組件業",
     "Themes": [
       "電子零組件",
-      "PCB／HDI"
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "CoreThemes": [
-      "PCB／HDI"
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -13201,7 +13275,7 @@
   {
     "Symbol": "5474",
     "Name": "聰泰",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -13296,7 +13370,7 @@
   {
     "Symbol": "5490",
     "Name": "同亨",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -13320,9 +13394,14 @@
     "Name": "凱崴",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB設備耗材－鑽孔／工具"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB設備耗材－鑽孔／工具"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -14004,7 +14083,7 @@
   {
     "Symbol": "6117",
     "Name": "迎廣",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -14037,7 +14116,7 @@
   {
     "Symbol": "6121",
     "Name": "新普",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊",
       "AI電源／機櫃"
@@ -14113,7 +14192,7 @@
   {
     "Symbol": "6128",
     "Name": "上福",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -14287,7 +14366,7 @@
   {
     "Symbol": "6150",
     "Name": "撼訊",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -14322,9 +14401,14 @@
     "Name": "嘉聯益",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB製造－軟板（FPC）"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB製造－軟板（FPC）"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -14375,7 +14459,7 @@
   {
     "Symbol": "6160",
     "Name": "欣技",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -14386,7 +14470,7 @@
   {
     "Symbol": "6161",
     "Name": "捷波",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -14428,7 +14512,7 @@
   {
     "Symbol": "6166",
     "Name": "凌華",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -14629,7 +14713,7 @@
   {
     "Symbol": "6188",
     "Name": "廣明",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -14664,9 +14748,14 @@
     "Name": "精成科",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -14799,7 +14888,7 @@
   {
     "Symbol": "6206",
     "Name": "飛捷",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -14865,11 +14954,15 @@
     "Name": "聯茂",
     "Industry": "電子零組件業",
     "Themes": [
+      "高速材料／CCL",
       "電子零組件",
-      "高速材料／CCL"
+      "PCB",
+      "PCB中游－銅箔基板（CCL）"
     ],
     "CoreThemes": [
-      "高速材料／CCL"
+      "高速材料／CCL",
+      "PCB",
+      "PCB中游－銅箔基板（CCL）"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -15032,7 +15125,7 @@
   {
     "Symbol": "6228",
     "Name": "全譜",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -15054,7 +15147,7 @@
   {
     "Symbol": "6230",
     "Name": "尼得科超眾",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -15098,7 +15191,7 @@
   {
     "Symbol": "6235",
     "Name": "華孚",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -15309,9 +15402,14 @@
     "Name": "台郡",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB製造－軟板（FPC）"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB製造－軟板（FPC）"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -15353,11 +15451,15 @@
     "Name": "台燿",
     "Industry": "電子零組件業",
     "Themes": [
+      "高速材料／CCL",
       "電子零組件",
-      "高速材料／CCL"
+      "PCB",
+      "PCB中游－銅箔基板（CCL）"
     ],
     "CoreThemes": [
-      "高速材料／CCL"
+      "高速材料／CCL",
+      "PCB",
+      "PCB中游－銅箔基板（CCL）"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -15376,7 +15478,7 @@
   {
     "Symbol": "6276",
     "Name": "安鈦克",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -15387,7 +15489,7 @@
   {
     "Symbol": "6277",
     "Name": "宏正",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -15578,7 +15680,7 @@
   {
     "Symbol": "6414",
     "Name": "樺漢",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -15731,16 +15833,21 @@
     "Name": "迅得",
     "Industry": "其他電子業",
     "Themes": [
-      "其他電子"
+      "其他電子",
+      "PCB",
+      "PCB設備自動化－機械／AOI"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB設備自動化－機械／AOI"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
     "Symbol": "6441",
     "Name": "廣錠",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -16531,7 +16638,7 @@
   {
     "Symbol": "6570",
     "Name": "維田",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -16584,7 +16691,7 @@
   {
     "Symbol": "6577",
     "Name": "勁豐",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -16604,7 +16711,7 @@
   {
     "Symbol": "6579",
     "Name": "研揚",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -16717,7 +16824,7 @@
   {
     "Symbol": "6591",
     "Name": "動力-KY",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -17242,7 +17349,7 @@
   {
     "Symbol": "6669",
     "Name": "緯穎",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "AI伺服器",
       "電腦及週邊",
@@ -17277,9 +17384,14 @@
     "Name": "騰輝電子-KY",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB中游－銅箔基板（CCL）"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB中游－銅箔基板（CCL）"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -17335,7 +17447,7 @@
   {
     "Symbol": "6680",
     "Name": "鑫創電子",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -18381,7 +18493,7 @@
   {
     "Symbol": "6831",
     "Name": "邁科",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -19111,7 +19223,7 @@
   {
     "Symbol": "6922",
     "Name": "宸曜",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -19171,7 +19283,7 @@
   {
     "Symbol": "6928",
     "Name": "攸泰科技",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -19213,7 +19325,7 @@
   {
     "Symbol": "6933",
     "Name": "AMAX-KY",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -20033,7 +20145,7 @@
   {
     "Symbol": "7711",
     "Name": "永擎",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -21835,9 +21947,14 @@
     "Name": "尖點",
     "Industry": "其他電子業",
     "Themes": [
-      "其他電子"
+      "其他電子",
+      "PCB",
+      "PCB設備耗材－鑽孔／工具"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB設備耗材－鑽孔／工具"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -22035,7 +22152,7 @@
   {
     "Symbol": "8050",
     "Name": "廣積",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -22121,9 +22238,12 @@
     "Name": "元太",
     "Industry": "光電業",
     "Themes": [
-      "光電"
+      "光電",
+      "面板／顯示"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "面板／顯示"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -22174,7 +22294,7 @@
   {
     "Symbol": "8076",
     "Name": "伍豐",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -22467,10 +22587,10 @@
     "Industry": "電子通路業",
     "Themes": [
       "電子通路",
-      "記憶體通路"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體通路"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -22478,7 +22598,7 @@
   {
     "Symbol": "8114",
     "Name": "振樺電",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -22567,7 +22687,7 @@
   {
     "Symbol": "8163",
     "Name": "達方",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -22633,7 +22753,7 @@
   {
     "Symbol": "8210",
     "Name": "勤誠",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -22686,7 +22806,7 @@
   {
     "Symbol": "8234",
     "Name": "新漢",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -22749,10 +22869,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體模組／工控儲存"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體模組／工控儲存"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -22838,10 +22958,10 @@
     "Industry": "半導體業",
     "Themes": [
       "半導體",
-      "記憶體控制IC"
+      "記憶體"
     ],
     "CoreThemes": [
-      "記憶體控制IC"
+      "記憶體"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -22907,9 +23027,14 @@
     "Name": "金居",
     "Industry": "電子零組件業",
     "Themes": [
-      "電子零組件"
+      "電子零組件",
+      "PCB",
+      "PCB上游－銅箔"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB",
+      "PCB上游－銅箔"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -23007,7 +23132,7 @@
   {
     "Symbol": "8410",
     "Name": "森田",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],
@@ -23768,7 +23893,7 @@
   {
     "Symbol": "9912",
     "Name": "偉聯",
-    "Industry": "電腦及週邊設備業",
+    "Industry": "電腦及週邊",
     "Themes": [
       "電腦及週邊"
     ],

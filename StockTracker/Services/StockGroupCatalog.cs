@@ -36,7 +36,7 @@ namespace StockTracker.Services
             var result = new List<string>();
             if (!string.IsNullOrWhiteSpace(entry.Industry)) result.Add(NormalizeGroupName(entry.Industry));
             if (entry.Themes != null) result.AddRange(entry.Themes.Where(x => !string.IsNullOrWhiteSpace(x)).Select(NormalizeGroupName));
-            return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            return result.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         public IReadOnlyList<string> GetCoreGroups(string symbol)
@@ -46,7 +46,7 @@ namespace StockTracker.Services
             var result = new List<string>();
             if (!string.IsNullOrWhiteSpace(entry.Industry)) result.Add(NormalizeGroupName(entry.Industry));
             if (entry.CoreThemes != null) result.AddRange(entry.CoreThemes.Where(x => !string.IsNullOrWhiteSpace(x)).Select(NormalizeGroupName));
-            return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            return result.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         public IReadOnlyList<string> GetGroupNames()
@@ -190,6 +190,9 @@ namespace StockTracker.Services
         private static string NormalizeGroupName(string groupName)
         {
             var group = groupName?.Trim() ?? string.Empty;
+            if (group == "防禦型") return string.Empty;
+            if (group == "IC載板") return string.Empty;
+            if (group.Contains("記憶體")) return "記憶體";
             switch (group)
             {
                 case "半導體業": return "半導體";
@@ -200,6 +203,10 @@ namespace StockTracker.Services
                 case "資訊服務業": return "資訊服務";
                 case "電子通路業": return "電子通路";
                 case "電子零組件業": return "電子零組件";
+                case "水泥": return "水泥工業";
+                case "汽車": return "汽車／電動車";
+                case "電腦及週邊設備業": return "電腦及週邊";
+                case "PCB／HDI": return "PCB";
                 default: return group;
             }
         }
