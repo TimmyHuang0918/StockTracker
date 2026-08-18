@@ -3263,7 +3263,8 @@ namespace StockTracker.ViewModels
                     DecliningCount = pair.Value.Count(x => x.ChangePercent < 0m),
                     AverageChangePercent = pair.Value.Count == 0 ? 0m : pair.Value.Average(x => x.ChangePercent)
                 })
-                .OrderBy(x => x.GroupName, StringComparer.CurrentCulture)
+                .OrderByDescending(x => x.AverageChangePercent)
+                .ThenBy(x => x.GroupName, StringComparer.CurrentCulture)
                 .ToList();
         }
 
