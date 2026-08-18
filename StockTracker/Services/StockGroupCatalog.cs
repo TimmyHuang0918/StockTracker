@@ -34,8 +34,8 @@ namespace StockTracker.Services
             var entry = Find(symbol);
             if (entry == null || !entry.Enabled) return Array.Empty<string>();
             var result = new List<string>();
-            if (!string.IsNullOrWhiteSpace(entry.Industry)) result.Add(entry.Industry);
-            if (entry.Themes != null) result.AddRange(entry.Themes.Where(x => !string.IsNullOrWhiteSpace(x)));
+            if (!string.IsNullOrWhiteSpace(entry.Industry)) result.Add(NormalizeGroupName(entry.Industry));
+            if (entry.Themes != null) result.AddRange(entry.Themes.Where(x => !string.IsNullOrWhiteSpace(x)).Select(NormalizeGroupName));
             return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -44,8 +44,8 @@ namespace StockTracker.Services
             var entry = Find(symbol);
             if (entry == null || !entry.Enabled) return Array.Empty<string>();
             var result = new List<string>();
-            if (!string.IsNullOrWhiteSpace(entry.Industry)) result.Add(entry.Industry);
-            if (entry.CoreThemes != null) result.AddRange(entry.CoreThemes.Where(x => !string.IsNullOrWhiteSpace(x)));
+            if (!string.IsNullOrWhiteSpace(entry.Industry)) result.Add(NormalizeGroupName(entry.Industry));
+            if (entry.CoreThemes != null) result.AddRange(entry.CoreThemes.Where(x => !string.IsNullOrWhiteSpace(x)).Select(NormalizeGroupName));
             return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -53,8 +53,7 @@ namespace StockTracker.Services
         {
             return _entries.Values
                 .Where(x => x != null && x.Enabled)
-                .SelectMany(x => new[] { x.Industry }
-                    .Concat(x.CoreThemes ?? Enumerable.Empty<string>()))
+                .SelectMany(x => GetGroups(x.Symbol))
                 .Where(x => !string.IsNullOrWhiteSpace(x) &&
                     !string.Equals(x, "待分類", StringComparison.OrdinalIgnoreCase))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -65,7 +64,7 @@ namespace StockTracker.Services
         public IReadOnlyList<StockGroupEntry> GetEntriesForGroup(string groupName)
         {
             if (string.IsNullOrWhiteSpace(groupName)) return Array.Empty<StockGroupEntry>();
-            var group = groupName.Trim();
+            var group = NormalizeGroupName(groupName);
             return _entries.Values
                 .Where(x => x != null && x.Enabled && GetGroups(x.Symbol)
                     .Any(value => string.Equals(value, group, StringComparison.OrdinalIgnoreCase)))
@@ -76,7 +75,7 @@ namespace StockTracker.Services
         public bool AddStockToGroup(string groupName, string symbol, string name)
         {
             if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(symbol)) return false;
-            var group = groupName.Trim();
+            var group = NormalizeGroupName(groupName);
             if (string.Equals(group, "待分類", StringComparison.OrdinalIgnoreCase)) return false;
 
             var normalizedSymbol = symbol.Trim();
@@ -99,8 +98,8 @@ namespace StockTracker.Services
             entry.Enabled = true;
             entry.Themes = entry.Themes ?? new List<string>();
             entry.CoreThemes = entry.CoreThemes ?? new List<string>();
-            if (!entry.Themes.Any(x => string.Equals(x, group, StringComparison.OrdinalIgnoreCase))) entry.Themes.Add(group);
-            if (!entry.CoreThemes.Any(x => string.Equals(x, group, StringComparison.OrdinalIgnoreCase))) entry.CoreThemes.Add(group);
+            if (!entry.Themes.Any(x => string.Equals(NormalizeGroupName(x), group, StringComparison.OrdinalIgnoreCase))) entry.Themes.Add(group);
+            if (!entry.CoreThemes.Any(x => string.Equals(NormalizeGroupName(x), group, StringComparison.OrdinalIgnoreCase))) entry.CoreThemes.Add(group);
             Save();
             return true;
         }
@@ -112,13 +111,13 @@ namespace StockTracker.Services
 
             var group = groupName.Trim();
             var changed = false;
-            if (string.Equals(entry.Industry, group, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(NormalizeGroupName(entry.Industry), group, StringComparison.OrdinalIgnoreCase))
             {
                 entry.Industry = "待分類";
                 changed = true;
             }
-            changed |= (entry.Themes?.RemoveAll(x => string.Equals(x, group, StringComparison.OrdinalIgnoreCase)) ?? 0) > 0;
-            changed |= (entry.CoreThemes?.RemoveAll(x => string.Equals(x, group, StringComparison.OrdinalIgnoreCase)) ?? 0) > 0;
+            changed |= (entry.Themes?.RemoveAll(x => string.Equals(NormalizeGroupName(x), group, StringComparison.OrdinalIgnoreCase)) ?? 0) > 0;
+            changed |= (entry.CoreThemes?.RemoveAll(x => string.Equals(NormalizeGroupName(x), group, StringComparison.OrdinalIgnoreCase)) ?? 0) > 0;
             if (changed) Save();
             return changed;
         }
@@ -177,14 +176,32 @@ namespace StockTracker.Services
         private static bool RemoveGroupFromEntry(StockGroupEntry entry, string groupName)
         {
             var changed = false;
-            if (string.Equals(entry.Industry, groupName, StringComparison.OrdinalIgnoreCase))
+            var group = NormalizeGroupName(groupName);
+            if (string.Equals(NormalizeGroupName(entry.Industry), group, StringComparison.OrdinalIgnoreCase))
             {
                 entry.Industry = "待分類";
                 changed = true;
             }
-            changed |= (entry.Themes?.RemoveAll(x => string.Equals(x, groupName, StringComparison.OrdinalIgnoreCase)) ?? 0) > 0;
-            changed |= (entry.CoreThemes?.RemoveAll(x => string.Equals(x, groupName, StringComparison.OrdinalIgnoreCase)) ?? 0) > 0;
+            changed |= (entry.Themes?.RemoveAll(x => string.Equals(NormalizeGroupName(x), group, StringComparison.OrdinalIgnoreCase)) ?? 0) > 0;
+            changed |= (entry.CoreThemes?.RemoveAll(x => string.Equals(NormalizeGroupName(x), group, StringComparison.OrdinalIgnoreCase)) ?? 0) > 0;
             return changed;
+        }
+
+        private static string NormalizeGroupName(string groupName)
+        {
+            var group = groupName?.Trim() ?? string.Empty;
+            switch (group)
+            {
+                case "半導體業": return "半導體";
+                case "生技醫療業": return "生技醫療";
+                case "光電業": return "光電";
+                case "其他電子業": return "其他電子";
+                case "航運業": return "航運";
+                case "資訊服務業": return "資訊服務";
+                case "電子通路業": return "電子通路";
+                case "電子零組件業": return "電子零組件";
+                default: return group;
+            }
         }
     }
 }

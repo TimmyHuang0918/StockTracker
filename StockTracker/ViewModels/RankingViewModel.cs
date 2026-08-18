@@ -1863,7 +1863,7 @@ namespace StockTracker.ViewModels
             // 將原生 Stock JSON 埋在 JS 變數中
             html.AppendLine("<script>");
             html.AppendLine($"const rawData = {stockDataJson};");
-            html.AppendLine("let groupMappingBySymbol=new Map();let selectedMarketGroup='';");
+            html.AppendLine("const normalizeMarketGroupName=value=>({'半導體業':'半導體','生技醫療業':'生技醫療','光電業':'光電','其他電子業':'其他電子','航運業':'航運','資訊服務業':'資訊服務','電子通路業':'電子通路','電子零組件業':'電子零組件'})[String(value||'').trim()]||String(value||'').trim();let groupMappingBySymbol=new Map();let selectedMarketGroup='';");
             html.AppendLine("fetch('./stock-groups.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).then(rows=>{groupMappingBySymbol=new Map(rows.map(x=>[String(x.Symbol??x.symbol??''),x]).filter(([symbol])=>symbol));document.querySelectorAll('.group-filter').forEach(button=>button.addEventListener('click',()=>{selectedMarketGroup=button.dataset.group||'';applyFilter();document.getElementById('activeGroupFilter').textContent=selectedMarketGroup?'目前族群：'+selectedMarketGroup:'';}));document.getElementById('clearGroupFilter').addEventListener('click',()=>{selectedMarketGroup='';applyFilter();document.getElementById('activeGroupFilter').textContent='';});}).catch(()=>{});");
             html.AppendLine($"const kLineData0050 = {kLineData0050Json};");
             html.AppendLine($"const stock0050Data = {stock0050Json};");
@@ -2351,7 +2351,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;");
 
             html.AppendLine("  filteredData = rawData.filter(item => {");
-            html.AppendLine("    if(selectedMarketGroup){const mapping=groupMappingBySymbol.get(String(item.symbol));const groups=mapping?[mapping.Industry??mapping.industry,...(mapping.Themes??mapping.themes??[]),...(mapping.CoreThemes??mapping.coreThemes??[])]:[];if(!groups.includes(selectedMarketGroup))return false;}");
+            html.AppendLine("    if(selectedMarketGroup){const mapping=groupMappingBySymbol.get(String(item.symbol));const groups=mapping?[mapping.Industry??mapping.industry,...(mapping.Themes??mapping.themes??[]),...(mapping.CoreThemes??mapping.coreThemes??[])].map(normalizeMarketGroupName):[];if(!groups.includes(selectedMarketGroup))return false;}");
             html.AppendLine("    if(top!==null&&item.rank>top) return false;");
             html.AppendLine("    if(kw&&!item.searchKey.includes(kw)) return false;");
             html.AppendLine("    if(!passRange(item.price,minPrice,maxPrice)) return false;");
