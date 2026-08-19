@@ -998,7 +998,8 @@ namespace StockTracker.ViewModels
             SystemMessage = "三大法人資料更新中…";
             try
             {
-                var startDt = TwseHistoryStartDate;
+                // 每次都回補最近交易日，避免某一市場暫時下載失敗後資料永久不完整。
+                var startDt = new[] { TwseHistoryStartDate.Date, DateTime.Today.AddDays(-10) }.Min();
                 var endDt = DateTime.Today;
 
                 UpdatingTwseText = "下載中…";
@@ -1006,7 +1007,7 @@ namespace StockTracker.ViewModels
                 var priceFetcher = new DailyPriceFetcher();
 
                 // Find existing dates from DB
-                var existingDatesT86 = _twseT86Repository.GetExistingDates();
+                var existingDatesT86 = _twseT86Repository.GetCompleteTradeDates();
                 var existingDatesMargin = _twseMarginRepository.GetExistingDates();
                 var existingDatesPrice = _dailyPriceRepository.GetExistingDates();
 

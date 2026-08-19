@@ -79,6 +79,33 @@ namespace StockTracker.Services
             return result;
         }
 
+        /// <summary>
+        /// 只有上市、上櫃資料皆達最低筆數的交易日才視為完整，避免單一市場下載失敗後不再回補。
+        /// </summary>
+        public HashSet<DateTime> GetCompleteTradeDates(int minimumRecordsPerMarket = 100)
+        {
+            var result = new HashSet<DateTime>();
+            using (var conn = new SQLiteConnection(ConnectionString))
+            {
+                conn.Open();
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"
+SELECT TradeDate
+FROM T86
+GROUP BY TradeDate
+HAVING SUM(CASE WHEN Market = '上市' THEN 1 ELSE 0 END) >= @minimumRecords
+   AND SUM(CASE WHEN Market = '上櫃' THEN 1 ELSE 0 END) >= @minimumRecords";
+                    cmd.Parameters.AddWithValue("@minimumRecords", Math.Max(1, minimumRecordsPerMarket));
+                    using (var rdr = cmd.ExecuteReader())
+                        while (rdr.Read())
+                            if (DateTime.TryParse(rdr.GetString(0), out var date))
+                                result.Add(date.Date);
+                }
+            }
+            return result;
+        }
+
         public IReadOnlyList<DateTime> GetLatestTradeDates(int count)
         {
             var result = new List<DateTime>();

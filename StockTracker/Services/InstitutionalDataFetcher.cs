@@ -106,6 +106,9 @@ namespace StockTracker.Services
 
         private async Task<List<TwseT86Record>> GetTwseInstitutionalDataAsync(DateTime date)
         {
+            var jsonRecords = await GetTwseInstitutionalJsonDataAsync(date);
+            if (jsonRecords.Count > 0) return jsonRecords;
+
             var url = $"https://www.twse.com.tw/fund/T86?response=csv&date={date:yyyyMMdd}&selectType=ALL";
             try
             {
@@ -118,6 +121,56 @@ namespace StockTracker.Services
                 var text = enc.GetString(rawBytes);
 
                 return ParseTwseCsv(text, date);
+            }
+            catch
+            {
+                return new List<TwseT86Record>();
+            }
+        }
+
+        // 新版 TWSE 端點；舊 CSV 端點暫時失效或回傳空資料時作為備援。
+        private async Task<List<TwseT86Record>> GetTwseInstitutionalJsonDataAsync(DateTime date)
+        {
+            var url = $"https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date={date:yyyyMMdd}&selectType=ALL";
+            try
+            {
+                var json = JObject.Parse(await _httpClient.GetStringAsync(url));
+                if (json["stat"]?.ToString() != "OK") return new List<TwseT86Record>();
+
+                var fields = json["fields"]?.Values<string>().ToList();
+                var data = json["data"] as JArray;
+                if (fields == null || data == null || fields.Count == 0) return new List<TwseT86Record>();
+
+                var records = new List<TwseT86Record>();
+                foreach (var row in data.OfType<JArray>())
+                {
+                    if (row.Count < fields.Count) continue;
+                    var record = new TwseT86Record { TradeDate = date.Date, Market = "上市" };
+                    for (var index = 0; index < fields.Count; index++)
+                    {
+                        var column = fields[index];
+                        var value = row[index]?.ToString() ?? "0";
+                        if (column == "證券代號") record.Symbol = value.Replace("=", "").Trim('"', ' ');
+                        else if (column == "證券名稱") record.Name = value.Trim('"', ' ');
+                        else if (column == "外陸資買進股數(不含外資自營商)") record.ForeignBuy = ParseLong(value);
+                        else if (column == "外陸資賣出股數(不含外資自營商)") record.ForeignSell = ParseLong(value);
+                        else if (column == "外陸資買賣超股數(不含外資自營商)") record.ForeignNet = ParseLong(value);
+                        else if (column == "投信買進股數") record.InvestmentTrustBuy = ParseLong(value);
+                        else if (column == "投信賣出股數") record.InvestmentTrustSell = ParseLong(value);
+                        else if (column == "投信買賣超股數") record.InvestmentTrustNet = ParseLong(value);
+                        else if (column == "自營商買賣超股數") record.DealerNet = ParseLong(value);
+                        else if (column == "自營商買進股數(自行買賣)") record.DealerSelfBuy = ParseLong(value);
+                        else if (column == "自營商賣出股數(自行買賣)") record.DealerSelfSell = ParseLong(value);
+                        else if (column == "自營商買賣超股數(自行買賣)") record.DealerSelfNet = ParseLong(value);
+                        else if (column == "自營商買進股數(避險)") record.DealerHedgeBuy = ParseLong(value);
+                        else if (column == "自營商賣出股數(避險)") record.DealerHedgeSell = ParseLong(value);
+                        else if (column == "自營商買賣超股數(避險)") record.DealerHedgeNet = ParseLong(value);
+                        else if (column == "三大法人買賣超股數" || column == "三大法人買賣超股數合計") record.ThreeMajorNet = ParseLong(value);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(record.Symbol) && char.IsDigit(record.Symbol.FirstOrDefault())) records.Add(record);
+                }
+                return records;
             }
             catch
             {
