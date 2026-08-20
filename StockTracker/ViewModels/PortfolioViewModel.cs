@@ -64,6 +64,27 @@ namespace StockTracker.ViewModels
         public string TypeName => Amount >= 0 ? "入金" : "出金";
     }
 
+    public sealed class PortfolioTradeViewModel : ViewModelBase
+    {
+        public PortfolioTradeViewModel(PortfolioTrade trade) { Trade = trade; }
+        public PortfolioTrade Trade { get; }
+        public DateTime Date => Trade.Date;
+        public string TypeName => string.Equals(Trade.Type, "Sell", StringComparison.OrdinalIgnoreCase) ? "賣出" : "買入";
+        public string Symbol => Trade.Symbol;
+        public int Quantity => Trade.Quantity;
+        public decimal Price => Trade.Price;
+        public decimal RealizedProfitLoss => Trade.RealizedProfitLoss;
+    }
+
+    public sealed class PortfolioRealizedAdjustmentViewModel : ViewModelBase
+    {
+        public PortfolioRealizedAdjustmentViewModel(PortfolioRealizedAdjustment adjustment) { Adjustment = adjustment; }
+        public PortfolioRealizedAdjustment Adjustment { get; }
+        public DateTime Date => Adjustment.Date;
+        public decimal Amount => Adjustment.Amount;
+        public string Note => Adjustment.Note;
+    }
+
     public sealed class PortfolioViewModel : ViewModelBase
     {
         private readonly ObservableCollection<StockViewModel> _stocks;
@@ -77,6 +98,16 @@ namespace StockTracker.ViewModels
         private DateTime? _cashFlowDate = DateTime.Today;
         private string _cashFlowType = "Deposit";
         private string _cashFlowAmountInput;
+        private DateTime? _tradeDate = DateTime.Today;
+        private string _tradeType = "Buy";
+        private string _tradeSymbolInput;
+        private string _tradeQuantityInput;
+        private string _tradePriceInput;
+        private string _tradeFeeInput;
+        private string _tradeTaxInput;
+        private DateTime? _adjustmentDate = DateTime.Today;
+        private string _adjustmentAmountInput;
+        private string _adjustmentNoteInput;
 
         public PortfolioViewModel(ObservableCollection<StockViewModel> stocks, MainWindowViewModel mainViewModel = null)
         {
@@ -84,12 +115,16 @@ namespace StockTracker.ViewModels
             _mainViewModel = mainViewModel;
             Holdings = new ObservableCollection<PortfolioHoldingViewModel>();
             CashFlows = new ObservableCollection<PortfolioCashFlowViewModel>();
+            Trades = new ObservableCollection<PortfolioTradeViewModel>();
+            RealizedAdjustments = new ObservableCollection<PortfolioRealizedAdjustmentViewModel>();
             AddHoldingCommand = new RelayCommand(_ => AddHolding());
             RemoveHoldingCommand = new RelayCommand(item => RemoveHolding(item as PortfolioHoldingViewModel));
             ImportCsvCommand = new RelayCommand(_ => ImportCsv());
             ExportCsvCommand = new RelayCommand(_ => ExportCsv());
             AddCashFlowCommand = new RelayCommand(_ => AddCashFlow());
             RemoveCashFlowCommand = new RelayCommand(item => RemoveCashFlow(item as PortfolioCashFlowViewModel));
+            AddTradeCommand = new RelayCommand(_ => AddTrade());
+            AddRealizedAdjustmentCommand = new RelayCommand(_ => AddRealizedAdjustment());
             RefreshCommand = new RelayCommand(_ => Refresh());
             SaveCommand = new RelayCommand(_ => Save());
             Load();
@@ -98,12 +133,16 @@ namespace StockTracker.ViewModels
 
         public ObservableCollection<PortfolioHoldingViewModel> Holdings { get; }
         public ObservableCollection<PortfolioCashFlowViewModel> CashFlows { get; }
+        public ObservableCollection<PortfolioTradeViewModel> Trades { get; }
+        public ObservableCollection<PortfolioRealizedAdjustmentViewModel> RealizedAdjustments { get; }
         public ICommand AddHoldingCommand { get; }
         public ICommand RemoveHoldingCommand { get; }
         public ICommand ImportCsvCommand { get; }
         public ICommand ExportCsvCommand { get; }
         public ICommand AddCashFlowCommand { get; }
         public ICommand RemoveCashFlowCommand { get; }
+        public ICommand AddTradeCommand { get; }
+        public ICommand AddRealizedAdjustmentCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand SaveCommand { get; }
         public decimal Cash { get => _settings.Cash; set { _settings.Cash = Math.Max(0, value); OnPropertyChanged(); Refresh(); } }
@@ -115,6 +154,16 @@ namespace StockTracker.ViewModels
         public DateTime? CashFlowDate { get => _cashFlowDate; set { _cashFlowDate = value; OnPropertyChanged(); } }
         public string CashFlowType { get => _cashFlowType; set { _cashFlowType = value; OnPropertyChanged(); } }
         public string CashFlowAmountInput { get => _cashFlowAmountInput; set { _cashFlowAmountInput = value; OnPropertyChanged(); } }
+        public DateTime? TradeDate { get => _tradeDate; set { _tradeDate = value; OnPropertyChanged(); } }
+        public string TradeType { get => _tradeType; set { _tradeType = value; OnPropertyChanged(); } }
+        public string TradeSymbolInput { get => _tradeSymbolInput; set { _tradeSymbolInput = value; OnPropertyChanged(); } }
+        public string TradeQuantityInput { get => _tradeQuantityInput; set { _tradeQuantityInput = value; OnPropertyChanged(); } }
+        public string TradePriceInput { get => _tradePriceInput; set { _tradePriceInput = value; OnPropertyChanged(); } }
+        public string TradeFeeInput { get => _tradeFeeInput; set { _tradeFeeInput = value; OnPropertyChanged(); } }
+        public string TradeTaxInput { get => _tradeTaxInput; set { _tradeTaxInput = value; OnPropertyChanged(); } }
+        public DateTime? AdjustmentDate { get => _adjustmentDate; set { _adjustmentDate = value; OnPropertyChanged(); } }
+        public string AdjustmentAmountInput { get => _adjustmentAmountInput; set { _adjustmentAmountInput = value; OnPropertyChanged(); } }
+        public string AdjustmentNoteInput { get => _adjustmentNoteInput; set { _adjustmentNoteInput = value; OnPropertyChanged(); } }
         public string StatusMessage { get => _statusMessage; private set { _statusMessage = value; OnPropertyChanged(); } }
         public decimal StockMarketValue => Holdings.Sum(x => x.MarketValue);
         public decimal TotalAssets => StockMarketValue + Cash;
@@ -123,6 +172,10 @@ namespace StockTracker.ViewModels
         public decimal NetInvested => (_settings.CashFlows ?? new List<PortfolioCashFlow>()).Sum(x => x.Amount);
         public decimal CumulativeProfitLoss => TotalAssets - NetInvested;
         public double CumulativeReturnPercentage => NetInvested == 0 ? 0 : (double)(CumulativeProfitLoss / NetInvested * 100m);
+        public decimal TransactionRealizedProfitLoss => (_settings.Trades ?? new List<PortfolioTrade>()).Sum(x => x.RealizedProfitLoss);
+        public decimal HistoricalRealizedProfitLoss => (_settings.RealizedAdjustments ?? new List<PortfolioRealizedAdjustment>()).Sum(x => x.Amount);
+        public decimal RealizedProfitLoss => TransactionRealizedProfitLoss + HistoricalRealizedProfitLoss;
+        public decimal UnrealizedProfitLoss => Holdings.Sum(x => x.MarketValue - x.Quantity * x.AverageCost);
         public StockViewModel FindStock(string symbol) => _stocks.FirstOrDefault(stock => stock.Symbol == symbol);
 
         public void Dispose()
@@ -147,8 +200,12 @@ namespace StockTracker.ViewModels
             _settings.CashFlows = (_settings.CashFlows ?? new List<PortfolioCashFlow>())
                 .Where(cashFlow => cashFlow != null)
                 .ToList();
+            _settings.Trades = (_settings.Trades ?? new List<PortfolioTrade>()).Where(trade => trade != null).ToList();
+            _settings.RealizedAdjustments = (_settings.RealizedAdjustments ?? new List<PortfolioRealizedAdjustment>()).Where(adjustment => adjustment != null).ToList();
             foreach (var holding in _settings.Holdings) Holdings.Add(new PortfolioHoldingViewModel(holding));
             foreach (var cashFlow in _settings.CashFlows.OrderByDescending(x => x.Date)) CashFlows.Add(new PortfolioCashFlowViewModel(cashFlow));
+            foreach (var trade in _settings.Trades.OrderByDescending(x => x.Date)) Trades.Add(new PortfolioTradeViewModel(trade));
+            foreach (var adjustment in _settings.RealizedAdjustments.OrderByDescending(x => x.Date)) RealizedAdjustments.Add(new PortfolioRealizedAdjustmentViewModel(adjustment));
             OnPropertyChanged(nameof(Cash)); OnPropertyChanged(nameof(CashReservePercentage)); OnPropertyChanged(nameof(SinglePositionLimitPercentage));
             Refresh();
         }
@@ -197,6 +254,74 @@ namespace StockTracker.ViewModels
             _settings.CashFlows.Remove(cashFlow.CashFlow);
             CashFlows.Remove(cashFlow);
             StatusMessage = "已移除資金異動紀錄。";
+            Save();
+        }
+
+        private void AddTrade()
+        {
+            var symbol = (TradeSymbolInput ?? string.Empty).Trim();
+            if (!TradeDate.HasValue || !System.Text.RegularExpressions.Regex.IsMatch(symbol, "^\\d{4,6}$")
+                || !int.TryParse(TradeQuantityInput, out var quantity) || quantity <= 0
+                || !decimal.TryParse(TradePriceInput, NumberStyles.Number, CultureInfo.CurrentCulture, out var price) || price <= 0
+                || !decimal.TryParse(string.IsNullOrWhiteSpace(TradeFeeInput) ? "0" : TradeFeeInput, NumberStyles.Number, CultureInfo.CurrentCulture, out var fee) || fee < 0
+                || !decimal.TryParse(string.IsNullOrWhiteSpace(TradeTaxInput) ? "0" : TradeTaxInput, NumberStyles.Number, CultureInfo.CurrentCulture, out var tax) || tax < 0)
+            {
+                StatusMessage = "請填寫有效的交易日期、代號、股數、成交價、手續費與交易稅。";
+                return;
+            }
+
+            var isSell = string.Equals(TradeType, "Sell", StringComparison.OrdinalIgnoreCase);
+            var holding = _settings.Holdings.FirstOrDefault(x => x.Symbol == symbol);
+            if (isSell && (holding == null || holding.Quantity < quantity))
+            {
+                StatusMessage = "賣出股數不得超過目前持有股數。";
+                return;
+            }
+
+            var realized = 0m;
+            if (isSell)
+            {
+                realized = (price - holding.AverageCost) * quantity - fee - tax;
+                holding.Quantity -= quantity;
+                if (holding.Quantity == 0) _settings.Holdings.Remove(holding);
+            }
+            else
+            {
+                var grossCost = price * quantity + fee + tax;
+                if (Cash < grossCost) { StatusMessage = "可用現金不足以支付本次買入交易。"; return; }
+                if (holding == null)
+                {
+                    holding = new PortfolioHolding { Symbol = symbol, Quantity = 0, AverageCost = 0 };
+                    _settings.Holdings.Add(holding);
+                }
+                holding.AverageCost = (holding.AverageCost * holding.Quantity + grossCost) / (holding.Quantity + quantity);
+                holding.Quantity += quantity;
+            }
+
+            Cash += isSell ? price * quantity - fee - tax : -(price * quantity + fee + tax);
+            var trade = new PortfolioTrade { Date = TradeDate.Value.Date, Type = isSell ? "Sell" : "Buy", Symbol = symbol, Quantity = quantity, Price = price, Fee = fee, Tax = tax, CostBasisPerShare = isSell ? holding?.AverageCost ?? 0 : 0, RealizedProfitLoss = realized };
+            _settings.Trades.Add(trade);
+            Trades.Insert(0, new PortfolioTradeViewModel(trade));
+            Holdings.Clear();
+            foreach (var item in _settings.Holdings) Holdings.Add(new PortfolioHoldingViewModel(item));
+            TradeSymbolInput = TradeQuantityInput = TradePriceInput = TradeFeeInput = TradeTaxInput = string.Empty;
+            StatusMessage = isSell ? $"已記錄賣出，已實現損益 {realized:N0}。" : "已記錄買入交易。";
+            Save();
+        }
+
+        private void AddRealizedAdjustment()
+        {
+            if (!AdjustmentDate.HasValue || !decimal.TryParse(AdjustmentAmountInput, NumberStyles.Number, CultureInfo.CurrentCulture, out var amount))
+            {
+                StatusMessage = "請填寫有效的日期與已實現損益金額。";
+                return;
+            }
+
+            var adjustment = new PortfolioRealizedAdjustment { Date = AdjustmentDate.Value.Date, Amount = amount, Note = (AdjustmentNoteInput ?? string.Empty).Trim() };
+            _settings.RealizedAdjustments.Add(adjustment);
+            RealizedAdjustments.Insert(0, new PortfolioRealizedAdjustmentViewModel(adjustment));
+            AdjustmentAmountInput = AdjustmentNoteInput = string.Empty;
+            StatusMessage = "已新增歷史已實現損益調整。";
             Save();
         }
 
@@ -315,6 +440,7 @@ namespace StockTracker.ViewModels
             }
             OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio)); OnPropertyChanged(nameof(StockHoldingRatio));
             OnPropertyChanged(nameof(NetInvested)); OnPropertyChanged(nameof(CumulativeProfitLoss)); OnPropertyChanged(nameof(CumulativeReturnPercentage));
+            OnPropertyChanged(nameof(TransactionRealizedProfitLoss)); OnPropertyChanged(nameof(HistoricalRealizedProfitLoss)); OnPropertyChanged(nameof(RealizedProfitLoss)); OnPropertyChanged(nameof(UnrealizedProfitLoss));
         }
 
         private Dictionary<PortfolioHoldingViewModel, double> CalculateDynamicTargets()
