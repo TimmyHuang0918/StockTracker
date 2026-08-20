@@ -321,25 +321,37 @@ namespace StockTracker.ViewModels
             var targets = Holdings.ToDictionary(holding => holding, _ => 0d);
             var active = Holdings
                 .Select(holding => new { Holding = holding, Stock = _stocks.FirstOrDefault(stock => stock.Symbol == holding.Symbol), RankedStock = _mainViewModel?.FindLatestMarketScanStock(holding.Symbol) })
-                .Where(item => (item.RankedStock?.LatestPrice ?? item.Stock?.LatestPrice ?? 0) > 0
-                    && (item.RankedStock?.Score ?? item.Stock?.StrategyOutput?.FinalScore ?? 0) >= 65
-                    && (item.RankedStock?.CrashRiskScore ?? item.Stock?.CurrentCrashRiskScore ?? 100) <= 45)
-                .Select(item => new { item.Holding, Signal = (item.RankedStock?.Score ?? item.Stock?.StrategyOutput?.FinalScore ?? 0) * Math.Max(0.1, 1d - (item.RankedStock?.CrashRiskScore ?? item.Stock?.CurrentCrashRiskScore ?? 100) / 100d) })
+                .Select(item => new
+                {
+                    item.Holding,
+                    Price = item.RankedStock?.LatestPrice ?? item.Stock?.LatestPrice ?? 0,
+                    Score = item.RankedStock?.Score ?? item.Stock?.StrategyOutput?.FinalScore ?? 0,
+                    Risk = item.RankedStock?.CrashRiskScore ?? item.Stock?.CurrentCrashRiskScore ?? 100
+                })
+                .Where(item => item.Price > 0 && item.Score >= 45 && item.Risk <= 70)
+                .Select(item => new
+                {
+                    item.Holding,
+                    Signal = item.Score * Math.Max(0.1, 1d - item.Risk / 100d),
+                    Cap = Math.Min(SinglePositionLimitPercentage,
+                        item.Score >= 75 && item.Risk <= 35 ? 30d :
+                        item.Score >= 65 && item.Risk <= 45 ? 25d :
+                        item.Score >= 55 && item.Risk <= 60 ? 15d : 8d)
+                })
                 .ToList();
             var remainingBudget = Math.Max(0, 100d - CashReservePercentage);
-            var cap = SinglePositionLimitPercentage;
 
             while (active.Count > 0 && remainingBudget > 0.0001)
             {
                 var totalSignal = active.Sum(item => item.Signal);
-                var capped = active.Where(item => remainingBudget * item.Signal / totalSignal > cap).ToList();
+                var capped = active.Where(item => remainingBudget * item.Signal / totalSignal > item.Cap).ToList();
                 if (capped.Count == 0)
                 {
                     foreach (var item in active) targets[item.Holding] = remainingBudget * item.Signal / totalSignal;
                     break;
                 }
 
-                foreach (var item in capped) { targets[item.Holding] = cap; remainingBudget -= cap; active.Remove(item); }
+                foreach (var item in capped) { targets[item.Holding] = item.Cap; remainingBudget -= item.Cap; active.Remove(item); }
             }
 
             return targets;

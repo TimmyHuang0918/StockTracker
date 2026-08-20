@@ -40,9 +40,8 @@ namespace StockTracker
         {
             _holdingDetailsVisible = !_holdingDetailsVisible;
             var visibility = _holdingDetailsVisible ? Visibility.Visible : Visibility.Collapsed;
-            HoldingQuantityColumn.Visibility = visibility;
             HoldingAverageCostColumn.Visibility = visibility;
-            ToggleHoldingDetailsButton.Content = _holdingDetailsVisible ? "隱藏成本／股數" : "顯示成本／股數";
+            ToggleHoldingDetailsButton.Content = _holdingDetailsVisible ? "隱藏成本" : "顯示成本";
         }
     }
 }
