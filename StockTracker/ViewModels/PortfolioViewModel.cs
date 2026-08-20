@@ -119,6 +119,7 @@ namespace StockTracker.ViewModels
         public decimal StockMarketValue => Holdings.Sum(x => x.MarketValue);
         public decimal TotalAssets => StockMarketValue + Cash;
         public double CashRatio => TotalAssets == 0 ? 0 : (double)(Cash / TotalAssets * 100m);
+        public double StockHoldingRatio => TotalAssets == 0 ? 0 : (double)(StockMarketValue / TotalAssets * 100m);
         public decimal NetInvested => (_settings.CashFlows ?? new List<PortfolioCashFlow>()).Sum(x => x.Amount);
         public decimal CumulativeProfitLoss => TotalAssets - NetInvested;
         public double CumulativeReturnPercentage => NetInvested == 0 ? 0 : (double)(CumulativeProfitLoss / NetInvested * 100m);
@@ -312,7 +313,7 @@ namespace StockTracker.ViewModels
                 var rankedStock = _mainViewModel?.FindLatestMarketScanStock(holding.Symbol);
                 holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), rankedStock, total, SinglePositionLimitPercentage, available, targets.TryGetValue(holding, out var target) ? target : 0);
             }
-            OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio));
+            OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio)); OnPropertyChanged(nameof(StockHoldingRatio));
             OnPropertyChanged(nameof(NetInvested)); OnPropertyChanged(nameof(CumulativeProfitLoss)); OnPropertyChanged(nameof(CumulativeReturnPercentage));
         }
 
