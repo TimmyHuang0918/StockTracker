@@ -672,13 +672,13 @@
     "DecliningCount": 83,
     "AdvanceRatioPercent": 58.291457286432160804020100503,
     "AverageChange1D": 0.6831317100671596672969899084,
-    "AverageChange5D": 3.835338324631178118520480971,
+    "AverageChange5D": 3.8353383246311781185204809711,
     "AverageVolumeRatio20D": 1.0466387406513252864077669903,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "6187",
       "3105",
+      "6187",
       "7751"
     ],
     "WeakSymbols": [
