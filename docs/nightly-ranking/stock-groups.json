@@ -19456,6 +19456,15 @@
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
+    "Symbol": "6950",
+    "Name": "科科科技-KY",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "6951",
     "Name": "青新-創",
     "Industry": "綠能環保",
@@ -20040,6 +20049,15 @@
   {
     "Symbol": "7669",
     "Name": "碩正科技",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7686",
+    "Name": "捷立康",
     "Industry": "待分類",
     "Themes": [],
     "CoreThemes": [],
