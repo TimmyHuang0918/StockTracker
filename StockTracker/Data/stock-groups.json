@@ -2070,14 +2070,12 @@
     "industryCode": "21",
     "industry": "化學工業",
     "themes": [
-      "PCB",
-      "PCB上游－化學材料／薄膜"
+      "PCB"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
     "coreThemes": [
-      "PCB",
-      "PCB上游－化學材料／薄膜"
+      "PCB"
     ]
   },
   {
@@ -3583,9 +3581,6 @@
     "themes": [
       "AI伺服器",
       "電子零組件",
-      "電動車",
-      "電源",
-      "儲能",
       "機器人／自動化",
       "AI電源／機櫃",
       "綠能／儲能"
@@ -3669,7 +3664,7 @@
       "AI伺服器",
       "其他電子",
       "電子零組件",
-      "電動車",
+      "汽車／電動車",
       "AI伺服器／整機"
     ],
     "enabled": true,
@@ -3771,7 +3766,6 @@
     "industryCode": "24",
     "industry": "半導體業",
     "themes": [
-      "AI",
       "半導體",
       "先進封裝",
       "晶圓代工"
@@ -4034,7 +4028,6 @@
     "industryCode": "25",
     "industry": "電腦及週邊",
     "themes": [
-      "AI PC",
       "電腦及週邊",
       "筆記型電腦／PC"
     ],
@@ -4556,7 +4549,6 @@
     "industryCode": "27",
     "industry": "通信網路業",
     "themes": [
-      "電信",
       "網通"
     ],
     "enabled": true,
@@ -4654,12 +4646,12 @@
     "industry": "電子零組件業",
     "themes": [
       "電子零組件",
-      "AI散熱"
+      "散熱／熱管理"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
-      "AI散熱"
+      "散熱／熱管理"
     ]
   },
   {
@@ -4972,7 +4964,6 @@
     "industryCode": "24",
     "industry": "半導體業",
     "themes": [
-      "AI",
       "IC設計",
       "半導體"
     ],
@@ -5122,14 +5113,14 @@
       "半導體設備",
       "電子零組件",
       "PCB",
-      "PCB設備自動化－機械／AOI"
+      "PCB設備／耗材"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
       "半導體設備",
       "PCB",
-      "PCB設備自動化－機械／AOI"
+      "PCB設備／耗材"
     ]
   },
   {
@@ -6698,8 +6689,7 @@
     "industryCode": "17",
     "industry": "金融保險業",
     "themes": [
-      "金融",
-      "保險"
+      "金融"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
@@ -6714,8 +6704,7 @@
     "industryCode": "17",
     "industry": "金融保險業",
     "themes": [
-      "金融",
-      "保險"
+      "金融"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
@@ -6771,8 +6760,7 @@
     "industryCode": "17",
     "industry": "金融保險業",
     "themes": [
-      "金融",
-      "銀行"
+      "金融"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
@@ -6826,8 +6814,7 @@
     "industryCode": "17",
     "industry": "金融保險業",
     "themes": [
-      "金融",
-      "銀行"
+      "金融"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
@@ -7192,7 +7179,6 @@
     "industryCode": "26",
     "industry": "光電業",
     "themes": [
-      "手機供應鏈",
       "光電"
     ],
     "enabled": true,
@@ -7285,14 +7271,13 @@
     "industry": "電腦及週邊",
     "themes": [
       "AI伺服器",
-      "散熱",
       "電腦及週邊",
-      "AI散熱"
+      "散熱／熱管理"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
-      "AI散熱"
+      "散熱／熱管理"
     ]
   },
   {
@@ -7425,13 +7410,12 @@
     "industryCode": "29",
     "industry": "電子通路業",
     "themes": [
-      "電子通路",
-      "被動元件通路"
+      "電子通路"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
-      "被動元件通路"
+      "電子通路"
     ]
   },
   {
@@ -7510,8 +7494,7 @@
     "industry": "半導體業",
     "themes": [
       "IC設計",
-      "半導體",
-      "面板驅動IC"
+      "半導體"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
@@ -7993,13 +7976,12 @@
     "industryCode": "28",
     "industry": "電子零組件業",
     "themes": [
-      "電子零組件",
-      "被動元件通路"
+      "電子零組件"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
-      "被動元件通路"
+      "電子零組件"
     ]
   },
   {
@@ -8314,13 +8296,13 @@
     "industry": "電機機械",
     "themes": [
       "PCB",
-      "PCB設備自動化－機械／AOI"
+      "PCB設備／耗材"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
     "coreThemes": [
       "PCB",
-      "PCB設備自動化－機械／AOI"
+      "PCB設備／耗材"
     ]
   },
   {
@@ -9117,13 +9099,12 @@
     "themes": [
       "AI伺服器",
       "其他電子",
-      "散熱",
-      "AI散熱"
+      "散熱／熱管理"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
-      "AI散熱"
+      "散熱／熱管理"
     ]
   },
   {
@@ -10253,13 +10234,13 @@
     "themes": [
       "光電",
       "PCB",
-      "PCB設備自動化－機械／AOI"
+      "PCB設備／耗材"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
     "coreThemes": [
       "PCB",
-      "PCB設備自動化－機械／AOI"
+      "PCB設備／耗材"
     ]
   },
   {
@@ -10677,14 +10658,12 @@
     "industry": "電子零組件業",
     "themes": [
       "電子零組件",
-      "PCB",
-      "PCB上游－化學材料／薄膜"
+      "PCB"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
     "coreThemes": [
-      "PCB",
-      "PCB上游－化學材料／薄膜"
+      "PCB"
     ]
   },
   {
@@ -10721,12 +10700,12 @@
     "industry": "電子零組件業",
     "themes": [
       "電子零組件",
-      "AI散熱"
+      "散熱／熱管理"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
-      "AI散熱"
+      "散熱／熱管理"
     ]
   },
   {
@@ -15142,13 +15121,13 @@
     "themes": [
       "電子零組件",
       "PCB",
-      "PCB設備耗材－鑽孔／工具"
+      "PCB設備／耗材"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
     "coreThemes": [
       "PCB",
-      "PCB設備耗材－鑽孔／工具"
+      "PCB設備／耗材"
     ]
   },
   {
@@ -17958,13 +17937,13 @@
     "themes": [
       "其他電子",
       "PCB",
-      "PCB設備自動化－機械／AOI"
+      "PCB設備／耗材"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
     "coreThemes": [
       "PCB",
-      "PCB設備自動化－機械／AOI"
+      "PCB設備／耗材"
     ]
   },
   {
@@ -22281,13 +22260,13 @@
     "themes": [
       "其他電子",
       "PCB",
-      "PCB設備耗材－鑽孔／工具"
+      "PCB設備／耗材"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
     "coreThemes": [
       "PCB",
-      "PCB設備耗材－鑽孔／工具"
+      "PCB設備／耗材"
     ]
   },
   {
