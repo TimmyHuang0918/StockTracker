@@ -9788,6 +9788,15 @@
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
+    "Symbol": "3718",
+    "Name": "中光電投控",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "4102",
     "Name": "永日",
     "Industry": "生技醫療業",
