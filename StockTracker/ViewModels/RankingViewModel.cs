@@ -89,6 +89,7 @@ namespace StockTracker.ViewModels
     /// <summary>全市場掃描頁使用的市場資金與選擇權情緒摘要。</summary>
     public sealed class MarketOverviewSnapshot
     {
+        public IReadOnlyList<MarketOverviewDay> Days { get; set; } = Array.Empty<MarketOverviewDay>();
         public DateTime TradeDate { get; set; }
         public long ForeignNet5D { get; set; }
         public long TrustNet5D { get; set; }
@@ -118,6 +119,27 @@ namespace StockTracker.ViewModels
             var lots = shares / 1000m;
             return lots > 0m ? $"+{lots:N0} 張" : lots < 0m ? $"{lots:N0} 張" : "0 張";
         }
+    }
+
+    public sealed class MarketOverviewDay
+    {
+        public DateTime TradeDate { get; set; }
+        public long ForeignNet { get; set; }
+        public long TrustNet { get; set; }
+        public long DealerNet { get; set; }
+        public long ThreeMajorNet { get; set; }
+        public long MarginBalance { get; set; }
+        public long ShortBalance { get; set; }
+        public decimal? PutCallOpenInterestRatio { get; set; }
+        public string TradeDateText => TradeDate == DateTime.MinValue ? "—" : TradeDate.ToString("MM/dd");
+        public string ForeignNetText => FormatLots(ForeignNet);
+        public string TrustNetText => FormatLots(TrustNet);
+        public string DealerNetText => FormatLots(DealerNet);
+        public string ThreeMajorNetText => FormatLots(ThreeMajorNet);
+        public string MarginBalanceText => FormatLots(MarginBalance);
+        public string ShortBalanceText => FormatLots(ShortBalance);
+        public string PutCallOpenInterestRatioText => PutCallOpenInterestRatio.HasValue ? $"{PutCallOpenInterestRatio.Value:F1}%" : "—";
+        private static string FormatLots(long shares) => shares > 0 ? $"+{shares / 1000m:N0}" : shares < 0 ? $"{shares / 1000m:N0}" : "0";
     }
 
     /// <summary>Aggregated atmosphere for one official industry or theme.</summary>
@@ -2862,6 +2884,26 @@ namespace StockTracker.ViewModels
                 overview.PutCallOpenInterestRatio = putCallDays.Last().OpenInterestRatioPercent;
                 overview.PutCallOpenInterestRatio5DAverage = putCallDays.Average(x => x.OpenInterestRatioPercent);
             }
+
+            var marginByDate = marginDays.ToDictionary(x => x.TradeDate.Date);
+            var putCallByDate = putCallDays.ToDictionary(x => x.TradeDate.Date);
+            overview.Days = latestDates.Select(date =>
+            {
+                var records = allRecords.Where(x => x.TradeDate.Date == date).ToList();
+                marginByDate.TryGetValue(date, out var margin);
+                putCallByDate.TryGetValue(date, out var putCall);
+                return new MarketOverviewDay
+                {
+                    TradeDate = date,
+                    ForeignNet = records.Sum(x => x.ForeignNet),
+                    TrustNet = records.Sum(x => x.InvestmentTrustNet),
+                    DealerNet = records.Sum(x => x.DealerNet),
+                    ThreeMajorNet = records.Sum(x => x.ThreeMajorNet),
+                    MarginBalance = margin?.MarginBalance ?? 0,
+                    ShortBalance = margin?.ShortBalance ?? 0,
+                    PutCallOpenInterestRatio = putCall?.OpenInterestRatioPercent
+                };
+            }).ToList();
 
             return overview;
         }

@@ -103,37 +103,21 @@
                     <TextBlock Text="全市場資金總覽" FontSize="15" FontWeight="SemiBold" Foreground="White" />
                     <TextBlock DockPanel.Dock="Right" Text="{Binding MarketOverview.TradeDateText}" Foreground="#8b949e" FontSize="11" />
                 </DockPanel>
-                <WrapPanel>
-                    <Border Background="#21262d" BorderBrush="#30363d" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,8,0">
-                        <StackPanel>
-                            <TextBlock Text="三大法人買賣超（近五日，張）" FontSize="10" Foreground="#8b949e" />
-                            <WrapPanel Margin="0,4,0,0">
-                                <StackPanel Margin="0,0,12,0"><TextBlock Text="外資" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketOverview.ForeignNet5DText}" FontWeight="Bold" Foreground="White" /></StackPanel>
-                                <StackPanel Margin="0,0,12,0"><TextBlock Text="投信" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketOverview.TrustNet5DText}" FontWeight="Bold" Foreground="White" /></StackPanel>
-                                <StackPanel Margin="0,0,12,0"><TextBlock Text="自營商" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketOverview.DealerNet5DText}" FontWeight="Bold" Foreground="White" /></StackPanel>
-                                <StackPanel><TextBlock Text="合計" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketOverview.ThreeMajorNet5DText}" FontWeight="Bold" Foreground="White" /></StackPanel>
-                            </WrapPanel>
-                        </StackPanel>
-                    </Border>
-                    <Border Background="#21262d" BorderBrush="#30363d" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,8,0">
-                        <StackPanel>
-                            <TextBlock Text="融資融券（上市，張）" FontSize="10" Foreground="#8b949e" />
-                            <WrapPanel Margin="0,4,0,0">
-                                <StackPanel Margin="0,0,14,0"><TextBlock Text="融資餘額" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketOverview.MarginBalanceText}" FontWeight="Bold" Foreground="White" /><TextBlock Text="{Binding MarketOverview.MarginBalanceChange5DText, StringFormat=五日 {0}}" FontSize="10" Foreground="#8b949e" /></StackPanel>
-                                <StackPanel><TextBlock Text="融券餘額" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketOverview.ShortBalanceText}" FontWeight="Bold" Foreground="White" /><TextBlock Text="{Binding MarketOverview.ShortBalanceChange5DText, StringFormat=五日 {0}}" FontSize="10" Foreground="#8b949e" /></StackPanel>
-                            </WrapPanel>
-                        </StackPanel>
-                    </Border>
-                    <Border Background="#21262d" BorderBrush="#30363d" BorderThickness="1" CornerRadius="4" Padding="8">
-                        <StackPanel>
-                            <TextBlock Text="臺指選擇權 P/C Ratio（未平倉量）" FontSize="10" Foreground="#8b949e" />
-                            <WrapPanel Margin="0,4,0,0">
-                                <StackPanel Margin="0,0,14,0"><TextBlock Text="當日" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketOverview.PutCallOpenInterestRatioText}" FontWeight="Bold" Foreground="White" /></StackPanel>
-                                <StackPanel><TextBlock Text="五日均值" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketOverview.PutCallOpenInterestRatio5DAverageText}" FontWeight="Bold" Foreground="White" /></StackPanel>
-                            </WrapPanel>
-                        </StackPanel>
-                    </Border>
-                </WrapPanel>
+                <ItemsControl ItemsSource="{Binding MarketOverview.Days}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#21262d" BorderBrush="#30363d" BorderThickness="1" CornerRadius="4" Padding="7" Margin="0,0,7,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding TradeDateText}" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                                    <TextBlock Text="法人：外／投／自／合" FontSize="9" Foreground="#8b949e" /><TextBlock Text="{Binding ForeignNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding TrustNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding DealerNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding ThreeMajorNetText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    <TextBlock Text="融資／融券（張）" FontSize="9" Foreground="#8b949e" Margin="0,4,0,0" /><TextBlock Text="{Binding MarginBalanceText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding ShortBalanceText}" FontSize="10" Foreground="White" />
+                                    <TextBlock Text="P/C 未平倉" FontSize="9" Foreground="#8b949e" Margin="0,4,0,0" /><TextBlock Text="{Binding PutCallOpenInterestRatioText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </Border>
 
