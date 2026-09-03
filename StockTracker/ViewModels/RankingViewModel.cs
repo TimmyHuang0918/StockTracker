@@ -86,6 +86,40 @@ namespace StockTracker.ViewModels
         }
     }
 
+    /// <summary>全市場掃描頁使用的市場資金與選擇權情緒摘要。</summary>
+    public sealed class MarketOverviewSnapshot
+    {
+        public DateTime TradeDate { get; set; }
+        public long ForeignNet5D { get; set; }
+        public long TrustNet5D { get; set; }
+        public long DealerNet5D { get; set; }
+        public long ThreeMajorNet5D { get; set; }
+        public long MarginBalance { get; set; }
+        public long MarginBalanceChange5D { get; set; }
+        public long ShortBalance { get; set; }
+        public long ShortBalanceChange5D { get; set; }
+        public decimal? PutCallOpenInterestRatio { get; set; }
+        public decimal? PutCallOpenInterestRatio5DAverage { get; set; }
+
+        public string TradeDateText => TradeDate == DateTime.MinValue ? "資料尚未載入" : TradeDate.ToString("yyyy/MM/dd");
+        public string ForeignNet5DText => FormatLots(ForeignNet5D);
+        public string TrustNet5DText => FormatLots(TrustNet5D);
+        public string DealerNet5DText => FormatLots(DealerNet5D);
+        public string ThreeMajorNet5DText => FormatLots(ThreeMajorNet5D);
+        public string MarginBalanceText => FormatLots(MarginBalance);
+        public string MarginBalanceChange5DText => FormatLots(MarginBalanceChange5D);
+        public string ShortBalanceText => FormatLots(ShortBalance);
+        public string ShortBalanceChange5DText => FormatLots(ShortBalanceChange5D);
+        public string PutCallOpenInterestRatioText => PutCallOpenInterestRatio.HasValue ? $"{PutCallOpenInterestRatio.Value:F1}%" : "—";
+        public string PutCallOpenInterestRatio5DAverageText => PutCallOpenInterestRatio5DAverage.HasValue ? $"{PutCallOpenInterestRatio5DAverage.Value:F1}%" : "—";
+
+        private static string FormatLots(long shares)
+        {
+            var lots = shares / 1000m;
+            return lots > 0m ? $"+{lots:N0} 張" : lots < 0m ? $"{lots:N0} 張" : "0 張";
+        }
+    }
+
     /// <summary>Aggregated atmosphere for one official industry or theme.</summary>
     public sealed class MarketGroupSnapshot
     {
@@ -295,6 +329,7 @@ namespace StockTracker.ViewModels
         private string _scoreDay3Header = "D3";
         private string _scoreDay4Header = "D4";
         private RankedStock _stock0050;
+        private MarketOverviewSnapshot _marketOverview = new MarketOverviewSnapshot();
         private IReadOnlyList<ThemeStatus> _themeStatuses = Array.Empty<ThemeStatus>();
         private string _selectedMarketGroup;
         private string _groupEditorName;
@@ -575,6 +610,16 @@ namespace StockTracker.ViewModels
         }
 
         public bool Has0050Data => Stock0050 != null;
+
+        public MarketOverviewSnapshot MarketOverview
+        {
+            get => _marketOverview;
+            private set
+            {
+                _marketOverview = value ?? new MarketOverviewSnapshot();
+                OnPropertyChanged();
+            }
+        }
 
         public MarketBreadthSnapshot MarketBreadth => CreateMarketBreadth(RankedStocks);
         public IReadOnlyList<MarketGroupSnapshot> MarketGroups => CreateMarketGroups(RankedStocks, _stockGroupCatalog);
@@ -1569,6 +1614,7 @@ namespace StockTracker.ViewModels
             html.AppendLine(".btn-csv:hover{background:var(--primary-hover);}");
 
             html.AppendLine(".panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
+            html.AppendLine(".market-overview{display:grid;grid-template-columns:2fr 1.5fr 1fr;gap:10px;margin-bottom:16px;}.market-overview .stat-box{background:var(--panel-bg);border:1px solid var(--border);}.market-overview .stat-label{margin-bottom:8px;}.market-overview .overview-values{display:flex;flex-wrap:wrap;gap:12px;}.market-overview .overview-item{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--text-muted);}.market-overview .overview-item strong{color:#fff;font-size:15px;}@media(max-width:900px){.market-overview{grid-template-columns:1fr;}}");
             html.AppendLine(".breadth-card{position:static;width:142px;min-width:0;padding:10px;margin:0 0 16px auto;text-align:center;overflow:visible;isolation:isolate;}.breadth-title{margin:0;color:#fff;font-size:13px;}.breadth-subtitle{display:none;}.breadth-donut{width:86px;height:86px;border-radius:50%;margin:6px auto;display:grid;place-items:center;position:relative;overflow:visible;}.breadth-donut::after{content:'';position:absolute;inset:12px;background:var(--panel-bg);border-radius:50%;}.breadth-center{position:relative;z-index:1;display:flex;flex-direction:column;line-height:1.05;white-space:nowrap;}.breadth-tone{font-size:12px;font-weight:700;}.breadth-ratio{font-size:16px;font-weight:700;color:#fff;}.breadth-counts{display:flex;justify-content:center;gap:6px;font-size:10px;font-weight:600;white-space:nowrap;}.breadth-average{margin:4px 0 0;font-size:10px;color:var(--text-muted);}.breadth-note{display:none;}");
             html.AppendLine(".hero-card{background:linear-gradient(135deg, #1f2937 0%, #111827 100%);border:2px solid #2563eb;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 8px 24px rgba(37,99,235,0.2);}");
             html.AppendLine(".hero-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:16px;}");
@@ -1657,6 +1703,14 @@ namespace StockTracker.ViewModels
             html.AppendLine("    <button id='btnDownloadCsv' class='btn-csv'>💾 下載 CSV 檔</button>");
             html.AppendLine("  </div>");
             html.AppendLine("</div>");
+
+            html.AppendLine("<section class='market-overview'>");
+            html.AppendLine("<div class='stat-box'><div class='stat-label'>三大法人買賣超（近五日，張）</div><div class='overview-values'>");
+            html.AppendLine($"<div class='overview-item'>外資<strong>{HtmlEncode(MarketOverview.ForeignNet5DText)}</strong></div><div class='overview-item'>投信<strong>{HtmlEncode(MarketOverview.TrustNet5DText)}</strong></div><div class='overview-item'>自營商<strong>{HtmlEncode(MarketOverview.DealerNet5DText)}</strong></div><div class='overview-item'>合計<strong>{HtmlEncode(MarketOverview.ThreeMajorNet5DText)}</strong></div></div></div>");
+            html.AppendLine("<div class='stat-box'><div class='stat-label'>融資融券（上市，張）</div><div class='overview-values'>");
+            html.AppendLine($"<div class='overview-item'>融資餘額<strong>{HtmlEncode(MarketOverview.MarginBalanceText)}</strong><span>五日 {HtmlEncode(MarketOverview.MarginBalanceChange5DText)}</span></div><div class='overview-item'>融券餘額<strong>{HtmlEncode(MarketOverview.ShortBalanceText)}</strong><span>五日 {HtmlEncode(MarketOverview.ShortBalanceChange5DText)}</span></div></div></div>");
+            html.AppendLine($"<div class='stat-box'><div class='stat-label'>臺指選擇權 P/C Ratio（未平倉量）</div><div class='overview-values'><div class='overview-item'>當日<strong>{HtmlEncode(MarketOverview.PutCallOpenInterestRatioText)}</strong></div><div class='overview-item'>五日均值<strong>{HtmlEncode(MarketOverview.PutCallOpenInterestRatio5DAverageText)}</strong></div></div></div>");
+            html.AppendLine("</section>");
 
             html.AppendLine("<div class='filter-breadth-layout'>");
             html.AppendLine("<div class=\"panel filter-panel\">");
@@ -2563,6 +2617,7 @@ namespace StockTracker.ViewModels
                 int analyzeChecked = 0;
                 var lockObj = new object();
                 var t86HistoryMap = await _mainViewModel.LoadAllTwseT86HistoriesForScanAsync(scanHistoryStartDate);
+                MarketOverview = await BuildMarketOverviewAsync(t86HistoryMap);
 
                 var parallelOptions = new ParallelOptions
                 {
@@ -2761,6 +2816,54 @@ namespace StockTracker.ViewModels
                 _isScanning = false;
                 CommandManager.InvalidateRequerySuggested();
             }
+        }
+
+        private async Task<MarketOverviewSnapshot> BuildMarketOverviewAsync(IReadOnlyDictionary<string, TwseT86History> t86HistoryMap)
+        {
+            var overview = new MarketOverviewSnapshot();
+            var allRecords = (t86HistoryMap ?? new Dictionary<string, TwseT86History>())
+                .Values
+                .Where(x => x?.RecordsByDate != null)
+                .SelectMany(x => x.RecordsByDate.Values)
+                .Where(x => x != null)
+                .ToList();
+            var latestDates = allRecords.Select(x => x.TradeDate.Date)
+                .Distinct()
+                .OrderByDescending(x => x)
+                .Take(5)
+                .OrderBy(x => x)
+                .ToList();
+            var fiveDayRecords = allRecords.Where(x => latestDates.Contains(x.TradeDate.Date)).ToList();
+            if (latestDates.Count > 0)
+                overview.TradeDate = latestDates.Last();
+            overview.ForeignNet5D = fiveDayRecords.Sum(x => x.ForeignNet);
+            overview.TrustNet5D = fiveDayRecords.Sum(x => x.InvestmentTrustNet);
+            overview.DealerNet5D = fiveDayRecords.Sum(x => x.DealerNet);
+            overview.ThreeMajorNet5D = fiveDayRecords.Sum(x => x.ThreeMajorNet);
+
+            var marginTotals = await _mainViewModel.LoadMarketMarginTotalsForScanAsync(5);
+            var marginDays = (marginTotals ?? Array.Empty<MarketMarginDailyTotal>())
+                .OrderBy(x => x.TradeDate)
+                .ToList();
+            if (marginDays.Count > 0)
+            {
+                var latest = marginDays.Last();
+                var first = marginDays.First();
+                overview.MarginBalance = latest.MarginBalance;
+                overview.ShortBalance = latest.ShortBalance;
+                overview.MarginBalanceChange5D = latest.MarginBalance - first.MarginBalance;
+                overview.ShortBalanceChange5D = latest.ShortBalance - first.ShortBalance;
+            }
+
+            var putCallRecords = await new TaifexPutCallRatioService().GetRecentAsync(5);
+            var putCallDays = (putCallRecords ?? Array.Empty<PutCallRatioRecord>()).ToList();
+            if (putCallDays.Count > 0)
+            {
+                overview.PutCallOpenInterestRatio = putCallDays.Last().OpenInterestRatioPercent;
+                overview.PutCallOpenInterestRatio5DAverage = putCallDays.Average(x => x.OpenInterestRatioPercent);
+            }
+
+            return overview;
         }
 
         private sealed class RecentAnalysisResult

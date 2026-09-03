@@ -194,6 +194,42 @@ ORDER BY Symbol, TradeDate";
             });
         }
 
+        /// <summary>取得上市全市場最近交易日的融資融券餘額加總。</summary>
+        public Task<IReadOnlyList<MarketMarginDailyTotal>> LoadMarketTotalsAsync(int dayCount)
+        {
+            return Task.Run<IReadOnlyList<MarketMarginDailyTotal>>(() =>
+            {
+                var result = new List<MarketMarginDailyTotal>();
+                using (var conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+SELECT TradeDate, SUM(MarginBalance), SUM(ShortBalance)
+FROM Margin
+GROUP BY TradeDate
+ORDER BY TradeDate DESC
+LIMIT @count";
+                        cmd.Parameters.AddWithValue("@count", Math.Max(1, dayCount));
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            while (rdr.Read())
+                            {
+                                result.Add(new MarketMarginDailyTotal
+                                {
+                                    TradeDate = DateTime.Parse(rdr.GetString(0)),
+                                    MarginBalance = rdr.IsDBNull(1) ? 0 : rdr.GetInt64(1),
+                                    ShortBalance = rdr.IsDBNull(2) ? 0 : rdr.GetInt64(2)
+                                });
+                            }
+                        }
+                    }
+                }
+                return result.OrderBy(x => x.TradeDate).ToList();
+            });
+        }
+
         public Task<IReadOnlyList<TwseMarginHistory>> LoadHistoriesBySymbolsAsync(IEnumerable<string> symbols)
         {
             return Task.Run<IReadOnlyList<TwseMarginHistory>>(() =>

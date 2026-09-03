@@ -264,6 +264,20 @@ namespace StockTracker.Models
         public System.Collections.Generic.Dictionary<DateTime, TwseMarginRecord> RecordsByDate { get; set; } = new System.Collections.Generic.Dictionary<DateTime, TwseMarginRecord>();
     }
 
+    public class MarketMarginDailyTotal
+    {
+        public DateTime TradeDate { get; set; }
+        public long MarginBalance { get; set; }
+        public long ShortBalance { get; set; }
+    }
+
+    public class PutCallRatioRecord
+    {
+        public DateTime TradeDate { get; set; }
+        public decimal VolumeRatioPercent { get; set; }
+        public decimal OpenInterestRatioPercent { get; set; }
+    }
+
     public class DailyCloseRecord
     {
         public DateTime TradeDate { get; set; }

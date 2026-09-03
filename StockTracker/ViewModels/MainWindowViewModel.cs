@@ -1346,6 +1346,11 @@ namespace StockTracker.ViewModels
             return result;
         }
 
+        public Task<IReadOnlyList<MarketMarginDailyTotal>> LoadMarketMarginTotalsForScanAsync(int dayCount = 5)
+        {
+            return _twseMarginRepository.LoadMarketTotalsAsync(dayCount);
+        }
+
         private void RebuildMarginMetricHistories(IEnumerable<TwseMarginHistory> marginHistories, IEnumerable<DailyCloseHistory> dailyPriceHistories)
         {
             _twseMarginMetricHistories.Clear();
