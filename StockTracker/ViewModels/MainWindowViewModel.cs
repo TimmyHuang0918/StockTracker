@@ -1022,7 +1022,9 @@ namespace StockTracker.ViewModels
                     bool hasMargin = existingDatesMargin.Contains(date.Date);
                     bool hasPrice = existingDatesPrice.Contains(date.Date);
 
-                    if (hasT86 && hasMargin && hasPrice)
+                    // 最近七天一定重抓：可修正資料來源欄位變動或解析邏輯更新後的既有資料。
+                    var refreshRecentHistory = date.Date >= DateTime.Today.AddDays(-7);
+                    if (hasT86 && hasMargin && hasPrice && !refreshRecentHistory)
                     {
                         continue;
                     }

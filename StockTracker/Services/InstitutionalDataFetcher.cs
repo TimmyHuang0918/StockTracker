@@ -78,11 +78,11 @@ namespace StockTracker.Services
                         Name = item[1]?.ToString().Trim(),
                         MarginBalance = ParseLongWrapper(item[6]?.ToString()),
                         MarginPurchaseSales = ParseLongWrapper(item[6]?.ToString()) - ParseLongWrapper(item[2]?.ToString()),
-                        MarginRedemption = ParseLongWrapper(item[4]?.ToString()),
-                        ShortCovering = ParseLongWrapper(item[8]?.ToString()),
-                        ShortSales = ParseLongWrapper(item[9]?.ToString()),
-                        ShortRedemption = ParseLongWrapper(item[10]?.ToString()),
-                        ShortBalance = ParseLongWrapper(item[11]?.ToString())
+                        MarginRedemption = ParseLongWrapper(item[5]?.ToString()),
+                        ShortCovering = ParseLongWrapper(item[9]?.ToString()),
+                        ShortSales = ParseLongWrapper(item[10]?.ToString()),
+                        ShortRedemption = ParseLongWrapper(item[11]?.ToString()),
+                        ShortBalance = ParseLongWrapper(item[13]?.ToString())
                     };
 
                     if (!string.IsNullOrWhiteSpace(record.Symbol))

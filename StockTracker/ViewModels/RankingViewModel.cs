@@ -1458,6 +1458,8 @@ namespace StockTracker.ViewModels
             var updateSummary = latestScoreDate.HasValue
                 ? $"資料日期：{latestScoreDate.Value:yyyy-MM-dd} · 筆數：{exportStocks.Count}"
                 : $"筆數：{exportStocks.Count}";
+            var marketOverviewRows = string.Join(string.Empty, (MarketOverview.Days ?? Array.Empty<MarketOverviewDay>()).Select(day =>
+                $"<tr><td>{HtmlEncode(day.TradeDateText)}</td><td>{HtmlEncode(day.ForeignNetText)}</td><td>{HtmlEncode(day.TrustNetText)}</td><td>{HtmlEncode(day.DealerNetText)}</td><td>{HtmlEncode(day.ThreeMajorNetText)}</td><td>{HtmlEncode(day.MarginBalanceText)}</td><td>{HtmlEncode(day.ShortBalanceText)}</td><td>{HtmlEncode(day.PutCallOpenInterestRatioText)}</td></tr>"));
 
             // Fetch 0050 K-Line data for 120 days
             var kLineData0050Json = "[]";
@@ -1726,13 +1728,9 @@ namespace StockTracker.ViewModels
             html.AppendLine("  </div>");
             html.AppendLine("</div>");
 
-            html.AppendLine("<section class='market-overview'>");
-            html.AppendLine("<div class='stat-box'><div class='stat-label'>三大法人買賣超（近五日，張）</div><div class='overview-values'>");
-            html.AppendLine($"<div class='overview-item'>外資<strong>{HtmlEncode(MarketOverview.ForeignNet5DText)}</strong></div><div class='overview-item'>投信<strong>{HtmlEncode(MarketOverview.TrustNet5DText)}</strong></div><div class='overview-item'>自營商<strong>{HtmlEncode(MarketOverview.DealerNet5DText)}</strong></div><div class='overview-item'>合計<strong>{HtmlEncode(MarketOverview.ThreeMajorNet5DText)}</strong></div></div></div>");
-            html.AppendLine("<div class='stat-box'><div class='stat-label'>融資融券（上市，張）</div><div class='overview-values'>");
-            html.AppendLine($"<div class='overview-item'>融資餘額<strong>{HtmlEncode(MarketOverview.MarginBalanceText)}</strong><span>五日 {HtmlEncode(MarketOverview.MarginBalanceChange5DText)}</span></div><div class='overview-item'>融券餘額<strong>{HtmlEncode(MarketOverview.ShortBalanceText)}</strong><span>五日 {HtmlEncode(MarketOverview.ShortBalanceChange5DText)}</span></div></div></div>");
-            html.AppendLine($"<div class='stat-box'><div class='stat-label'>臺指選擇權 P/C Ratio（未平倉量）</div><div class='overview-values'><div class='overview-item'>當日<strong>{HtmlEncode(MarketOverview.PutCallOpenInterestRatioText)}</strong></div><div class='overview-item'>五日均值<strong>{HtmlEncode(MarketOverview.PutCallOpenInterestRatio5DAverageText)}</strong></div></div></div>");
-            html.AppendLine("</section>");
+            html.AppendLine("<section class='panel'><h3 style='margin:0 0 10px'>全市場資金總覽（最近五個交易日，含當日）</h3><div style='overflow:auto'><table><thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th><th>三大法人</th><th>融資餘額</th><th>融券餘額</th><th>P/C 未平倉</th></tr></thead><tbody>");
+            html.AppendLine(marketOverviewRows);
+            html.AppendLine("</tbody></table></div><p class='muted' style='margin:8px 0 0'>法人與資券單位：張；資券為上市全市場餘額；P/C 為臺指選擇權未平倉量比率。</p></section>");
 
             html.AppendLine("<div class='filter-breadth-layout'>");
             html.AppendLine("<div class=\"panel filter-panel\">");
