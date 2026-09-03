@@ -1843,7 +1843,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("</div>");
             html.AppendLine("</div>");
 
-            html.AppendLine("<div class=\"panel\">");
+            html.AppendLine("<div class=\"panel\" style='display:none'>");
             html.AppendLine("<h3 style='margin:0 0 12px 0;font-size:18px;font-weight:600;'>📊 0050 元大台灣50 技術分析圖表 (120日)</h3>");
             html.AppendLine("<div id='chart0050Container' style='background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;'>");
             html.AppendLine("<canvas id='chartCandlestick' style='width:100%;height:400px;display:block;margin-bottom:8px;'></canvas>");
@@ -2371,8 +2371,6 @@ namespace StockTracker.ViewModels
             html.AppendLine("  $('stockModal').style.display = 'flex';");
             html.AppendLine("  document.body.style.overflow = 'hidden';");
             html.AppendLine("}");
-            html.AppendLine("populate0050Hero();");
-            html.AppendLine("draw0050Charts();");
 
             // 下拉選單填充
             html.AppendLine("function fillSelect(prop, sel){");
