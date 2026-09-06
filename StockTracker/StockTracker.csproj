@@ -234,6 +234,7 @@
     <Compile Include="Services\InstitutionalDataFetcher.cs" />
     <Compile Include="Services\MarginDataFetcher.cs" />
     <Compile Include="Services\MarginMetricCalculator.cs" />
+    <Compile Include="Services\MarketInstitutionalAmountService.cs" />
     <Compile Include="Services\SKAPI.cs" />
     <Compile Include="Services\TechnicalLineQuantizer.cs" />
     <Compile Include="Services\TaifexPutCallRatioService.cs" />

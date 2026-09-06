@@ -91,10 +91,10 @@ namespace StockTracker.ViewModels
     {
         public IReadOnlyList<MarketOverviewDay> Days { get; set; } = Array.Empty<MarketOverviewDay>();
         public DateTime TradeDate { get; set; }
-        public long ForeignNet5D { get; set; }
-        public long TrustNet5D { get; set; }
-        public long DealerNet5D { get; set; }
-        public long ThreeMajorNet5D { get; set; }
+        public decimal ForeignNet5D { get; set; }
+        public decimal TrustNet5D { get; set; }
+        public decimal DealerNet5D { get; set; }
+        public decimal ThreeMajorNet5D { get; set; }
         public long MarginBalance { get; set; }
         public long MarginBalanceChange5D { get; set; }
         public long ShortBalance { get; set; }
@@ -103,10 +103,10 @@ namespace StockTracker.ViewModels
         public decimal? PutCallOpenInterestRatio5DAverage { get; set; }
 
         public string TradeDateText => TradeDate == DateTime.MinValue ? "資料尚未載入" : TradeDate.ToString("yyyy/MM/dd");
-        public string ForeignNet5DText => FormatLots(ForeignNet5D);
-        public string TrustNet5DText => FormatLots(TrustNet5D);
-        public string DealerNet5DText => FormatLots(DealerNet5D);
-        public string ThreeMajorNet5DText => FormatLots(ThreeMajorNet5D);
+        public string ForeignNet5DText => FormatMoney(ForeignNet5D);
+        public string TrustNet5DText => FormatMoney(TrustNet5D);
+        public string DealerNet5DText => FormatMoney(DealerNet5D);
+        public string ThreeMajorNet5DText => FormatMoney(ThreeMajorNet5D);
         public string MarginBalanceText => FormatLots(MarginBalance);
         public string MarginBalanceChange5DText => FormatLots(MarginBalanceChange5D);
         public string ShortBalanceText => FormatLots(ShortBalance);
@@ -119,27 +119,34 @@ namespace StockTracker.ViewModels
             var lots = shares / 1000m;
             return lots > 0m ? $"+{lots:N0} 張" : lots < 0m ? $"{lots:N0} 張" : "0 張";
         }
+
+        private static string FormatMoney(decimal amount)
+        {
+            var billions = amount / 100000000m;
+            return billions > 0m ? $"+{billions:N1} 億" : billions < 0m ? $"{billions:N1} 億" : "0.0 億";
+        }
     }
 
     public sealed class MarketOverviewDay
     {
         public DateTime TradeDate { get; set; }
-        public long ForeignNet { get; set; }
-        public long TrustNet { get; set; }
-        public long DealerNet { get; set; }
-        public long ThreeMajorNet { get; set; }
+        public decimal ForeignNet { get; set; }
+        public decimal TrustNet { get; set; }
+        public decimal DealerNet { get; set; }
+        public decimal ThreeMajorNet { get; set; }
         public long MarginBalance { get; set; }
         public long ShortBalance { get; set; }
         public decimal? PutCallOpenInterestRatio { get; set; }
         public string TradeDateText => TradeDate == DateTime.MinValue ? "—" : TradeDate.ToString("MM/dd");
-        public string ForeignNetText => FormatLots(ForeignNet);
-        public string TrustNetText => FormatLots(TrustNet);
-        public string DealerNetText => FormatLots(DealerNet);
-        public string ThreeMajorNetText => FormatLots(ThreeMajorNet);
+        public string ForeignNetText => FormatMoney(ForeignNet);
+        public string TrustNetText => FormatMoney(TrustNet);
+        public string DealerNetText => FormatMoney(DealerNet);
+        public string ThreeMajorNetText => FormatMoney(ThreeMajorNet);
         public string MarginBalanceText => FormatLots(MarginBalance);
         public string ShortBalanceText => FormatLots(ShortBalance);
         public string PutCallOpenInterestRatioText => PutCallOpenInterestRatio.HasValue ? $"{PutCallOpenInterestRatio.Value:F1}%" : "—";
         private static string FormatLots(long shares) => shares > 0 ? $"+{shares / 1000m:N0}" : shares < 0 ? $"{shares / 1000m:N0}" : "0";
+        private static string FormatMoney(decimal amount) => amount > 0m ? $"+{amount / 100000000m:N1} 億" : amount < 0m ? $"{amount / 100000000m:N1} 億" : "0.0 億";
     }
 
     /// <summary>Aggregated atmosphere for one official industry or theme.</summary>
@@ -1730,7 +1737,7 @@ namespace StockTracker.ViewModels
 
             html.AppendLine("<section class='panel'><h3 style='margin:0 0 10px'>全市場資金總覽（最近五個交易日，含當日）</h3><div style='overflow:auto'><table><thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th><th>三大法人</th><th>融資餘額</th><th>融券餘額</th><th>P/C 未平倉</th></tr></thead><tbody>");
             html.AppendLine(marketOverviewRows);
-            html.AppendLine("</tbody></table></div><p class='muted' style='margin:8px 0 0'>法人與資券單位：張；資券為上市全市場餘額；P/C 為臺指選擇權未平倉量比率。</p></section>");
+            html.AppendLine("</tbody></table></div><p class='muted' style='margin:8px 0 0'>法人為上市、上櫃三大法人官方買賣超金額（億元）；資券為上市全市場餘額（張）；P/C 為臺指選擇權未平倉量比率。</p></section>");
 
             html.AppendLine("<div class='filter-breadth-layout'>");
             html.AppendLine("<div class=\"panel filter-panel\">");
@@ -2856,13 +2863,13 @@ namespace StockTracker.ViewModels
                 .Take(5)
                 .OrderBy(x => x)
                 .ToList();
-            var fiveDayRecords = allRecords.Where(x => latestDates.Contains(x.TradeDate.Date)).ToList();
+            var institutionalAmountByDate = await new MarketInstitutionalAmountService().GetByDatesAsync(latestDates);
             if (latestDates.Count > 0)
                 overview.TradeDate = latestDates.Last();
-            overview.ForeignNet5D = fiveDayRecords.Sum(x => x.ForeignNet);
-            overview.TrustNet5D = fiveDayRecords.Sum(x => x.InvestmentTrustNet);
-            overview.DealerNet5D = fiveDayRecords.Sum(x => x.DealerNet);
-            overview.ThreeMajorNet5D = fiveDayRecords.Sum(x => x.ThreeMajorNet);
+            overview.ForeignNet5D = institutionalAmountByDate.Values.Sum(x => x.ForeignNet);
+            overview.TrustNet5D = institutionalAmountByDate.Values.Sum(x => x.TrustNet);
+            overview.DealerNet5D = institutionalAmountByDate.Values.Sum(x => x.DealerNet);
+            overview.ThreeMajorNet5D = institutionalAmountByDate.Values.Sum(x => x.ThreeMajorNet);
 
             var marginTotals = await _mainViewModel.LoadMarketMarginTotalsForScanAsync(5);
             var marginDays = (marginTotals ?? Array.Empty<MarketMarginDailyTotal>())
@@ -2890,16 +2897,16 @@ namespace StockTracker.ViewModels
             var putCallByDate = putCallDays.ToDictionary(x => x.TradeDate.Date);
             overview.Days = latestDates.Select(date =>
             {
-                var records = allRecords.Where(x => x.TradeDate.Date == date).ToList();
+                institutionalAmountByDate.TryGetValue(date, out var institutionalAmount);
                 marginByDate.TryGetValue(date, out var margin);
                 putCallByDate.TryGetValue(date, out var putCall);
                 return new MarketOverviewDay
                 {
                     TradeDate = date,
-                    ForeignNet = records.Sum(x => x.ForeignNet),
-                    TrustNet = records.Sum(x => x.InvestmentTrustNet),
-                    DealerNet = records.Sum(x => x.DealerNet),
-                    ThreeMajorNet = records.Sum(x => x.ThreeMajorNet),
+                    ForeignNet = institutionalAmount?.ForeignNet ?? 0m,
+                    TrustNet = institutionalAmount?.TrustNet ?? 0m,
+                    DealerNet = institutionalAmount?.DealerNet ?? 0m,
+                    ThreeMajorNet = institutionalAmount?.ThreeMajorNet ?? 0m,
                     MarginBalance = margin?.MarginBalance ?? 0,
                     ShortBalance = margin?.ShortBalance ?? 0,
                     PutCallOpenInterestRatio = putCall?.OpenInterestRatioPercent

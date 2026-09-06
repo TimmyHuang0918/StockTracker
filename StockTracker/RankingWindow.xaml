@@ -110,7 +110,7 @@
                             <Border Background="#21262d" BorderBrush="#30363d" BorderThickness="1" CornerRadius="4" Padding="7" Margin="0,0,7,0">
                                 <StackPanel>
                                     <TextBlock Text="{Binding TradeDateText}" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                                    <TextBlock Text="法人：外／投／自／合" FontSize="9" Foreground="#8b949e" /><TextBlock Text="{Binding ForeignNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding TrustNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding DealerNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding ThreeMajorNetText}" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                    <TextBlock Text="法人淨額（億元）：外／投／自／合" FontSize="9" Foreground="#8b949e" /><TextBlock Text="{Binding ForeignNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding TrustNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding DealerNetText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding ThreeMajorNetText}" FontSize="10" FontWeight="Bold" Foreground="White" />
                                     <TextBlock Text="融資／融券（張）" FontSize="9" Foreground="#8b949e" Margin="0,4,0,0" /><TextBlock Text="{Binding MarginBalanceText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding ShortBalanceText}" FontSize="10" Foreground="White" />
                                     <TextBlock Text="P/C 未平倉" FontSize="9" Foreground="#8b949e" Margin="0,4,0,0" /><TextBlock Text="{Binding PutCallOpenInterestRatioText}" FontSize="10" FontWeight="Bold" Foreground="White" />
                                 </StackPanel>
