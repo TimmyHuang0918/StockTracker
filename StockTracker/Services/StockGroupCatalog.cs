@@ -49,6 +49,23 @@ namespace StockTracker.Services
             return result.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
+        /// <summary>
+        /// Returns the curated themes used for group momentum.  Official industries stay
+        /// available through GetGroups, but do not compete with investable themes in the
+        /// group leaderboard.  Detailed PCB labels roll up to the PCB parent theme.
+        /// </summary>
+        public IReadOnlyList<string> GetCoreThemeGroups(string symbol)
+        {
+            var entry = Find(symbol);
+            if (entry == null || !entry.Enabled) return Array.Empty<string>();
+            return (entry.CoreThemes ?? new List<string>())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(NormalizeCoreThemeName)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
         public IReadOnlyList<string> GetGroupNames()
         {
             return _entries.Values
@@ -195,6 +212,11 @@ namespace StockTracker.Services
             if (group.Contains("記憶體")) return "記憶體";
             switch (group)
             {
+                case "綠能": return "綠能環保";
+                case "金融": return "金融保險業";
+                case "公用事業": return "油電燃氣業";
+                case "網通": return "通信網路業";
+                case "AI伺服器／整機": return "AI伺服器";
                 case "半導體業": return "半導體";
                 case "生技醫療業": return "生技醫療";
                 case "光電業": return "光電";
@@ -209,6 +231,12 @@ namespace StockTracker.Services
                 case "PCB／HDI": return "PCB";
                 default: return group;
             }
+        }
+
+        private static string NormalizeCoreThemeName(string groupName)
+        {
+            var group = NormalizeGroupName(groupName);
+            return group.StartsWith("PCB", StringComparison.OrdinalIgnoreCase) ? "PCB" : group;
         }
     }
 }

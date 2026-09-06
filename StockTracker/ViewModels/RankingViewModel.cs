@@ -3396,7 +3396,7 @@ namespace StockTracker.ViewModels
             var grouped = new Dictionary<string, List<RankedStock>>(StringComparer.OrdinalIgnoreCase);
             foreach (var stock in stocks ?? Enumerable.Empty<RankedStock>())
             {
-                foreach (var group in catalog.GetCoreGroups(stock.Symbol)
+                foreach (var group in catalog.GetCoreThemeGroups(stock.Symbol)
                     .Where(x => !string.Equals(x, "\u5F85\u5206\u985E", StringComparison.OrdinalIgnoreCase))
                     .Distinct(StringComparer.OrdinalIgnoreCase))
                 {
@@ -3409,7 +3409,8 @@ namespace StockTracker.ViewModels
                 }
             }
 
-            return grouped.Select(pair => new MarketGroupSnapshot
+            return grouped.Where(pair => pair.Value.Count >= 3)
+                .Select(pair => new MarketGroupSnapshot
                 {
                     GroupName = pair.Key,
                     TotalCount = pair.Value.Count,
