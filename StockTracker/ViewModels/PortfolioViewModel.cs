@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using StockTracker.Models;
+using StockTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,6 +21,7 @@ namespace StockTracker.ViewModels
         public int Quantity => Holding.Quantity;
         public decimal AverageCost => Holding.AverageCost;
         public string Name { get; private set; } = "尚未訂閱／無資料";
+        public string GroupName { get; private set; } = "未分類";
         public decimal LatestPrice { get; private set; }
         public decimal MarketValue => LatestPrice * Quantity;
         public double Weight { get; private set; }
@@ -34,9 +36,10 @@ namespace StockTracker.ViewModels
         public double TargetWeight { get; private set; }
         public decimal SuggestedTradeAmount { get; private set; }
 
-        public void Refresh(StockViewModel stock, RankedStock rankedStock, decimal totalAssets, double positionLimit, decimal availableToBuy, double targetWeight)
+        public void Refresh(StockViewModel stock, RankedStock rankedStock, decimal totalAssets, double positionLimit, decimal availableToBuy, double targetWeight, string groupName)
         {
             Name = rankedStock?.Name ?? stock?.Name ?? "尚未訂閱／無資料";
+            GroupName = string.IsNullOrWhiteSpace(groupName) ? "未分類" : groupName;
             LatestPrice = rankedStock?.LatestPrice ?? stock?.LatestPrice ?? 0;
             Score = rankedStock?.Score ?? stock?.StrategyOutput?.FinalScore ?? 0;
             Risk = rankedStock?.CrashRiskScore ?? stock?.CurrentCrashRiskScore ?? 0;
@@ -51,7 +54,7 @@ namespace StockTracker.ViewModels
             else if (Weight > positionLimit) { Recommendation = "減碼至上限"; RecommendationBrush = Brushes.IndianRed; TargetWeight = positionLimit; SuggestedTradeAmount = totalAssets * (decimal)(TargetWeight / 100d) - MarketValue; Guidance = $"目前權重 {Weight:F1}% 超過 {positionLimit:F1}% 上限；參考減少約 {Math.Floor(Math.Abs(SuggestedTradeAmount) / LatestPrice):N0} 股。"; }
             else if (Weight + 0.5 < TargetWeight && availableToBuy > 0) { Recommendation = "分批加碼"; RecommendationBrush = Brushes.SeaGreen; SuggestedTradeAmount = Math.Min(SuggestedTradeAmount, availableToBuy); Guidance = $"分數 {Score}、風險 {Risk}，依合格持股的相對配置分數分配至 {TargetWeight:F1}%；參考分批買入約 {Math.Floor(SuggestedTradeAmount / LatestPrice):N0} 股。"; }
             else { Recommendation = "暫不交易"; RecommendationBrush = Brushes.DarkOrange; Guidance = $"目前權重 {Weight:F1}% 接近 {TargetWeight:F1}% 目標；等待下一次評分或價格更新再檢視。"; }
-            foreach (var property in new[] { nameof(Name), nameof(LatestPrice), nameof(MarketValue), nameof(Weight), nameof(Score), nameof(Risk), nameof(ScoreRiskText), nameof(ProfitPercentage), nameof(TodayChangePercentage), nameof(Recommendation), nameof(Guidance), nameof(RecommendationBrush), nameof(TargetWeight), nameof(SuggestedTradeAmount) }) OnPropertyChanged(property);
+            foreach (var property in new[] { nameof(Name), nameof(GroupName), nameof(LatestPrice), nameof(MarketValue), nameof(Weight), nameof(Score), nameof(Risk), nameof(ScoreRiskText), nameof(ProfitPercentage), nameof(TodayChangePercentage), nameof(Recommendation), nameof(Guidance), nameof(RecommendationBrush), nameof(TargetWeight), nameof(SuggestedTradeAmount) }) OnPropertyChanged(property);
         }
     }
 
@@ -89,6 +92,7 @@ namespace StockTracker.ViewModels
     {
         private readonly ObservableCollection<StockViewModel> _stocks;
         private readonly MainWindowViewModel _mainViewModel;
+        private readonly StockGroupCatalog _stockGroupCatalog = new StockGroupCatalog();
         private readonly string _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "portfolio.json");
         private PortfolioSettings _settings = new PortfolioSettings();
         private string _symbolInput;
@@ -176,6 +180,18 @@ namespace StockTracker.ViewModels
         public decimal HistoricalRealizedProfitLoss => (_settings.RealizedAdjustments ?? new List<PortfolioRealizedAdjustment>()).Sum(x => x.Amount);
         public decimal RealizedProfitLoss => TransactionRealizedProfitLoss + HistoricalRealizedProfitLoss;
         public decimal UnrealizedProfitLoss => Holdings.Sum(x => x.MarketValue - x.Quantity * x.AverageCost);
+        public string ConcentrationRiskSummary
+        {
+            get
+            {
+                var largest = Holdings.OrderByDescending(x => x.Weight).FirstOrDefault();
+                var group = Holdings.GroupBy(x => x.GroupName).OrderByDescending(x => x.Sum(y => y.Weight)).FirstOrDefault();
+                if (largest == null) return "尚未建立持股。";
+                var positionWarning = largest.Weight > SinglePositionLimitPercentage ? $"單一持股 {largest.Symbol} 占 {largest.Weight:F1}% 超過上限。" : $"最大持股 {largest.Symbol} 占 {largest.Weight:F1}%。";
+                var groupWarning = group == null ? string.Empty : $" 最大族群「{group.Key}」占 {group.Sum(x => x.Weight):F1}%。";
+                return positionWarning + groupWarning;
+            }
+        }
         public StockViewModel FindStock(string symbol) => _stocks.FirstOrDefault(stock => stock.Symbol == symbol);
 
         public void Dispose()
@@ -216,16 +232,30 @@ namespace StockTracker.ViewModels
             if (!System.Text.RegularExpressions.Regex.IsMatch(symbol, "^\\d{4,6}$") || !int.TryParse(QuantityInput, out var quantity) || quantity <= 0 || !decimal.TryParse(AverageCostInput, NumberStyles.Number, CultureInfo.CurrentCulture, out var cost) || cost < 0)
             { StatusMessage = "請輸入有效的股票代號、股數與平均成本。"; return; }
             var existing = _settings.Holdings.FirstOrDefault(x => x.Symbol == symbol);
+            var previousCost = existing == null ? 0m : existing.Quantity * existing.AverageCost;
+            var newCost = quantity * cost;
+            var cashChange = previousCost - newCost;
+            if (cashChange < 0m && Cash < -cashChange)
+            {
+                StatusMessage = "可用現金不足以完成這次持股增加。";
+                return;
+            }
             if (existing != null) { existing.Quantity = quantity; existing.AverageCost = cost; var vm = Holdings.First(x => x.Holding == existing); Holdings.Remove(vm); }
             else { existing = new PortfolioHolding { Symbol = symbol, Quantity = quantity, AverageCost = cost }; _settings.Holdings.Add(existing); }
+            Cash += cashChange;
             Holdings.Add(new PortfolioHoldingViewModel(existing));
-            SymbolInput = QuantityInput = AverageCostInput = string.Empty; StatusMessage = "持股已新增／更新。"; Save();
+            SymbolInput = QuantityInput = AverageCostInput = string.Empty; StatusMessage = cashChange < 0m ? $"持股已新增／更新，已扣除現金 {-cashChange:N0}。" : cashChange > 0m ? $"持股已新增／更新，已回補現金 {cashChange:N0}。" : "持股已新增／更新。"; Save();
         }
 
         private void RemoveHolding(PortfolioHoldingViewModel holding)
         {
             if (holding == null) return;
-            _settings.Holdings.Remove(holding.Holding); Holdings.Remove(holding); StatusMessage = "持股已移除。"; Save();
+            var recoveredCash = holding.MarketValue;
+            _settings.Holdings.Remove(holding.Holding);
+            Holdings.Remove(holding);
+            Cash += recoveredCash;
+            StatusMessage = recoveredCash > 0m ? $"持股已移除，已按現價回補現金 {recoveredCash:N0}。" : "持股已移除。";
+            Save();
         }
 
         private void AddCashFlow()
@@ -436,11 +466,13 @@ namespace StockTracker.ViewModels
             foreach (var holding in Holdings)
             {
                 var rankedStock = _mainViewModel?.FindLatestMarketScanStock(holding.Symbol);
-                holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), rankedStock, total, SinglePositionLimitPercentage, available, targets.TryGetValue(holding, out var target) ? target : 0);
+                var groups = _stockGroupCatalog.GetGroups(holding.Symbol);
+                holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), rankedStock, total, SinglePositionLimitPercentage, available, targets.TryGetValue(holding, out var target) ? target : 0, groups.FirstOrDefault());
             }
             OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio)); OnPropertyChanged(nameof(StockHoldingRatio));
             OnPropertyChanged(nameof(NetInvested)); OnPropertyChanged(nameof(CumulativeProfitLoss)); OnPropertyChanged(nameof(CumulativeReturnPercentage));
             OnPropertyChanged(nameof(TransactionRealizedProfitLoss)); OnPropertyChanged(nameof(HistoricalRealizedProfitLoss)); OnPropertyChanged(nameof(RealizedProfitLoss)); OnPropertyChanged(nameof(UnrealizedProfitLoss));
+            OnPropertyChanged(nameof(ConcentrationRiskSummary));
         }
 
         private Dictionary<PortfolioHoldingViewModel, double> CalculateDynamicTargets()
