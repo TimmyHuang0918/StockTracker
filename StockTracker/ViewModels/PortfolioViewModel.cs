@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows;
 
 namespace StockTracker.ViewModels
 {
@@ -131,6 +132,7 @@ namespace StockTracker.ViewModels
             AddRealizedAdjustmentCommand = new RelayCommand(_ => AddRealizedAdjustment());
             RefreshCommand = new RelayCommand(_ => Refresh());
             SaveCommand = new RelayCommand(_ => Save());
+            ResetAllRecordsCommand = new RelayCommand(_ => ResetAllRecords());
             Load();
             if (_mainViewModel != null) _mainViewModel.MarketScanUpdated += MainViewModelOnMarketScanUpdated;
         }
@@ -149,7 +151,8 @@ namespace StockTracker.ViewModels
         public ICommand AddRealizedAdjustmentCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand SaveCommand { get; }
-        public decimal Cash { get => _settings.Cash; set { _settings.Cash = Math.Max(0, value); OnPropertyChanged(); Refresh(); } }
+        public ICommand ResetAllRecordsCommand { get; }
+        public decimal Cash => Math.Max(0m, NetInvested + TradeCashMovement);
         public double CashReservePercentage { get => _settings.CashReservePercentage; set { _settings.CashReservePercentage = Math.Max(0, Math.Min(100, value)); OnPropertyChanged(); Refresh(); } }
         public double SinglePositionLimitPercentage { get => _settings.SinglePositionLimitPercentage; set { _settings.SinglePositionLimitPercentage = Math.Max(1, Math.Min(100, value)); OnPropertyChanged(); Refresh(); } }
         public string SymbolInput { get => _symbolInput; set { _symbolInput = value; OnPropertyChanged(); } }
@@ -174,6 +177,10 @@ namespace StockTracker.ViewModels
         public double CashRatio => TotalAssets == 0 ? 0 : (double)(Cash / TotalAssets * 100m);
         public double StockHoldingRatio => TotalAssets == 0 ? 0 : (double)(StockMarketValue / TotalAssets * 100m);
         public decimal NetInvested => (_settings.CashFlows ?? new List<PortfolioCashFlow>()).Sum(x => x.Amount);
+        public decimal TradeCashMovement => (_settings.Trades ?? new List<PortfolioTrade>()).Sum(trade =>
+            string.Equals(trade.Type, "Sell", StringComparison.OrdinalIgnoreCase)
+                ? trade.Price * trade.Quantity - trade.Fee - trade.Tax
+                : -(trade.Price * trade.Quantity + trade.Fee + trade.Tax));
         public decimal CumulativeProfitLoss => TotalAssets - NetInvested;
         public double CumulativeReturnPercentage => NetInvested == 0 ? 0 : (double)(CumulativeProfitLoss / NetInvested * 100m);
         public decimal TransactionRealizedProfitLoss => (_settings.Trades ?? new List<PortfolioTrade>()).Sum(x => x.RealizedProfitLoss);
@@ -218,6 +225,14 @@ namespace StockTracker.ViewModels
                 .ToList();
             _settings.Trades = (_settings.Trades ?? new List<PortfolioTrade>()).Where(trade => trade != null).ToList();
             _settings.RealizedAdjustments = (_settings.RealizedAdjustments ?? new List<PortfolioRealizedAdjustment>()).Where(adjustment => adjustment != null).ToList();
+            // 將舊版可手動輸入的現金餘額轉為一筆期初入金，往後完全由資金與交易紀錄推算。
+            if (_settings.Cash != 0m)
+            {
+                var legacyOpeningCash = _settings.Cash - _settings.CashFlows.Sum(x => x.Amount) - TradeCashMovement;
+                if (legacyOpeningCash != 0m)
+                    _settings.CashFlows.Add(new PortfolioCashFlow { Date = DateTime.Today, Amount = legacyOpeningCash });
+                _settings.Cash = 0m;
+            }
             foreach (var holding in _settings.Holdings) Holdings.Add(new PortfolioHoldingViewModel(holding));
             foreach (var cashFlow in _settings.CashFlows.OrderByDescending(x => x.Date)) CashFlows.Add(new PortfolioCashFlowViewModel(cashFlow));
             foreach (var trade in _settings.Trades.OrderByDescending(x => x.Date)) Trades.Add(new PortfolioTradeViewModel(trade));
@@ -232,30 +247,42 @@ namespace StockTracker.ViewModels
             if (!System.Text.RegularExpressions.Regex.IsMatch(symbol, "^\\d{4,6}$") || !int.TryParse(QuantityInput, out var quantity) || quantity <= 0 || !decimal.TryParse(AverageCostInput, NumberStyles.Number, CultureInfo.CurrentCulture, out var cost) || cost < 0)
             { StatusMessage = "請輸入有效的股票代號、股數與平均成本。"; return; }
             var existing = _settings.Holdings.FirstOrDefault(x => x.Symbol == symbol);
-            var previousCost = existing == null ? 0m : existing.Quantity * existing.AverageCost;
-            var newCost = quantity * cost;
-            var cashChange = previousCost - newCost;
-            if (cashChange < 0m && Cash < -cashChange)
-            {
-                StatusMessage = "可用現金不足以完成這次持股增加。";
-                return;
-            }
             if (existing != null) { existing.Quantity = quantity; existing.AverageCost = cost; var vm = Holdings.First(x => x.Holding == existing); Holdings.Remove(vm); }
             else { existing = new PortfolioHolding { Symbol = symbol, Quantity = quantity, AverageCost = cost }; _settings.Holdings.Add(existing); }
-            Cash += cashChange;
             Holdings.Add(new PortfolioHoldingViewModel(existing));
-            SymbolInput = QuantityInput = AverageCostInput = string.Empty; StatusMessage = cashChange < 0m ? $"持股已新增／更新，已扣除現金 {-cashChange:N0}。" : cashChange > 0m ? $"持股已新增／更新，已回補現金 {cashChange:N0}。" : "持股已新增／更新。"; Save();
+            SymbolInput = QuantityInput = AverageCostInput = string.Empty; StatusMessage = "持股庫存已更新；實際買賣請用下方交易紀錄，剩餘資金才會自動結算。"; Save();
         }
 
         private void RemoveHolding(PortfolioHoldingViewModel holding)
         {
             if (holding == null) return;
-            var recoveredCash = holding.MarketValue;
             _settings.Holdings.Remove(holding.Holding);
             Holdings.Remove(holding);
-            Cash += recoveredCash;
-            StatusMessage = recoveredCash > 0m ? $"持股已移除，已按現價回補現金 {recoveredCash:N0}。" : "持股已移除。";
+            StatusMessage = "持股紀錄已移除；若為實際賣出，請改用交易紀錄登錄，系統才會回補現金。";
             Save();
+        }
+
+        private void ResetAllRecords()
+        {
+            var confirmation = MessageBox.Show(
+                "這會清除所有持股、入出金、買賣交易與已實現損益紀錄，且無法復原。\n\n確定要重設嗎？",
+                "重設所有投資組合紀錄",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+            if (confirmation != MessageBoxResult.Yes) return;
+
+            _settings.Holdings.Clear();
+            _settings.CashFlows.Clear();
+            _settings.Trades.Clear();
+            _settings.RealizedAdjustments.Clear();
+            _settings.Cash = 0m;
+            Holdings.Clear();
+            CashFlows.Clear();
+            Trades.Clear();
+            RealizedAdjustments.Clear();
+            Save();
+            StatusMessage = "所有投資組合紀錄已重設。";
         }
 
         private void AddCashFlow()
@@ -328,7 +355,6 @@ namespace StockTracker.ViewModels
                 holding.Quantity += quantity;
             }
 
-            Cash += isSell ? price * quantity - fee - tax : -(price * quantity + fee + tax);
             var trade = new PortfolioTrade { Date = TradeDate.Value.Date, Type = isSell ? "Sell" : "Buy", Symbol = symbol, Quantity = quantity, Price = price, Fee = fee, Tax = tax, CostBasisPerShare = isSell ? holding?.AverageCost ?? 0 : 0, RealizedProfitLoss = realized };
             _settings.Trades.Add(trade);
             Trades.Insert(0, new PortfolioTradeViewModel(trade));
@@ -470,7 +496,7 @@ namespace StockTracker.ViewModels
                 holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), rankedStock, total, SinglePositionLimitPercentage, available, targets.TryGetValue(holding, out var target) ? target : 0, groups.FirstOrDefault());
             }
             OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio)); OnPropertyChanged(nameof(StockHoldingRatio));
-            OnPropertyChanged(nameof(NetInvested)); OnPropertyChanged(nameof(CumulativeProfitLoss)); OnPropertyChanged(nameof(CumulativeReturnPercentage));
+            OnPropertyChanged(nameof(Cash)); OnPropertyChanged(nameof(NetInvested)); OnPropertyChanged(nameof(TradeCashMovement)); OnPropertyChanged(nameof(CumulativeProfitLoss)); OnPropertyChanged(nameof(CumulativeReturnPercentage));
             OnPropertyChanged(nameof(TransactionRealizedProfitLoss)); OnPropertyChanged(nameof(HistoricalRealizedProfitLoss)); OnPropertyChanged(nameof(RealizedProfitLoss)); OnPropertyChanged(nameof(UnrealizedProfitLoss));
             OnPropertyChanged(nameof(ConcentrationRiskSummary));
         }
