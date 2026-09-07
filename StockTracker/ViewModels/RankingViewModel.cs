@@ -174,7 +174,9 @@ namespace StockTracker.ViewModels
         public decimal DealerNet { get; set; }
         public decimal ThreeMajorNet { get; set; }
         public long MarginAmountThousand { get; set; }
+        public long MarginAmountChangeThousand { get; set; }
         public long ShortBalanceLots { get; set; }
+        public long ShortBalanceChangeLots { get; set; }
         public decimal? PutCallOpenInterestRatio { get; set; }
         public string TradeDateText => TradeDate == DateTime.MinValue ? "—" : TradeDate.ToString("MM/dd");
         public string ForeignNetText => FormatMoney(ForeignNet);
@@ -183,10 +185,30 @@ namespace StockTracker.ViewModels
         public string ThreeMajorNetText => FormatMoney(ThreeMajorNet);
         public string MarginBalanceText => FormatCreditMoney(MarginAmountThousand);
         public string ShortBalanceText => FormatLots(ShortBalanceLots);
+        public string MarginAmountChangeText => FormatCreditMoneyChange(MarginAmountChangeThousand);
+        public string ShortBalanceChangeText => FormatLotsChange(ShortBalanceChangeLots);
+        public string MarginAmountChangeDisplayText => $"（{MarginAmountChangeText}）";
+        public string ShortBalanceChangeDisplayText => $"（{ShortBalanceChangeText}）";
         public string PutCallOpenInterestRatioText => PutCallOpenInterestRatio.HasValue ? $"{PutCallOpenInterestRatio.Value:F1}%" : "—";
+        public System.Windows.Media.Brush ForeignNetBrush => GetValueBrush(ForeignNet);
+        public System.Windows.Media.Brush TrustNetBrush => GetValueBrush(TrustNet);
+        public System.Windows.Media.Brush DealerNetBrush => GetValueBrush(DealerNet);
+        public System.Windows.Media.Brush ThreeMajorNetBrush => GetValueBrush(ThreeMajorNet);
+        public System.Windows.Media.Brush MarginAmountChangeBrush => GetValueBrush(MarginAmountChangeThousand);
+        public System.Windows.Media.Brush ShortBalanceChangeBrush => GetValueBrush(ShortBalanceChangeLots);
         private static string FormatCreditMoney(long thousandNtd) => (thousandNtd / 100000m).ToString("N1", CultureInfo.InvariantCulture);
         private static string FormatLots(long lots) => lots.ToString("N0", CultureInfo.InvariantCulture);
+        private static string FormatCreditMoneyChange(long thousandNtd)
+        {
+            var value = thousandNtd / 100000m;
+            return value > 0m ? $"+{value:N1} 億" : value < 0m ? $"{value:N1} 億" : "0.0 億";
+        }
+        private static string FormatLotsChange(long lots) => lots > 0 ? $"+{lots:N0} 張" : lots < 0 ? $"{lots:N0} 張" : "0 張";
         private static string FormatMoney(decimal amount) => amount > 0m ? $"+{amount / 100000000m:N1} 億" : amount < 0m ? $"{amount / 100000000m:N1} 億" : "0.0 億";
+        private static System.Windows.Media.Brush GetValueBrush(decimal value) =>
+            value > 0m ? System.Windows.Media.Brushes.IndianRed : value < 0m ? System.Windows.Media.Brushes.MediumSeaGreen : System.Windows.Media.Brushes.Gray;
+        private static System.Windows.Media.Brush GetValueBrush(long value) =>
+            value > 0 ? System.Windows.Media.Brushes.IndianRed : value < 0 ? System.Windows.Media.Brushes.MediumSeaGreen : System.Windows.Media.Brushes.Gray;
     }
 
     /// <summary>Aggregated atmosphere for one official industry or theme.</summary>
@@ -1509,7 +1531,7 @@ namespace StockTracker.ViewModels
                 ? $"資料日期：{latestScoreDate.Value:yyyy-MM-dd} · 筆數：{exportStocks.Count}"
                 : $"筆數：{exportStocks.Count}";
             var marketOverviewRows = string.Join(string.Empty, (MarketOverview.Days ?? Array.Empty<MarketOverviewDay>()).Select(day =>
-                $"<tr><td>{HtmlEncode(day.TradeDateText)}</td><td>{HtmlEncode(day.ForeignNetText)}</td><td>{HtmlEncode(day.TrustNetText)}</td><td>{HtmlEncode(day.DealerNetText)}</td><td>{HtmlEncode(day.ThreeMajorNetText)}</td><td>{HtmlEncode(day.MarginBalanceText)}</td><td>{HtmlEncode(day.ShortBalanceText)}</td><td>{HtmlEncode(day.PutCallOpenInterestRatioText)}</td></tr>"));
+                $"<tr><td>{HtmlEncode(day.TradeDateText)}</td><td class='{ResolveValueColorClass((double)day.ForeignNet)}'>{HtmlEncode(day.ForeignNetText)}</td><td class='{ResolveValueColorClass((double)day.TrustNet)}'>{HtmlEncode(day.TrustNetText)}</td><td class='{ResolveValueColorClass((double)day.DealerNet)}'>{HtmlEncode(day.DealerNetText)}</td><td class='{ResolveValueColorClass((double)day.ThreeMajorNet)}'>{HtmlEncode(day.ThreeMajorNetText)}</td><td>{HtmlEncode(day.MarginBalanceText)} <span class='{ResolveValueColorClass(day.MarginAmountChangeThousand)}'>{HtmlEncode(day.MarginAmountChangeDisplayText)}</span></td><td>{HtmlEncode(day.ShortBalanceText)} <span class='{ResolveValueColorClass(day.ShortBalanceChangeLots)}'>{HtmlEncode(day.ShortBalanceChangeDisplayText)}</span></td><td>{HtmlEncode(day.PutCallOpenInterestRatioText)}</td></tr>"));
 
             // Fetch 0050 K-Line data for 120 days
             var kLineData0050Json = "[]";
@@ -2961,7 +2983,9 @@ namespace StockTracker.ViewModels
                     DealerNet = institutionalAmount?.DealerNet ?? 0m,
                     ThreeMajorNet = institutionalAmount?.ThreeMajorNet ?? 0m,
                     MarginAmountThousand = credit?.MarginAmountThousand ?? 0,
+                    MarginAmountChangeThousand = credit?.MarginAmountChangeThousand ?? 0,
                     ShortBalanceLots = credit?.ShortBalanceLots ?? 0,
+                    ShortBalanceChangeLots = credit?.ShortBalanceChangeLots ?? 0,
                     PutCallOpenInterestRatio = putCall?.OpenInterestRatioPercent
                 };
             }).ToList();
