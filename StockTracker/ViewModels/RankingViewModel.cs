@@ -95,10 +95,10 @@ namespace StockTracker.ViewModels
         public decimal TrustNet5D { get; set; }
         public decimal DealerNet5D { get; set; }
         public decimal ThreeMajorNet5D { get; set; }
-        public long MarginBalance { get; set; }
-        public long MarginBalanceChange5D { get; set; }
-        public long ShortBalance { get; set; }
-        public long ShortBalanceChange5D { get; set; }
+        public long MarginAmountThousand { get; set; }
+        public long MarginAmountChange5DThousand { get; set; }
+        public long ShortBalanceLots { get; set; }
+        public long ShortBalanceChange5DLots { get; set; }
         public decimal? PutCallOpenInterestRatio { get; set; }
         public decimal? PutCallOpenInterestRatio5DAverage { get; set; }
 
@@ -107,17 +107,32 @@ namespace StockTracker.ViewModels
         public string TrustNet5DText => FormatMoney(TrustNet5D);
         public string DealerNet5DText => FormatMoney(DealerNet5D);
         public string ThreeMajorNet5DText => FormatMoney(ThreeMajorNet5D);
-        public string MarginBalanceText => FormatLots(MarginBalance);
-        public string MarginBalanceChange5DText => FormatLots(MarginBalanceChange5D);
-        public string ShortBalanceText => FormatLots(ShortBalance);
-        public string ShortBalanceChange5DText => FormatLots(ShortBalanceChange5D);
+        public string MarginBalanceText => FormatCreditMoney(MarginAmountThousand);
+        public string MarginBalanceChange5DText => FormatCreditMoneyChange(MarginAmountChange5DThousand);
+        public string ShortBalanceText => FormatLots(ShortBalanceLots);
+        public string ShortBalanceChange5DText => FormatLotsChange(ShortBalanceChange5DLots);
         public string PutCallOpenInterestRatioText => PutCallOpenInterestRatio.HasValue ? $"{PutCallOpenInterestRatio.Value:F1}%" : "—";
         public string PutCallOpenInterestRatio5DAverageText => PutCallOpenInterestRatio5DAverage.HasValue ? $"{PutCallOpenInterestRatio5DAverage.Value:F1}%" : "—";
 
-        private static string FormatLots(long shares)
+        private static string FormatCreditMoney(long thousandNtd)
         {
-            var lots = shares / 1000m;
-            return lots > 0m ? $"+{lots:N0} 張" : lots < 0m ? $"{lots:N0} 張" : "0 張";
+            return (thousandNtd / 100000m).ToString("N1", CultureInfo.InvariantCulture);
+        }
+
+        private static string FormatCreditMoneyChange(long thousandNtd)
+        {
+            var value = thousandNtd / 100000m;
+            return value > 0m ? $"+{value:N1} 億" : value < 0m ? $"{value:N1} 億" : "0.0 億";
+        }
+
+        private static string FormatLots(long lots)
+        {
+            return lots.ToString("N0", CultureInfo.InvariantCulture);
+        }
+
+        private static string FormatLotsChange(long lots)
+        {
+            return lots > 0 ? $"+{lots:N0} 張" : lots < 0 ? $"{lots:N0} 張" : "0 張";
         }
 
         private static string FormatMoney(decimal amount)
@@ -158,18 +173,19 @@ namespace StockTracker.ViewModels
         public decimal TrustNet { get; set; }
         public decimal DealerNet { get; set; }
         public decimal ThreeMajorNet { get; set; }
-        public long MarginBalance { get; set; }
-        public long ShortBalance { get; set; }
+        public long MarginAmountThousand { get; set; }
+        public long ShortBalanceLots { get; set; }
         public decimal? PutCallOpenInterestRatio { get; set; }
         public string TradeDateText => TradeDate == DateTime.MinValue ? "—" : TradeDate.ToString("MM/dd");
         public string ForeignNetText => FormatMoney(ForeignNet);
         public string TrustNetText => FormatMoney(TrustNet);
         public string DealerNetText => FormatMoney(DealerNet);
         public string ThreeMajorNetText => FormatMoney(ThreeMajorNet);
-        public string MarginBalanceText => FormatLots(MarginBalance);
-        public string ShortBalanceText => FormatLots(ShortBalance);
+        public string MarginBalanceText => FormatCreditMoney(MarginAmountThousand);
+        public string ShortBalanceText => FormatLots(ShortBalanceLots);
         public string PutCallOpenInterestRatioText => PutCallOpenInterestRatio.HasValue ? $"{PutCallOpenInterestRatio.Value:F1}%" : "—";
-        private static string FormatLots(long shares) => shares > 0 ? $"+{shares / 1000m:N0}" : shares < 0 ? $"{shares / 1000m:N0}" : "0";
+        private static string FormatCreditMoney(long thousandNtd) => (thousandNtd / 100000m).ToString("N1", CultureInfo.InvariantCulture);
+        private static string FormatLots(long lots) => lots.ToString("N0", CultureInfo.InvariantCulture);
         private static string FormatMoney(decimal amount) => amount > 0m ? $"+{amount / 100000000m:N1} 億" : amount < 0m ? $"{amount / 100000000m:N1} 億" : "0.0 億";
     }
 
@@ -1763,9 +1779,9 @@ namespace StockTracker.ViewModels
             html.AppendLine("  </div>");
             html.AppendLine("</div>");
 
-            html.AppendLine("<section class='panel'><h3 style='margin:0 0 10px'>全市場資金總覽（最近五個交易日，含當日）</h3><div style='overflow:auto'><table><thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th><th>三大法人</th><th>融資餘額</th><th>融券餘額</th><th>P/C 未平倉</th></tr></thead><tbody>");
+            html.AppendLine("<section class='panel'><h3 style='margin:0 0 10px'>全市場資金總覽（最近五個交易日，含當日）</h3><div style='overflow:auto'><table><thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th><th>三大法人</th><th>融資餘額<br>（億元）</th><th>融券餘額<br>（張）</th><th>P/C 未平倉</th></tr></thead><tbody>");
             html.AppendLine(marketOverviewRows);
-            html.AppendLine("</tbody></table></div><p class='muted' style='margin:8px 0 0'>法人為上市、上櫃三大法人官方買賣超金額（億元）；資券為上市全市場餘額（張）；P/C 為臺指選擇權未平倉量比率。</p></section>");
+            html.AppendLine("</tbody></table></div><p class='muted' style='margin:8px 0 0'>法人為上市、上櫃三大法人官方買賣超金額（億元）；融資為上市信用交易餘額金額（億元），融券為上市信用交易餘額（張）；P/C 為臺指選擇權未平倉量比率。</p></section>");
 
             var marketRegimeToneClass = ResolveValueColorClass(marketRegime.PositiveSignals - marketRegime.NegativeSignals);
             html.AppendLine("<section class='panel market-regime' aria-label='市場狀態'>");
@@ -2908,18 +2924,18 @@ namespace StockTracker.ViewModels
             overview.DealerNet5D = institutionalAmountByDate.Values.Sum(x => x.DealerNet);
             overview.ThreeMajorNet5D = institutionalAmountByDate.Values.Sum(x => x.ThreeMajorNet);
 
-            var marginTotals = await _mainViewModel.LoadMarketMarginTotalsForScanAsync(5);
-            var marginDays = (marginTotals ?? Array.Empty<MarketMarginDailyTotal>())
+            var creditByDate = await new TwseMarketCreditService().GetByDatesAsync(latestDates);
+            var creditDays = (creditByDate?.Values ?? Enumerable.Empty<MarketCreditDailyTotal>())
                 .OrderBy(x => x.TradeDate)
                 .ToList();
-            if (marginDays.Count > 0)
+            if (creditDays.Count > 0)
             {
-                var latest = marginDays.Last();
-                var first = marginDays.First();
-                overview.MarginBalance = latest.MarginBalance;
-                overview.ShortBalance = latest.ShortBalance;
-                overview.MarginBalanceChange5D = latest.MarginBalance - first.MarginBalance;
-                overview.ShortBalanceChange5D = latest.ShortBalance - first.ShortBalance;
+                var latest = creditDays.Last();
+                var first = creditDays.First();
+                overview.MarginAmountThousand = latest.MarginAmountThousand;
+                overview.ShortBalanceLots = latest.ShortBalanceLots;
+                overview.MarginAmountChange5DThousand = latest.MarginAmountThousand - first.MarginAmountThousand;
+                overview.ShortBalanceChange5DLots = latest.ShortBalanceLots - first.ShortBalanceLots;
             }
 
             var putCallRecords = await new TaifexPutCallRatioService().GetRecentAsync(5);
@@ -2930,12 +2946,12 @@ namespace StockTracker.ViewModels
                 overview.PutCallOpenInterestRatio5DAverage = putCallDays.Average(x => x.OpenInterestRatioPercent);
             }
 
-            var marginByDate = marginDays.ToDictionary(x => x.TradeDate.Date);
+            var creditByTradeDate = creditDays.ToDictionary(x => x.TradeDate.Date);
             var putCallByDate = putCallDays.ToDictionary(x => x.TradeDate.Date);
             overview.Days = latestDates.Select(date =>
             {
                 institutionalAmountByDate.TryGetValue(date, out var institutionalAmount);
-                marginByDate.TryGetValue(date, out var margin);
+                creditByTradeDate.TryGetValue(date, out var credit);
                 putCallByDate.TryGetValue(date, out var putCall);
                 return new MarketOverviewDay
                 {
@@ -2944,8 +2960,8 @@ namespace StockTracker.ViewModels
                     TrustNet = institutionalAmount?.TrustNet ?? 0m,
                     DealerNet = institutionalAmount?.DealerNet ?? 0m,
                     ThreeMajorNet = institutionalAmount?.ThreeMajorNet ?? 0m,
-                    MarginBalance = margin?.MarginBalance ?? 0,
-                    ShortBalance = margin?.ShortBalance ?? 0,
+                    MarginAmountThousand = credit?.MarginAmountThousand ?? 0,
+                    ShortBalanceLots = credit?.ShortBalanceLots ?? 0,
                     PutCallOpenInterestRatio = putCall?.OpenInterestRatioPercent
                 };
             }).ToList();
@@ -3469,19 +3485,19 @@ namespace StockTracker.ViewModels
                     result.InstitutionalSignal = "0.0 億：中性";
                 }
 
-                if (overview.MarginBalanceChange5D > 0)
+                if (overview.MarginAmountChange5DThousand > 0)
                 {
                     result.PositiveSignals++;
-                    result.MarginSignal = $"{FormatRegimeLots(overview.MarginBalanceChange5D)}：槓桿升溫";
+                    result.MarginSignal = $"{FormatRegimeCreditMoney(overview.MarginAmountChange5DThousand)}：槓桿升溫";
                 }
-                else if (overview.MarginBalanceChange5D < 0)
+                else if (overview.MarginAmountChange5DThousand < 0)
                 {
                     result.NegativeSignals++;
-                    result.MarginSignal = $"{FormatRegimeLots(overview.MarginBalanceChange5D)}：槓桿收斂";
+                    result.MarginSignal = $"{FormatRegimeCreditMoney(overview.MarginAmountChange5DThousand)}：槓桿收斂";
                 }
                 else
                 {
-                    result.MarginSignal = "0 張：槓桿持平";
+                    result.MarginSignal = "0.0 億：槓桿持平";
                 }
 
                 if (overview.PutCallOpenInterestRatio.HasValue)
@@ -3522,10 +3538,10 @@ namespace StockTracker.ViewModels
             return value > 0m ? $"+{value:N1} 億" : value < 0m ? $"{value:N1} 億" : "0.0 億";
         }
 
-        private static string FormatRegimeLots(long shares)
+        private static string FormatRegimeCreditMoney(long thousandNtd)
         {
-            var lots = shares / 1000m;
-            return lots > 0m ? $"+{lots:N0} 張" : lots < 0m ? $"{lots:N0} 張" : "0 張";
+            var value = thousandNtd / 100000m;
+            return value > 0m ? $"+{value:N1} 億" : value < 0m ? $"{value:N1} 億" : "0.0 億";
         }
 
         private static IReadOnlyList<MarketGroupSnapshot> CreateMarketGroups(

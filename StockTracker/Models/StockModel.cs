@@ -271,6 +271,19 @@ namespace StockTracker.Models
         public long ShortBalance { get; set; }
     }
 
+    /// <summary>
+    /// Official listed-market credit-trading totals from TWSE MI_MARGN.
+    /// Margin values are in thousands of NTD; short values are trading lots.
+    /// </summary>
+    public class MarketCreditDailyTotal
+    {
+        public DateTime TradeDate { get; set; }
+        public long MarginAmountThousand { get; set; }
+        public long MarginAmountChangeThousand { get; set; }
+        public long ShortBalanceLots { get; set; }
+        public long ShortBalanceChangeLots { get; set; }
+    }
+
     public class PutCallRatioRecord
     {
         public DateTime TradeDate { get; set; }
