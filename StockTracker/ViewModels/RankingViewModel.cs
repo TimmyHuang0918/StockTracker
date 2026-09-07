@@ -262,6 +262,10 @@ namespace StockTracker.ViewModels
         public long ForeignNet { get; set; }
         public long DealerNet { get; set; }
         public long InvestmentTrustNet { get; set; }
+        public decimal? LargeHolder400PlusRatio { get; set; }
+        public decimal? LargeHolder1000PlusRatio { get; set; }
+        public decimal? LargeHolder400PlusWeeklyChange { get; set; }
+        public DateTime LargeHolderDataDate { get; set; }
         public string ScoreReason { get; set; }
         public string DecisionSummary { get; set; }
         public string PositionPlanText { get; set; }
@@ -300,6 +304,20 @@ namespace StockTracker.ViewModels
         public System.Windows.Media.Brush NetAmountDisplayBrush => ThreeMajorNetAmount > 0 ? System.Windows.Media.Brushes.IndianRed :
                                                                      ThreeMajorNetAmount < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
                                                                      System.Windows.Media.Brushes.Gray;
+        public string LargeHolder400PlusDisplay => LargeHolder400PlusRatio.HasValue
+            ? $"{LargeHolder400PlusRatio.Value:F1}%"
+            : "—";
+        public string LargeHolder1000PlusDisplay => LargeHolder1000PlusRatio.HasValue
+            ? $"{LargeHolder1000PlusRatio.Value:F1}%"
+            : "—";
+        public string LargeHolder400PlusWeeklyChangeDisplay => LargeHolder400PlusWeeklyChange.HasValue
+            ? $"{(LargeHolder400PlusWeeklyChange.Value > 0 ? "+" : string.Empty)}{LargeHolder400PlusWeeklyChange.Value:F1}pp"
+            : "—";
+        public System.Windows.Media.Brush LargeHolder400PlusWeeklyChangeBrush =>
+            !LargeHolder400PlusWeeklyChange.HasValue ? System.Windows.Media.Brushes.Gray :
+            LargeHolder400PlusWeeklyChange.Value > 0 ? System.Windows.Media.Brushes.IndianRed :
+            LargeHolder400PlusWeeklyChange.Value < 0 ? System.Windows.Media.Brushes.MediumSeaGreen :
+            System.Windows.Media.Brushes.Gray;
         public string ForeignNetDisplay
         {
             get
@@ -979,7 +997,29 @@ namespace StockTracker.ViewModels
                             ScoreReason TEXT NOT NULL DEFAULT '',
                             DecisionSummary TEXT NOT NULL DEFAULT '',
                             PositionPlanText TEXT NOT NULL DEFAULT '',
-                            KeyReasonsText TEXT NOT NULL DEFAULT ''
+                            KeyReasonsText TEXT NOT NULL DEFAULT '',
+                            LargeHolder400PlusRatio REAL NULL,
+                            LargeHolder1000PlusRatio REAL NULL,
+                            LargeHolder400PlusWeeklyChange REAL NULL,
+                            LargeHolderDataDate TEXT NOT NULL DEFAULT ''
+                        );";
+                    cmd.ExecuteNonQuery();
+                }
+
+                AddRankingColumnIfMissing(conn, "LargeHolder400PlusRatio REAL NULL");
+                AddRankingColumnIfMissing(conn, "LargeHolder1000PlusRatio REAL NULL");
+                AddRankingColumnIfMissing(conn, "LargeHolder400PlusWeeklyChange REAL NULL");
+                AddRankingColumnIfMissing(conn, "LargeHolderDataDate TEXT NOT NULL DEFAULT ''");
+
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS TdccLargeHolderSnapshots (
+                            DataDate TEXT NOT NULL,
+                            Symbol TEXT NOT NULL,
+                            Holding400PlusRatio REAL NOT NULL,
+                            Holding1000PlusRatio REAL NOT NULL,
+                            PRIMARY KEY (DataDate, Symbol)
                         );";
                     cmd.ExecuteNonQuery();
                 }
@@ -1222,6 +1262,21 @@ namespace StockTracker.ViewModels
             }
         }
 
+        private static void AddRankingColumnIfMissing(System.Data.SQLite.SQLiteConnection conn, string definition)
+        {
+            try
+            {
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = $"ALTER TABLE LatestRanking ADD COLUMN {definition};";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
         private void LoadSavedRanking()
         {
             try
@@ -1232,7 +1287,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -1270,7 +1325,11 @@ namespace StockTracker.ViewModels
                                     InvestmentTrustNet = reader.IsDBNull(20) ? 0 : reader.GetInt64(20),
                                     DecisionSummary = reader.IsDBNull(21) ? string.Empty : reader.GetString(21),
                                     PositionPlanText = reader.IsDBNull(22) ? string.Empty : reader.GetString(22),
-                                    KeyReasonsText = reader.IsDBNull(23) ? string.Empty : reader.GetString(23)
+                                    KeyReasonsText = reader.IsDBNull(23) ? string.Empty : reader.GetString(23),
+                                    LargeHolder400PlusRatio = reader.IsDBNull(24) ? (decimal?)null : Convert.ToDecimal(reader.GetValue(24), CultureInfo.InvariantCulture),
+                                    LargeHolder1000PlusRatio = reader.IsDBNull(25) ? (decimal?)null : Convert.ToDecimal(reader.GetValue(25), CultureInfo.InvariantCulture),
+                                    LargeHolder400PlusWeeklyChange = reader.IsDBNull(26) ? (decimal?)null : Convert.ToDecimal(reader.GetValue(26), CultureInfo.InvariantCulture),
+                                    LargeHolderDataDate = reader.IsDBNull(27) || !DateTime.TryParse(reader.GetString(27), out var largeHolderDate) ? DateTime.MinValue : largeHolderDate.Date
                                 });
                             }
                         }
@@ -1331,8 +1390,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText, @largeHolder400, @largeHolder1000, @largeHolderWeeklyChange, @largeHolderDate)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -1360,6 +1419,10 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@decisionSummary", s.DecisionSummary ?? string.Empty);
                                 cmd.Parameters.AddWithValue("@positionPlanText", s.PositionPlanText ?? string.Empty);
                                 cmd.Parameters.AddWithValue("@keyReasonsText", s.KeyReasonsText ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@largeHolder400", s.LargeHolder400PlusRatio.HasValue ? (object)s.LargeHolder400PlusRatio.Value : DBNull.Value);
+                                cmd.Parameters.AddWithValue("@largeHolder1000", s.LargeHolder1000PlusRatio.HasValue ? (object)s.LargeHolder1000PlusRatio.Value : DBNull.Value);
+                                cmd.Parameters.AddWithValue("@largeHolderWeeklyChange", s.LargeHolder400PlusWeeklyChange.HasValue ? (object)s.LargeHolder400PlusWeeklyChange.Value : DBNull.Value);
+                                cmd.Parameters.AddWithValue("@largeHolderDate", s.LargeHolderDataDate == DateTime.MinValue ? string.Empty : s.LargeHolderDataDate.ToString("yyyy-MM-dd"));
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -1530,6 +1593,13 @@ namespace StockTracker.ViewModels
             var updateSummary = latestScoreDate.HasValue
                 ? $"資料日期：{latestScoreDate.Value:yyyy-MM-dd} · 筆數：{exportStocks.Count}"
                 : $"筆數：{exportStocks.Count}";
+            var largeHolderDataDate = exportStocks
+                .Where(s => s.LargeHolderDataDate != DateTime.MinValue)
+                .Select(s => (DateTime?)s.LargeHolderDataDate.Date)
+                .Max();
+            var largeHolderDataDateText = largeHolderDataDate.HasValue
+                ? largeHolderDataDate.Value.ToString("MM/dd", CultureInfo.InvariantCulture)
+                : "—";
             var marketOverviewRows = string.Join(string.Empty, (MarketOverview.Days ?? Array.Empty<MarketOverviewDay>()).Select(day =>
                 $"<tr><td>{HtmlEncode(day.TradeDateText)}</td><td class='{ResolveValueColorClass((double)day.ForeignNet)}'>{HtmlEncode(day.ForeignNetText)}</td><td class='{ResolveValueColorClass((double)day.TrustNet)}'>{HtmlEncode(day.TrustNetText)}</td><td class='{ResolveValueColorClass((double)day.DealerNet)}'>{HtmlEncode(day.DealerNetText)}</td><td class='{ResolveValueColorClass((double)day.ThreeMajorNet)}'>{HtmlEncode(day.ThreeMajorNetText)}</td><td>{HtmlEncode(day.MarginBalanceText)} <span class='{ResolveValueColorClass(day.MarginAmountChangeThousand)}'>{HtmlEncode(day.MarginAmountChangeDisplayText)}</span></td><td>{HtmlEncode(day.ShortBalanceText)} <span class='{ResolveValueColorClass(day.ShortBalanceChangeLots)}'>{HtmlEncode(day.ShortBalanceChangeDisplayText)}</span></td><td>{HtmlEncode(day.PutCallOpenInterestRatioText)}</td></tr>"));
 
@@ -1666,6 +1736,15 @@ namespace StockTracker.ViewModels
                 netAmount = (double)s.ThreeMajorNetAmount,
                 netAmountStr = FormatMoney((double)s.ThreeMajorNetAmount),
                 netAmountClass = ResolveValueColorClass((double)s.ThreeMajorNetAmount),
+                largeHolder400 = s.LargeHolder400PlusRatio.HasValue ? (double?)s.LargeHolder400PlusRatio.Value : null,
+                largeHolder400Str = s.LargeHolder400PlusDisplay,
+                largeHolder1000 = s.LargeHolder1000PlusRatio.HasValue ? (double?)s.LargeHolder1000PlusRatio.Value : null,
+                largeHolder1000Str = s.LargeHolder1000PlusDisplay,
+                largeHolderWeekly = s.LargeHolder400PlusWeeklyChange.HasValue ? (double?)s.LargeHolder400PlusWeeklyChange.Value : null,
+                largeHolderWeeklyStr = s.LargeHolder400PlusWeeklyChangeDisplay,
+                largeHolderWeeklyClass = s.LargeHolder400PlusWeeklyChange.HasValue
+                    ? ResolveValueColorClass((double)s.LargeHolder400PlusWeeklyChange.Value)
+                    : "flat",
                 foreignNet = (double)s.ForeignNet,
                 foreignNetStr = FormatNetShares((double)s.ForeignNet),
                 foreignNetClass = ResolveValueColorClass((double)s.ForeignNet),
@@ -2014,7 +2093,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  <div class='portfolio-summary' id='portfolioSummary'></div><div class='portfolio-table-wrap'><table class='portfolio-table'><thead><tr><th>&#25345;&#32929;</th><th>&#29694;&#20729;</th><th>&#20170;&#26085;&#28466;&#36300;</th><th>&#25613;&#30410;&#29575;</th><th>&#29694;&#26377;&#27402;&#37325;</th><th>&#30446;&#27161;&#27402;&#37325;</th><th>&#24314;&#35696;</th><th></th></tr></thead><tbody id='portfolioBody'></tbody></table></div>");
             html.AppendLine("</div>");
             html.AppendLine("<div class=\"table-container\" id=\"tableContainer\"><table id=\"rankingTable\"><thead><tr>");
-            html.AppendLine("<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
+            html.AppendLine($"<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='num'>大戶400+<br><span class='muted'>{largeHolderDataDateText}</span></th><th data-type='num'>超大戶1000+</th><th data-type='num'>大戶週變</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
             html.AppendLine("</tr></thead><tbody id=\"tbody\"></tbody></table></div>");
 
             // 將原生 Stock JSON 埋在 JS 變數中
@@ -2491,6 +2570,9 @@ namespace StockTracker.ViewModels
             html.AppendLine("      `<td>${s.trend}</td>`+");
             html.AppendLine("      `<td class='${s.netClass}'>${s.netStr}</td>`+");
             html.AppendLine("      `<td class='${s.netAmountClass}'>${s.netAmountStr}</td>`+");
+            html.AppendLine("      `<td>${s.largeHolder400Str}</td>`+");
+            html.AppendLine("      `<td>${s.largeHolder1000Str}</td>`+");
+            html.AppendLine("      `<td class='${s.largeHolderWeeklyClass}'>${s.largeHolderWeeklyStr}</td>`+");
             html.AppendLine("      `<td>${s.action}</td>`+");
             html.AppendLine("      `<td>${s.stage}</td>`+");
             html.AppendLine("      `<td class='text-left'>${s.suggestion}</td>`+");
@@ -2552,7 +2634,7 @@ namespace StockTracker.ViewModels
 
             // 排序機制
             html.AppendLine("let sortState={idx:0,asc:true};");
-            html.AppendLine("const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','net','netAmount','action','stage','suggestion','price','chg'];");
+            html.AppendLine("const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','net','netAmount','largeHolder400','largeHolder1000','largeHolderWeekly','action','stage','suggestion','price','chg'];");
             html.AppendLine("[...table.tHead.rows[0].cells].forEach((th,idx)=>{");
             html.AppendLine("  th.addEventListener('click',()=>{");
             html.AppendLine("    sortState.asc=(sortState.idx===idx)?!sortState.asc:true;");
@@ -2575,7 +2657,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const headers = [...table.tHead.rows[0].cells].map(th => `\"${(th.textContent||'').trim().replace(/\"/g, '\"\"')}\"`);");
             html.AppendLine("  csvRows.push(headers.join(','));");
             html.AppendLine("  filteredData.forEach(s => {");
-            html.AppendLine("    const row = [s.rank, s.symbol, s.name, s.score, s.crash, s.pcount, s.pattern, s.d0, s.d1, s.d2, s.d3, s.d4, s.avg, s.trend, s.netStr, s.netAmountStr, s.action, s.stage, s.suggestion, s.price, s.chg];");
+            html.AppendLine("    const row = [s.rank, s.symbol, s.name, s.score, s.crash, s.pcount, s.pattern, s.d0, s.d1, s.d2, s.d3, s.d4, s.avg, s.trend, s.netStr, s.netAmountStr, s.largeHolder400Str, s.largeHolder1000Str, s.largeHolderWeeklyStr, s.action, s.stage, s.suggestion, s.price, s.chg];");
             html.AppendLine("    csvRows.push(row.map(v => `\"${String(v).replace(/\"/g, '\"\"')}\"`).join(','));");
             html.AppendLine("  });");
             html.AppendLine("  const csvString = csvRows.join('\\r\\n');");
@@ -2723,6 +2805,9 @@ namespace StockTracker.ViewModels
                 var lockObj = new object();
                 var t86HistoryMap = await _mainViewModel.LoadAllTwseT86HistoriesForScanAsync(scanHistoryStartDate);
                 MarketOverview = await BuildMarketOverviewAsync(t86HistoryMap);
+                ProgressText = "正在取得集保大戶持股資料...";
+                var largeHolderDataset = await new TdccLargeHolderService().GetLatestAsync();
+                var largeHolderMetrics = SaveAndGetLargeHolderMetrics(largeHolderDataset);
 
                 var parallelOptions = new ParallelOptions
                 {
@@ -2810,6 +2895,7 @@ namespace StockTracker.ViewModels
                             long foreignNet = ResolveForeignNetByDate(t86History, scoreDate);
                             long dealerNet = ResolveDealerNetByDate(t86History, scoreDate);
                             long trustNet = ResolveInvestmentTrustNetByDate(t86History, scoreDate);
+                            largeHolderMetrics.TryGetValue(symbol, out var largeHolderMetric);
 
                             lock (lockObj)
                             {
@@ -2849,6 +2935,10 @@ namespace StockTracker.ViewModels
                                     ForeignNet = foreignNet,
                                     DealerNet = dealerNet,
                                     InvestmentTrustNet = trustNet,
+                                    LargeHolder400PlusRatio = largeHolderMetric?.Holding400PlusRatio,
+                                    LargeHolder1000PlusRatio = largeHolderMetric?.Holding1000PlusRatio,
+                                    LargeHolder400PlusWeeklyChange = largeHolderMetric?.Holding400PlusWeeklyChange,
+                                    LargeHolderDataDate = largeHolderMetric?.DataDate ?? DateTime.MinValue,
                                     RecentScores = recentScores,
                                     ScoreReason = scoreReasonText,
                                     DecisionSummary = strategyOutput?.DecisionSummary ?? string.Empty,
@@ -2921,6 +3011,95 @@ namespace StockTracker.ViewModels
                 _isScanning = false;
                 CommandManager.InvalidateRequerySuggested();
             }
+        }
+
+        private IReadOnlyDictionary<string, TdccLargeHolderMetric> SaveAndGetLargeHolderMetrics(TdccLargeHolderDataset dataset)
+        {
+            var result = new Dictionary<string, TdccLargeHolderMetric>(StringComparer.OrdinalIgnoreCase);
+            if (dataset == null || dataset.DataDate == DateTime.MinValue || dataset.SnapshotsBySymbol == null)
+                return result;
+
+            var dataDateText = dataset.DataDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            try
+            {
+                using (var conn = new System.Data.SQLite.SQLiteConnection($"Data Source={_dbPath};Version=3;"))
+                {
+                    conn.Open();
+                    string previousDateText;
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT MAX(DataDate) FROM TdccLargeHolderSnapshots WHERE DataDate < @dataDate";
+                        cmd.Parameters.AddWithValue("@dataDate", dataDateText);
+                        previousDateText = cmd.ExecuteScalar() as string;
+                    }
+
+                    var previousBySymbol = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+                    if (!string.IsNullOrWhiteSpace(previousDateText))
+                    {
+                        using (var cmd = conn.CreateCommand())
+                        {
+                            cmd.CommandText = "SELECT Symbol, Holding400PlusRatio FROM TdccLargeHolderSnapshots WHERE DataDate = @dataDate";
+                            cmd.Parameters.AddWithValue("@dataDate", previousDateText);
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                    previousBySymbol[reader.GetString(0)] = Convert.ToDecimal(reader.GetValue(1), CultureInfo.InvariantCulture);
+                            }
+                        }
+                    }
+
+                    using (var tx = conn.BeginTransaction())
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.Transaction = tx;
+                        cmd.CommandText = @"
+                            INSERT OR REPLACE INTO TdccLargeHolderSnapshots (DataDate, Symbol, Holding400PlusRatio, Holding1000PlusRatio)
+                            VALUES (@dataDate, @symbol, @ratio400, @ratio1000)";
+                        foreach (var pair in dataset.SnapshotsBySymbol)
+                        {
+                            var snapshot = pair.Value;
+                            if (snapshot == null || string.IsNullOrWhiteSpace(snapshot.Symbol))
+                                continue;
+
+                            var hasPrevious = previousBySymbol.TryGetValue(snapshot.Symbol, out var previousRatio);
+                            result[snapshot.Symbol] = new TdccLargeHolderMetric
+                            {
+                                DataDate = dataset.DataDate.Date,
+                                Holding400PlusRatio = snapshot.Holding400PlusRatio,
+                                Holding1000PlusRatio = snapshot.Holding1000PlusRatio,
+                                Holding400PlusWeeklyChange = hasPrevious
+                                    ? snapshot.Holding400PlusRatio - previousRatio
+                                    : (decimal?)null
+                            };
+
+                            cmd.Parameters.Clear();
+                            cmd.Parameters.AddWithValue("@dataDate", dataDateText);
+                            cmd.Parameters.AddWithValue("@symbol", snapshot.Symbol);
+                            cmd.Parameters.AddWithValue("@ratio400", snapshot.Holding400PlusRatio);
+                            cmd.Parameters.AddWithValue("@ratio1000", snapshot.Holding1000PlusRatio);
+                            cmd.ExecuteNonQuery();
+                        }
+                        tx.Commit();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save TDCC large-holder snapshot: {ex.Message}");
+                foreach (var pair in dataset.SnapshotsBySymbol)
+                {
+                    if (pair.Value == null)
+                        continue;
+                    result[pair.Key] = new TdccLargeHolderMetric
+                    {
+                        DataDate = dataset.DataDate.Date,
+                        Holding400PlusRatio = pair.Value.Holding400PlusRatio,
+                        Holding1000PlusRatio = pair.Value.Holding1000PlusRatio
+                    };
+                }
+            }
+
+            return result;
         }
 
         private async Task<MarketOverviewSnapshot> BuildMarketOverviewAsync(IReadOnlyDictionary<string, TwseT86History> t86HistoryMap)

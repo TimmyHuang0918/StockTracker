@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Media;
 
 namespace StockTracker.Models
@@ -282,6 +283,29 @@ namespace StockTracker.Models
         public long MarginAmountChangeThousand { get; set; }
         public long ShortBalanceLots { get; set; }
         public long ShortBalanceChangeLots { get; set; }
+    }
+
+    /// <summary>Weekly large-holder ownership ratios calculated from TDCC ownership tiers.</summary>
+    public class TdccLargeHolderSnapshot
+    {
+        public string Symbol { get; set; }
+        public decimal Holding400PlusRatio { get; set; }
+        public decimal Holding1000PlusRatio { get; set; }
+    }
+
+    public class TdccLargeHolderDataset
+    {
+        public DateTime DataDate { get; set; }
+        public IReadOnlyDictionary<string, TdccLargeHolderSnapshot> SnapshotsBySymbol { get; set; }
+            = new Dictionary<string, TdccLargeHolderSnapshot>();
+    }
+
+    public class TdccLargeHolderMetric
+    {
+        public DateTime DataDate { get; set; }
+        public decimal Holding400PlusRatio { get; set; }
+        public decimal Holding1000PlusRatio { get; set; }
+        public decimal? Holding400PlusWeeklyChange { get; set; }
     }
 
     public class PutCallRatioRecord

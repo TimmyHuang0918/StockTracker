@@ -415,6 +415,15 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
+                <DataGridTextColumn Header="大戶 400張+" Binding="{Binding LargeHolder400PlusDisplay}" SortMemberPath="LargeHolder400PlusRatio" Width="95" />
+                <DataGridTextColumn Header="超大戶 1000張+" Binding="{Binding LargeHolder1000PlusDisplay}" SortMemberPath="LargeHolder1000PlusRatio" Width="110" />
+                <DataGridTextColumn Header="大戶週變" Binding="{Binding LargeHolder400PlusWeeklyChangeDisplay}" SortMemberPath="LargeHolder400PlusWeeklyChange" Width="95">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding LargeHolder400PlusWeeklyChangeBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="策略動作" Binding="{Binding StrategyActionText}" Width="130">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
