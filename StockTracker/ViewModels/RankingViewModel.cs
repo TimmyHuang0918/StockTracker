@@ -127,6 +127,30 @@ namespace StockTracker.ViewModels
         }
     }
 
+    /// <summary>
+    /// A transparent, scan-based market reading.  It deliberately does not
+    /// represent an official index forecast: each component is shown so the
+    /// user can judge the context instead of relying on a black-box score.
+    /// </summary>
+    public sealed class MarketRegimeSnapshot
+    {
+        public string Title { get; set; } = "資料待更新";
+        public string Summary { get; set; } = "完成全市場掃描後，會依市場廣度、法人、融資與 P/C 顯示判讀。";
+        public int PositiveSignals { get; set; }
+        public int NegativeSignals { get; set; }
+        public string BreadthSignal { get; set; } = "市場廣度尚無資料";
+        public string InstitutionalSignal { get; set; } = "法人資料尚無資料";
+        public string MarginSignal { get; set; } = "融資資料尚無資料";
+        public string PutCallSignal { get; set; } = "P/C 未平倉尚無資料";
+
+        public System.Windows.Media.Brush ToneBrush =>
+            PositiveSignals > NegativeSignals ? System.Windows.Media.Brushes.IndianRed :
+            NegativeSignals > PositiveSignals ? System.Windows.Media.Brushes.MediumSeaGreen :
+            System.Windows.Media.Brushes.Gray;
+
+        public string SignalCountText => $"偏多 {PositiveSignals} 項／偏空 {NegativeSignals} 項";
+    }
+
     public sealed class MarketOverviewDay
     {
         public DateTime TradeDate { get; set; }
@@ -647,10 +671,12 @@ namespace StockTracker.ViewModels
             {
                 _marketOverview = value ?? new MarketOverviewSnapshot();
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(MarketRegime));
             }
         }
 
         public MarketBreadthSnapshot MarketBreadth => CreateMarketBreadth(RankedStocks);
+        public MarketRegimeSnapshot MarketRegime => CreateMarketRegime(MarketBreadth, MarketOverview);
         public IReadOnlyList<MarketGroupSnapshot> MarketGroups => CreateMarketGroups(RankedStocks, _stockGroupCatalog);
         public IReadOnlyList<MarketGroupSnapshot> TopMarketGroups => MarketGroups;
         public IReadOnlyList<string> GroupEditorGroups => _stockGroupCatalog.GetGroupNames();
@@ -1452,6 +1478,7 @@ namespace StockTracker.ViewModels
         {
             var exportStocks = GetCurrentViewStocks();
             var marketBreadth = CreateMarketBreadth(RankedStocks);
+            var marketRegime = CreateMarketRegime(marketBreadth, MarketOverview);
             var marketGroups = CreateMarketGroups(RankedStocks, _stockGroupCatalog)
                 .ToList();
             var themeStatusByName = ThemeStatuses.ToDictionary(x => x.Theme, StringComparer.OrdinalIgnoreCase);
@@ -1646,6 +1673,7 @@ namespace StockTracker.ViewModels
 
             html.AppendLine(".panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}");
             html.AppendLine(".market-overview{display:grid;grid-template-columns:2fr 1.5fr 1fr;gap:10px;margin-bottom:16px;}.market-overview .stat-box{background:var(--panel-bg);border:1px solid var(--border);}.market-overview .stat-label{margin-bottom:8px;}.market-overview .overview-values{display:flex;flex-wrap:wrap;gap:12px;}.market-overview .overview-item{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--text-muted);}.market-overview .overview-item strong{color:#fff;font-size:15px;}@media(max-width:900px){.market-overview{grid-template-columns:1fr;}}");
+            html.AppendLine(".market-regime{display:grid;grid-template-columns:minmax(220px,1.25fr) repeat(4,minmax(130px,1fr));gap:10px;align-items:stretch;}.regime-lead,.regime-signal{background:rgba(139,148,158,.06);border:1px solid var(--border);border-radius:10px;padding:12px;}.regime-eyebrow,.regime-signal span{display:block;color:var(--text-muted);font-size:11px;margin-bottom:5px;}.regime-lead strong{display:block;font-size:21px;margin-bottom:5px;}.regime-lead p{margin:0;color:var(--text-muted);font-size:12px;line-height:1.5;}.regime-signal strong{font-size:13px;line-height:1.45;}@media(max-width:1100px){.market-regime{grid-template-columns:repeat(2,minmax(180px,1fr));}}@media(max-width:620px){.market-regime{grid-template-columns:1fr;}}");
             html.AppendLine(".breadth-card{position:static;width:142px;min-width:0;padding:10px;margin:0 0 16px auto;text-align:center;overflow:visible;isolation:isolate;}.breadth-title{margin:0;color:#fff;font-size:13px;}.breadth-subtitle{display:none;}.breadth-donut{width:86px;height:86px;border-radius:50%;margin:6px auto;display:grid;place-items:center;position:relative;overflow:visible;}.breadth-donut::after{content:'';position:absolute;inset:12px;background:var(--panel-bg);border-radius:50%;}.breadth-center{position:relative;z-index:1;display:flex;flex-direction:column;line-height:1.05;white-space:nowrap;}.breadth-tone{font-size:12px;font-weight:700;}.breadth-ratio{font-size:16px;font-weight:700;color:#fff;}.breadth-counts{display:flex;justify-content:center;gap:6px;font-size:10px;font-weight:600;white-space:nowrap;}.breadth-average{margin:4px 0 0;font-size:10px;color:var(--text-muted);}.breadth-note{display:none;}");
             html.AppendLine(".hero-card{background:linear-gradient(135deg, #1f2937 0%, #111827 100%);border:2px solid #2563eb;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 8px 24px rgba(37,99,235,0.2);}");
             html.AppendLine(".hero-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:16px;}");
@@ -1739,6 +1767,15 @@ namespace StockTracker.ViewModels
             html.AppendLine(marketOverviewRows);
             html.AppendLine("</tbody></table></div><p class='muted' style='margin:8px 0 0'>法人為上市、上櫃三大法人官方買賣超金額（億元）；資券為上市全市場餘額（張）；P/C 為臺指選擇權未平倉量比率。</p></section>");
 
+            var marketRegimeToneClass = ResolveValueColorClass(marketRegime.PositiveSignals - marketRegime.NegativeSignals);
+            html.AppendLine("<section class='panel market-regime' aria-label='市場狀態'>");
+            html.AppendLine($"<div class='regime-lead'><span class='regime-eyebrow'>市場狀態（本次掃描）</span><strong class='{marketRegimeToneClass}'>{HtmlEncode(marketRegime.Title)}</strong><p>{HtmlEncode(marketRegime.Summary)}<br>{HtmlEncode(marketRegime.SignalCountText)}</p></div>");
+            html.AppendLine($"<div class='regime-signal'><span>市場廣度</span><strong>{HtmlEncode(marketRegime.BreadthSignal)}</strong></div>");
+            html.AppendLine($"<div class='regime-signal'><span>三大法人（近五日）</span><strong>{HtmlEncode(marketRegime.InstitutionalSignal)}</strong></div>");
+            html.AppendLine($"<div class='regime-signal'><span>融資（近五日）</span><strong>{HtmlEncode(marketRegime.MarginSignal)}</strong></div>");
+            html.AppendLine($"<div class='regime-signal'><span>臺指 P/C 未平倉</span><strong>{HtmlEncode(marketRegime.PutCallSignal)}</strong></div>");
+            html.AppendLine("</section>");
+
             html.AppendLine("<div class='filter-breadth-layout'>");
             html.AppendLine("<div class=\"panel filter-panel\">");
             html.AppendLine("<div class='filter-grid'>");
@@ -1781,7 +1818,7 @@ namespace StockTracker.ViewModels
             }
             else
             {
-                html.AppendLine("<div id='marketGroupCards' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;max-height:180px;overflow-y:auto;padding-right:6px;'>");
+                html.AppendLine("<div id='marketGroupCards' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;max-height:300px;overflow-y:auto;padding:2px 8px 2px 2px;'>");
                 foreach (var group in marketGroups)
                 {
                     var toneClass = ResolveValueColorClass((double)group.AverageChangePercent);
@@ -1790,7 +1827,7 @@ namespace StockTracker.ViewModels
                     var extra = status == null
                         ? string.Empty
                         : $"<div class='muted' style='font-size:12px;margin-top:3px'>&#36817;5&#26085; {status.AverageChange5D:+0.00;-0.00;0.00}%&#65307;&#37327;&#33021; {status.AverageVolumeRatio20D:F2}x</div>";
-                    html.AppendLine($"<button type='button' class='group-filter' data-group='{HtmlEncode(group.GroupName)}' style='text-align:left;color:inherit;border:1px solid var(--border);border-radius:8px;padding:10px;background:rgba(139,148,158,.06);cursor:pointer'><div style='display:flex;justify-content:space-between;gap:8px'><strong>{HtmlEncode(group.GroupName)}</strong><span class='{toneClass}'>{label}</span></div><div style='font-size:20px;font-weight:700;margin:6px 0' class='{toneClass}'>{group.AverageChangePercent:+0.00;-0.00;0.00}%</div><div class='muted' style='font-size:12px'>&#19978;&#28450; {group.AdvancingCount:N0} / &#19979;&#36300; {group.DecliningCount:N0} / &#20849; {group.TotalCount:N0}</div><div class='muted' style='font-size:12px;margin-top:3px'>&#19978;&#28450;&#29575; {group.AdvanceRatioPercent:F0}%</div>{extra}</button>");
+                    html.AppendLine($"<button type='button' class='group-filter' data-group='{HtmlEncode(group.GroupName)}' style='min-height:132px;text-align:left;color:inherit;border:1px solid var(--border);border-radius:12px;padding:14px;background:rgba(139,148,158,.06);cursor:pointer'><div style='display:flex;justify-content:space-between;gap:8px'><strong>{HtmlEncode(group.GroupName)}</strong><span class='{toneClass}'>{label}</span></div><div style='font-size:22px;font-weight:700;margin:8px 0' class='{toneClass}'>{group.AverageChangePercent:+0.00;-0.00;0.00}%</div><div class='muted' style='font-size:12px'>&#19978;&#28450; {group.AdvancingCount:N0} / &#19979;&#36300; {group.DecliningCount:N0} / &#20849; {group.TotalCount:N0}</div><div class='muted' style='font-size:12px;margin-top:4px'>&#19978;&#28450;&#29575; {group.AdvanceRatioPercent:F0}%</div>{extra}</button>");
                 }
                 html.AppendLine("</div>");
             }
@@ -1945,8 +1982,8 @@ namespace StockTracker.ViewModels
             // 將原生 Stock JSON 埋在 JS 變數中
             html.AppendLine("<script>");
             html.AppendLine($"const rawData = {stockDataJson};");
-            html.AppendLine("const normalizeMarketGroupName=value=>{const group=String(value||'').trim();if(group==='防禦型'||group==='IC載板')return '';if(group.includes('記憶體'))return '記憶體';return ({'半導體業':'半導體','生技醫療業':'生技醫療','光電業':'光電','其他電子業':'其他電子','航運業':'航運','資訊服務業':'資訊服務','電子通路業':'電子通路','電子零組件業':'電子零組件','水泥':'水泥工業','汽車':'汽車／電動車','電腦及週邊設備業':'電腦及週邊','PCB／HDI':'PCB'})[group]||group;};let groupMappingBySymbol=new Map();let selectedMarketGroup='';");
-            html.AppendLine("function refreshMarketGroupCards(){const host=document.getElementById('marketGroupCards');if(!host)return;const buckets=new Map();rawData.forEach(stock=>{const mapping=groupMappingBySymbol.get(String(stock.symbol));if(!mapping)return;const names=[...new Set([mapping.Industry??mapping.industry,...(mapping.Themes??mapping.themes??[]),...(mapping.CoreThemes??mapping.coreThemes??[])].map(normalizeMarketGroupName).filter(Boolean))];names.forEach(name=>{const items=buckets.get(name)||[];items.push(stock);buckets.set(name,items);});});const average=items=>items.reduce((sum,x)=>sum+Number(x.chg||0),0)/items.length;host.replaceChildren();[...buckets.entries()].sort((a,b)=>average(b[1])-average(a[1])||a[0].localeCompare(b[0],'zh-Hant')).forEach(([name,items])=>{const total=items.length,up=items.filter(x=>Number(x.chg)>0).length,down=items.filter(x=>Number(x.chg)<0).length,change=average(items),ratio=total?up/total*100:0,style=change>0?'rise':change<0?'fall':'flat',label=change>0?'偏多':change<0?'偏空':'持平',button=document.createElement('button');button.type='button';button.className='group-filter';button.dataset.group=name;button.style.cssText='text-align:left;color:inherit;border:1px solid var(--border);border-radius:8px;padding:10px;background:rgba(139,148,158,.06);cursor:pointer';button.innerHTML=\"<div style='display:flex;justify-content:space-between;gap:8px'><strong></strong><span class='\"+style+\"'>\"+label+\"</span></div><div style='font-size:20px;font-weight:700;margin:6px 0' class='\"+style+\"'>\"+(change>0?'+':'')+change.toFixed(2)+\"%</div><div class='muted' style='font-size:12px'>上漲 \"+up+\" / 下跌 \"+down+\" / 共 \"+total+\"</div><div class='muted' style='font-size:12px;margin-top:3px'>上漲率 \"+ratio.toFixed(0)+\"%</div>\";button.querySelector('strong').textContent=name;host.append(button);});}");
+            html.AppendLine("const normalizeMarketGroupName=value=>{const group=String(value||'').trim();if(group==='防禦型'||group==='IC載板')return '';if(group.includes('記憶體'))return '記憶體';return ({'綠能':'綠能環保','金融':'金融保險業','公用事業':'油電燃氣業','網通':'通信網路業','AI伺服器／整機':'AI伺服器','半導體業':'半導體','生技醫療業':'生技醫療','光電業':'光電','其他電子業':'其他電子','航運業':'航運','資訊服務業':'資訊服務','電子通路業':'電子通路','電子零組件業':'電子零組件','水泥':'水泥工業','汽車':'汽車／電動車','電腦及週邊設備業':'電腦及週邊','PCB／HDI':'PCB'})[group]||group;};const normalizeCoreThemeName=value=>{const group=normalizeMarketGroupName(value);return group.startsWith('PCB')?'PCB':group;};let groupMappingBySymbol=new Map();let selectedMarketGroup='';");
+            html.AppendLine("function refreshMarketGroupCards(){const host=document.getElementById('marketGroupCards');if(!host)return;const buckets=new Map();rawData.forEach(stock=>{const mapping=groupMappingBySymbol.get(String(stock.symbol));if(!mapping)return;const names=[...new Set([...(mapping.CoreThemes??mapping.coreThemes??[])].map(normalizeCoreThemeName).filter(Boolean))];names.forEach(name=>{const items=buckets.get(name)||[];items.push(stock);buckets.set(name,items);});});const average=items=>items.reduce((sum,x)=>sum+Number(x.chg||0),0)/items.length;host.replaceChildren();[...buckets.entries()].filter(([,items])=>items.length>=3).sort((a,b)=>average(b[1])-average(a[1])||a[0].localeCompare(b[0],'zh-Hant')).forEach(([name,items])=>{const total=items.length,up=items.filter(x=>Number(x.chg)>0).length,down=items.filter(x=>Number(x.chg)<0).length,change=average(items),ratio=total?up/total*100:0,style=change>0?'rise':change<0?'fall':'flat',label=change>0?'偏多':change<0?'偏空':'持平',button=document.createElement('button');button.type='button';button.className='group-filter';button.dataset.group=name;button.style.cssText='min-height:132px;text-align:left;color:inherit;border:1px solid var(--border);border-radius:12px;padding:14px;background:rgba(139,148,158,.06);cursor:pointer';button.innerHTML=\"<div style='display:flex;justify-content:space-between;gap:8px'><strong></strong><span class='\"+style+\"'>\"+label+\"</span></div><div style='font-size:22px;font-weight:700;margin:8px 0' class='\"+style+\"'>\"+(change>0?'+':'')+change.toFixed(2)+\"%</div><div class='muted' style='font-size:12px'>上漲 \"+up+\" / 下跌 \"+down+\" / 共 \"+total+\"</div><div class='muted' style='font-size:12px;margin-top:4px'>上漲率 \"+ratio.toFixed(0)+\"%</div>\";button.querySelector('strong').textContent=name;host.append(button);});}");
             html.AppendLine("fetch('./stock-groups.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).then(rows=>{groupMappingBySymbol=new Map(rows.map(x=>[String(x.Symbol??x.symbol??''),x]).filter(([symbol])=>symbol));refreshMarketGroupCards();document.querySelectorAll('.group-filter').forEach(button=>button.addEventListener('click',()=>{selectedMarketGroup=button.dataset.group||'';applyFilter();document.getElementById('activeGroupFilter').textContent=selectedMarketGroup?'目前族群：'+selectedMarketGroup:'';}));document.getElementById('clearGroupFilter').addEventListener('click',()=>{selectedMarketGroup='';applyFilter();document.getElementById('activeGroupFilter').textContent='';});}).catch(()=>{});");
             html.AppendLine($"const kLineData0050 = {kLineData0050Json};");
             html.AppendLine($"const stock0050Data = {stock0050Json};");
@@ -2437,7 +2474,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;");
 
             html.AppendLine("  filteredData = rawData.filter(item => {");
-            html.AppendLine("    if(selectedMarketGroup){const mapping=groupMappingBySymbol.get(String(item.symbol));const groups=mapping?[mapping.Industry??mapping.industry,...(mapping.Themes??mapping.themes??[]),...(mapping.CoreThemes??mapping.coreThemes??[])].map(normalizeMarketGroupName):[];if(!groups.includes(selectedMarketGroup))return false;}");
+            html.AppendLine("    if(selectedMarketGroup){const mapping=groupMappingBySymbol.get(String(item.symbol));const groups=mapping?[...(mapping.CoreThemes??mapping.coreThemes??[])].map(normalizeCoreThemeName):[];if(!groups.includes(selectedMarketGroup))return false;}");
             html.AppendLine("    if(top!==null&&item.rank>top) return false;");
             html.AppendLine("    if(kw&&!item.searchKey.includes(kw)) return false;");
             html.AppendLine("    if(!passRange(item.price,minPrice,maxPrice)) return false;");
@@ -3387,6 +3424,110 @@ namespace StockTracker.ViewModels
             };
         }
 
+        private static MarketRegimeSnapshot CreateMarketRegime(
+            MarketBreadthSnapshot breadth,
+            MarketOverviewSnapshot overview)
+        {
+            breadth ??= new MarketBreadthSnapshot();
+            overview ??= new MarketOverviewSnapshot();
+
+            var result = new MarketRegimeSnapshot();
+            var hasOverview = overview.TradeDate != DateTime.MinValue;
+
+            if (breadth.TotalCount > 0)
+            {
+                if (breadth.AdvanceRatioPercent >= 55m)
+                {
+                    result.PositiveSignals++;
+                    result.BreadthSignal = $"上漲比 {breadth.AdvanceRatioPercent:F0}%：漲勢擴散";
+                }
+                else if (breadth.AdvanceRatioPercent <= 45m)
+                {
+                    result.NegativeSignals++;
+                    result.BreadthSignal = $"上漲比 {breadth.AdvanceRatioPercent:F0}%：下跌較多";
+                }
+                else
+                {
+                    result.BreadthSignal = $"上漲比 {breadth.AdvanceRatioPercent:F0}%：多空分歧";
+                }
+            }
+
+            if (hasOverview)
+            {
+                if (overview.ThreeMajorNet5D > 0m)
+                {
+                    result.PositiveSignals++;
+                    result.InstitutionalSignal = $"{FormatRegimeMoney(overview.ThreeMajorNet5D)}：買超";
+                }
+                else if (overview.ThreeMajorNet5D < 0m)
+                {
+                    result.NegativeSignals++;
+                    result.InstitutionalSignal = $"{FormatRegimeMoney(overview.ThreeMajorNet5D)}：賣超";
+                }
+                else
+                {
+                    result.InstitutionalSignal = "0.0 億：中性";
+                }
+
+                if (overview.MarginBalanceChange5D > 0)
+                {
+                    result.PositiveSignals++;
+                    result.MarginSignal = $"{FormatRegimeLots(overview.MarginBalanceChange5D)}：槓桿升溫";
+                }
+                else if (overview.MarginBalanceChange5D < 0)
+                {
+                    result.NegativeSignals++;
+                    result.MarginSignal = $"{FormatRegimeLots(overview.MarginBalanceChange5D)}：槓桿收斂";
+                }
+                else
+                {
+                    result.MarginSignal = "0 張：槓桿持平";
+                }
+
+                if (overview.PutCallOpenInterestRatio.HasValue)
+                {
+                    var putCall = overview.PutCallOpenInterestRatio.Value;
+                    if (putCall > 115m)
+                    {
+                        result.NegativeSignals++;
+                        result.PutCallSignal = $"{putCall:F1}%：避險升溫";
+                    }
+                    else if (putCall < 80m)
+                    {
+                        result.PositiveSignals++;
+                        result.PutCallSignal = $"{putCall:F1}%：買方相對積極";
+                    }
+                    else
+                    {
+                        result.PutCallSignal = $"{putCall:F1}%：中性區間";
+                    }
+                }
+            }
+
+            var balance = result.PositiveSignals - result.NegativeSignals;
+            result.Title = !hasOverview && breadth.TotalCount == 0
+                ? "資料待更新"
+                : balance >= 2 ? "偏多延續"
+                : balance == 1 ? "偏多觀察"
+                : balance <= -2 ? "防守觀察"
+                : balance == -1 ? "轉弱留意"
+                : "盤整觀察";
+            result.Summary = "依市場廣度、近五日法人與融資、臺指 P/C 未平倉綜合判讀；不是加權指數預測。";
+            return result;
+        }
+
+        private static string FormatRegimeMoney(decimal amount)
+        {
+            var value = amount / 100000000m;
+            return value > 0m ? $"+{value:N1} 億" : value < 0m ? $"{value:N1} 億" : "0.0 億";
+        }
+
+        private static string FormatRegimeLots(long shares)
+        {
+            var lots = shares / 1000m;
+            return lots > 0m ? $"+{lots:N0} 張" : lots < 0m ? $"{lots:N0} 張" : "0 張";
+        }
+
         private static IReadOnlyList<MarketGroupSnapshot> CreateMarketGroups(
             IEnumerable<RankedStock> stocks,
             StockGroupCatalog catalog)
@@ -3483,6 +3624,7 @@ namespace StockTracker.ViewModels
         private void RefreshMarketBreadth()
         {
             OnPropertyChanged(nameof(MarketBreadth));
+            OnPropertyChanged(nameof(MarketRegime));
             OnPropertyChanged(nameof(MarketGroups));
             OnPropertyChanged(nameof(TopMarketGroups));
             OnPropertyChanged(nameof(GroupEditorGroups));

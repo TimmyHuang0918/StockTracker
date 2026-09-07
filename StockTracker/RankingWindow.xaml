@@ -103,6 +103,25 @@
                     <TextBlock Text="全市場資金總覽" FontSize="15" FontWeight="SemiBold" Foreground="White" />
                     <TextBlock DockPanel.Dock="Right" Text="{Binding MarketOverview.TradeDateText}" Foreground="#8b949e" FontSize="11" />
                 </DockPanel>
+                <Border Background="#21262d" BorderBrush="#3a4553" BorderThickness="1" CornerRadius="5" Padding="9" Margin="0,0,0,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="170" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="市場狀態（本次掃描）" FontSize="11" Foreground="#8b949e" />
+                            <TextBlock Text="{Binding MarketRegime.Title}" FontSize="18" FontWeight="Bold" Foreground="{Binding MarketRegime.ToneBrush}" />
+                            <TextBlock Text="{Binding MarketRegime.SignalCountText}" FontSize="10" Foreground="#8b949e" />
+                        </StackPanel>
+                        <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                            <StackPanel Width="135" Margin="0,0,8,4"><TextBlock Text="市場廣度" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketRegime.BreadthSignal}" TextWrapping="Wrap" FontSize="11" Foreground="White" /></StackPanel>
+                            <StackPanel Width="150" Margin="0,0,8,4"><TextBlock Text="三大法人（近五日）" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketRegime.InstitutionalSignal}" TextWrapping="Wrap" FontSize="11" Foreground="White" /></StackPanel>
+                            <StackPanel Width="140" Margin="0,0,8,4"><TextBlock Text="融資（近五日）" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketRegime.MarginSignal}" TextWrapping="Wrap" FontSize="11" Foreground="White" /></StackPanel>
+                            <StackPanel Width="135" Margin="0,0,8,4"><TextBlock Text="臺指 P/C 未平倉" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketRegime.PutCallSignal}" TextWrapping="Wrap" FontSize="11" Foreground="White" /></StackPanel>
+                        </WrapPanel>
+                    </Grid>
+                </Border>
                 <ItemsControl ItemsSource="{Binding MarketOverview.Days}">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
