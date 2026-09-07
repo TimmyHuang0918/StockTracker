@@ -3647,8 +3647,10 @@ namespace StockTracker.ViewModels
             MarketBreadthSnapshot breadth,
             MarketOverviewSnapshot overview)
         {
-            breadth ??= new MarketBreadthSnapshot();
-            overview ??= new MarketOverviewSnapshot();
+            if (breadth == null)
+                breadth = new MarketBreadthSnapshot();
+            if (overview == null)
+                overview = new MarketOverviewSnapshot();
 
             var result = new MarketRegimeSnapshot();
             var hasOverview = overview.TradeDate != DateTime.MinValue;
