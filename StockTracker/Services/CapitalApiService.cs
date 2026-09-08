@@ -176,7 +176,7 @@ namespace StockTracker.Services
                 {
                     var existingQuote = GetRelativeStockMessage(symbol);
                     CandleData existingCandle;
-                    if (TryBuildInstantCandle(existingQuote, out existingCandle))
+                    if (TryBuildScanInstantCandle(existingQuote, out existingCandle))
                     {
                         snapshots[symbol] = existingCandle;
                     }
@@ -208,7 +208,7 @@ namespace StockTracker.Services
                     }
 
                     CandleData candle;
-                    if (!TryBuildInstantCandle(quote, out candle))
+                    if (!TryBuildScanInstantCandle(quote, out candle))
                     {
                         return;
                     }
@@ -235,10 +235,13 @@ namespace StockTracker.Services
                                 {
                                     break;
                                 }
-                            }
+                        }
                             await Task.Delay(40);
                         }
                     }
+
+                    // 先在臨時報價請求仍有效時讀取群益快取，避免取消請求後快取被清理。
+                    FillSnapshotGaps(batch, snapshots);
                 }
                 finally
                 {
@@ -254,6 +257,33 @@ namespace StockTracker.Services
             }
 
             return snapshots;
+        }
+
+        private void FillSnapshotGaps(IEnumerable<string> symbols, Dictionary<string, CandleData> snapshots)
+        {
+            // 群益有時會更新內部報價快取，但不對每一檔觸發通知事件。
+            // 事件只作為快速路徑，缺漏的股票改從同一個群益快取逐檔讀回，
+            // 避免把「沒有事件」誤判成「沒有即時資料」。
+            foreach (var symbol in symbols)
+            {
+                lock (snapshots)
+                {
+                    if (snapshots.ContainsKey(symbol))
+                    {
+                        continue;
+                    }
+                }
+
+                var cachedQuote = GetRelativeStockMessage(symbol);
+                CandleData cachedCandle;
+                if (TryBuildScanInstantCandle(cachedQuote, out cachedCandle))
+                {
+                    lock (snapshots)
+                    {
+                        snapshots[symbol] = cachedCandle;
+                    }
+                }
+            }
         }
 
         private void RegisterSkEventsIfNeeded()
@@ -436,6 +466,41 @@ namespace StockTracker.Services
                 Volume = skStock.nYQty
             };
 
+            return true;
+        }
+
+        private static bool TryBuildScanInstantCandle(SKSTOCKLONG skStock, out CandleData candle)
+        {
+            if (TryBuildInstantCandle(skStock, out candle))
+            {
+                return true;
+            }
+
+            // 報價快取可能只有價格，未帶完整成交日期時間；掃描日期由掃描端
+            // 以本次請求日期統一標記，價格仍然完全來自群益快取。
+            var close = NormalizePrice(skStock.nClose);
+            if (close <= 0)
+            {
+                candle = null;
+                return false;
+            }
+
+            var open = NormalizePrice(skStock.nOpen);
+            var high = NormalizePrice(skStock.nHigh);
+            var low = NormalizePrice(skStock.nLow);
+            if (open <= 0) open = close;
+            if (high <= 0) high = Math.Max(open, close);
+            if (low <= 0) low = Math.Min(open, close);
+
+            candle = new CandleData
+            {
+                Time = DateTime.Today,
+                Open = open,
+                High = high,
+                Low = low,
+                Close = close,
+                Volume = skStock.nYQty
+            };
             return true;
         }
 

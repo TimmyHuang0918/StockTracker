@@ -2769,6 +2769,8 @@ namespace StockTracker.ViewModels
         private async Task ScanAllStocksAsync()
         {
             _isScanning = true;
+            // 夜間掃描可能跨過午夜；整批結果的日期應以掃描開始日為準。
+            var scanStartedDate = DateTime.Now;
             CommandManager.InvalidateRequerySuggested();
             RankedStocks.Clear();
             RefreshMarketBreadth();
@@ -2800,9 +2802,8 @@ namespace StockTracker.ViewModels
                         ProgressValue = total == 0 ? 0d : ((double)received / total) * 10d;
                         ProgressText = $"正在取得群益即時報價... ({received}/{total})";
                     });
-                // 群益的個別即時報價偶爾會帶回前一個交易日的 nTradingDay；
-                // 掃描在當日夜間執行時，資料日期應以這次即時快照的取得日為準。
-                var instantQuoteSnapshotDate = DateTime.Today;
+                // 群益即時快照先暫存；日期會在日 K 載入完成後依最新交易日判定。
+                DateTime instantQuoteSnapshotDate;
 
                 ProgressText = $"已取得 {instantQuoteMap.Count} 檔群益即時報價，開始下載日 K...";
 
@@ -2876,14 +2877,6 @@ namespace StockTracker.ViewModels
 
                         _apiService.KLineDataReceived -= onKLineReceived;
 
-                        // 日 K 僅提供歷史技術指標；最新一根日 K 以主頁同樣的群益即時
-                        // 報價快照更新，避免日 K API 在收盤後仍回傳前一日的收盤價。
-                        CandleData instantQuote;
-                        if (instantQuoteMap.TryGetValue(symbol, out instantQuote))
-                        {
-                            MergeInstantQuoteIntoDailyCandles(candles, instantQuote, instantQuoteSnapshotDate);
-                        }
-
                         symbolDataMap[symbol] = (stockInfo.bstrStockName, candles);
                     }
 
@@ -2893,6 +2886,25 @@ namespace StockTracker.ViewModels
                         ProgressValue = 10 + (((double)totalChecked / distinctSymbols.Count) * 40); // 報價 10%、日 K 40%
                         ProgressText = $"下載K線資料至第 {totalChecked} 檔股票，共 {distinctSymbols.Count} 檔 4 碼股票";
                         await System.Windows.Threading.Dispatcher.Yield();
+                    }
+                }
+
+                var latestHistoricalDate = symbolDataMap.Values
+                    .SelectMany(x => x.Candles ?? new List<CandleData>())
+                    .Select(x => x.Time.Date)
+                    .Where(x => x != DateTime.MinValue.Date)
+                    .DefaultIfEmpty(DateTime.MinValue)
+                    .Max();
+                instantQuoteSnapshotDate = ResolveScanDate(scanStartedDate, latestHistoricalDate);
+
+                // 日 K 僅提供歷史技術指標；最新一根日 K 以主頁同樣的群益即時
+                // 報價快照更新，避免日 K API 在收盤後仍回傳前一日的收盤價。
+                foreach (var eachData in symbolDataMap)
+                {
+                    CandleData instantQuote;
+                    if (instantQuoteMap.TryGetValue(eachData.Key, out instantQuote))
+                    {
+                        MergeInstantQuoteIntoDailyCandles(eachData.Value.Candles, instantQuote, instantQuoteSnapshotDate);
                     }
                 }
 
@@ -2992,7 +3004,7 @@ namespace StockTracker.ViewModels
                             if (recentScores.Count > 0)
                             {
                                 recentScores[0].Score = latestScore;
-                                recentScores[0].Date = enrichedCandles.Last().Time.Date;
+                                recentScores[0].Date = scoreDate;
                             }
 
                             long latestNet = ResolveThreeMajorNetByDate(t86History, scoreDate);
@@ -3148,6 +3160,18 @@ namespace StockTracker.ViewModels
             }
 
             candles.Add(replacement);
+        }
+
+        private static DateTime ResolveScanDate(DateTime scanStartedDate, DateTime latestHistoricalDate)
+        {
+            if (latestHistoricalDate != DateTime.MinValue &&
+                scanStartedDate.Date > latestHistoricalDate.Date &&
+                scanStartedDate.TimeOfDay < TimeSpan.FromHours(9))
+            {
+                return latestHistoricalDate.Date;
+            }
+
+            return scanStartedDate.Date;
         }
 
         private IReadOnlyDictionary<string, TdccLargeHolderMetric> SaveAndGetLargeHolderMetrics(TdccLargeHolderDataset dataset)
