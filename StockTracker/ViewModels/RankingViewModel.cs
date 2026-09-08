@@ -479,6 +479,7 @@ namespace StockTracker.ViewModels
             _rankedStocksView.Filter = FilterRankedStocks;
 
             LoadSavedRanking();
+            LoadSavedMarketOverview();
             LoadNotificationEmailList();
         }
 
@@ -1024,6 +1025,17 @@ namespace StockTracker.ViewModels
                     cmd.ExecuteNonQuery();
                 }
 
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS LatestMarketOverview (
+                            Id INTEGER PRIMARY KEY,
+                            SavedAt TEXT NOT NULL,
+                            Payload TEXT NOT NULL
+                        );";
+                    cmd.ExecuteNonQuery();
+                }
+
                 if (!hasThreeMajorNetColumn)
                 {
                     // 若存在舊表又沒有這個欄位，手動補上
@@ -1372,6 +1384,72 @@ namespace StockTracker.ViewModels
             {
                 ProgressText = $"讀取存檔時發生錯誤: {ex.Message}";
             }
+        }
+
+        private void LoadSavedMarketOverview()
+        {
+            try
+            {
+                using (var conn = new System.Data.SQLite.SQLiteConnection($"Data Source={_dbPath};Version=3;"))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT Payload FROM LatestMarketOverview WHERE Id = 1";
+                        var payload = cmd.ExecuteScalar() as string;
+                        if (string.IsNullOrWhiteSpace(payload))
+                            return;
+
+                        var overview = Newtonsoft.Json.JsonConvert.DeserializeObject<MarketOverviewSnapshot>(payload);
+                        if (overview == null || overview.TradeDate == DateTime.MinValue)
+                            return;
+
+                        overview.Days = overview.Days ?? Array.Empty<MarketOverviewDay>();
+                        MarketOverview = overview;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load market overview: {ex.Message}");
+            }
+        }
+
+        private void SaveMarketOverviewToDb(MarketOverviewSnapshot overview)
+        {
+            if (!IsMarketOverviewComplete(overview))
+                return;
+
+            try
+            {
+                var payload = Newtonsoft.Json.JsonConvert.SerializeObject(overview);
+                using (var conn = new System.Data.SQLite.SQLiteConnection($"Data Source={_dbPath};Version=3;"))
+                {
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"
+                            INSERT OR REPLACE INTO LatestMarketOverview (Id, SavedAt, Payload)
+                            VALUES (1, @savedAt, @payload)";
+                        cmd.Parameters.AddWithValue("@savedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+                        cmd.Parameters.AddWithValue("@payload", payload);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save market overview: {ex.Message}");
+            }
+        }
+
+        private static bool IsMarketOverviewComplete(MarketOverviewSnapshot overview)
+        {
+            var days = overview?.Days ?? Array.Empty<MarketOverviewDay>();
+            return overview != null && overview.TradeDate != DateTime.MinValue && days.Count > 0
+                && days.Any(day => day.MarginAmountThousand > 0 || day.ShortBalanceLots > 0)
+                && days.Any(day => day.PutCallOpenInterestRatio.HasValue)
+                && days.Any(day => day.ForeignNet != 0m || day.TrustNet != 0m || day.DealerNet != 0m);
         }
 
         private void SaveRankingToDb(IEnumerable<RankedStock> rankingResults)
@@ -2805,6 +2883,7 @@ namespace StockTracker.ViewModels
                 var lockObj = new object();
                 var t86HistoryMap = await _mainViewModel.LoadAllTwseT86HistoriesForScanAsync(scanHistoryStartDate);
                 MarketOverview = await BuildMarketOverviewAsync(t86HistoryMap);
+                SaveMarketOverviewToDb(MarketOverview);
                 ProgressText = "正在取得集保大戶持股資料...";
                 var largeHolderDataset = await new TdccLargeHolderService().GetLatestAsync();
                 var largeHolderMetrics = SaveAndGetLargeHolderMetrics(largeHolderDataset);
