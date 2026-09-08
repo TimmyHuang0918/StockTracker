@@ -2800,6 +2800,9 @@ namespace StockTracker.ViewModels
                         ProgressValue = total == 0 ? 0d : ((double)received / total) * 10d;
                         ProgressText = $"正在取得群益即時報價... ({received}/{total})";
                     });
+                // 群益的個別即時報價偶爾會帶回前一個交易日的 nTradingDay；
+                // 掃描在當日夜間執行時，資料日期應以這次即時快照的取得日為準。
+                var instantQuoteSnapshotDate = DateTime.Today;
 
                 ProgressText = $"已取得 {instantQuoteMap.Count} 檔群益即時報價，開始下載日 K...";
 
@@ -2878,7 +2881,7 @@ namespace StockTracker.ViewModels
                         CandleData instantQuote;
                         if (instantQuoteMap.TryGetValue(symbol, out instantQuote))
                         {
-                            MergeInstantQuoteIntoDailyCandles(candles, instantQuote);
+                            MergeInstantQuoteIntoDailyCandles(candles, instantQuote, instantQuoteSnapshotDate);
                         }
 
                         symbolDataMap[symbol] = (stockInfo.bstrStockName, candles);
@@ -2957,7 +2960,11 @@ namespace StockTracker.ViewModels
                             }
 
                             var latestScore = latestRecommendation.Score;
-                            var scoreDate = enrichedCandles.Last().Time.Date;
+                            CandleData latestInstantQuote;
+                            var hasInstantQuote = instantQuoteMap.TryGetValue(symbol, out latestInstantQuote);
+                            var scoreDate = hasInstantQuote
+                                ? instantQuoteSnapshotDate
+                                : enrichedCandles.Last().Time.Date;
                             var previousMa20 = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].MA20 : null;
                             var yesterdayPrice = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].Close : null;
                             var price20DaysAgo = enrichedCandles.Count > 20 ? (double?)enrichedCandles[enrichedCandles.Count - 21].Close : null;
@@ -3110,14 +3117,14 @@ namespace StockTracker.ViewModels
             }
         }
 
-        private static void MergeInstantQuoteIntoDailyCandles(List<CandleData> candles, CandleData instantQuote)
+        private static void MergeInstantQuoteIntoDailyCandles(List<CandleData> candles, CandleData instantQuote, DateTime snapshotDate)
         {
-            if (candles == null || instantQuote == null || instantQuote.Close <= 0 || instantQuote.Time == DateTime.MinValue)
+            if (candles == null || instantQuote == null || instantQuote.Close <= 0 || snapshotDate == DateTime.MinValue)
             {
                 return;
             }
 
-            var quoteDay = instantQuote.Time.Date;
+            var quoteDay = snapshotDate.Date;
             var replacement = new CandleData
             {
                 Time = quoteDay,
