@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.Globalization;
+using System.Linq;
 using System.Security.Policy;
 using System.Threading.Tasks;
 using System.Windows.Interop;
@@ -146,6 +147,115 @@ namespace StockTracker.Services
             return pSKStock;
         }
 
+        /// <summary>
+        /// 以和主畫面訂閱股票相同的群益即時報價通道，取得一批股票的最新日內快照。
+        /// 此方法使用第二個報價頁面，且不會取消使用者在主畫面（第一頁）的訂閱。
+        /// </summary>
+        public async Task<Dictionary<string, CandleData>> GetInstantQuoteSnapshotsAsync(
+            IEnumerable<string> symbols,
+            Action<int, int> progressCallback = null)
+        {
+            var snapshots = new Dictionary<string, CandleData>(StringComparer.OrdinalIgnoreCase);
+            if (!IsLoggedIn || symbols == null)
+            {
+                return snapshots;
+            }
+
+            var pendingSymbols = new List<string>();
+            var knownSymbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in symbols)
+            {
+                var symbol = item == null ? string.Empty : item.Trim();
+                if (string.IsNullOrWhiteSpace(symbol) || !knownSymbols.Add(symbol))
+                {
+                    continue;
+                }
+
+                // 主畫面已經訂閱的股票不需要再申請臨時報價，直接使用同一個即時快取。
+                if (_subscribedSymbols.Contains(symbol))
+                {
+                    var existingQuote = GetRelativeStockMessage(symbol);
+                    CandleData existingCandle;
+                    if (TryBuildInstantCandle(existingQuote, out existingCandle))
+                    {
+                        snapshots[symbol] = existingCandle;
+                    }
+                    continue;
+                }
+
+                pendingSymbols.Add(symbol);
+            }
+
+            const int batchSize = 50;
+            const short scanQuotePageNo = 2;
+            var completed = snapshots.Count;
+            var total = knownSymbols.Count;
+            progressCallback?.Invoke(completed, total);
+
+            for (var offset = 0; offset < pendingSymbols.Count; offset += batchSize)
+            {
+                var batch = pendingSymbols.Skip(offset).Take(batchSize).ToList();
+                var requested = new HashSet<string>(batch, StringComparer.OrdinalIgnoreCase);
+                var received = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Action<string, SKSTOCKLONG> onQuoteReceived = null;
+
+                onQuoteReceived = (reportedSymbol, quote) =>
+                {
+                    var matchedSymbol = FindRequestedSymbol(quote.bstrStockNo, requested);
+                    if (matchedSymbol == null)
+                    {
+                        return;
+                    }
+
+                    CandleData candle;
+                    if (!TryBuildInstantCandle(quote, out candle))
+                    {
+                        return;
+                    }
+
+                    lock (snapshots)
+                    {
+                        snapshots[matchedSymbol] = candle;
+                        received.Add(matchedSymbol);
+                    }
+                };
+
+                InstantDataRecevied += onQuoteReceived;
+                try
+                {
+                    var requestCode = _api.SKQuoteLib_RequestStocks(scanQuotePageNo, string.Join(",", batch));
+                    if (requestCode == 0)
+                    {
+                        var startedAt = DateTime.UtcNow;
+                        while ((DateTime.UtcNow - startedAt).TotalMilliseconds < 1500)
+                        {
+                            lock (snapshots)
+                            {
+                                if (received.Count == batch.Count)
+                                {
+                                    break;
+                                }
+                            }
+                            await Task.Delay(40);
+                        }
+                    }
+                }
+                finally
+                {
+                    InstantDataRecevied -= onQuoteReceived;
+                    _api.SKQuoteLib_CancelRequestStocks(string.Join(",", batch));
+                }
+
+                lock (snapshots)
+                {
+                    completed = snapshots.Count;
+                }
+                progressCallback?.Invoke(completed, total);
+            }
+
+            return snapshots;
+        }
+
         private void RegisterSkEventsIfNeeded()
         {
             if (_isSkEventsRegistered)
@@ -196,6 +306,25 @@ namespace StockTracker.Services
         private string GetSubscribedSymbolsAsCsv()
         {
             return string.Join(",", _subscribedSymbols);
+        }
+
+        private static string FindRequestedSymbol(string reportedSymbol, IEnumerable<string> requestedSymbols)
+        {
+            if (string.IsNullOrWhiteSpace(reportedSymbol))
+            {
+                return null;
+            }
+
+            foreach (var requested in requestedSymbols)
+            {
+                if (string.Equals(reportedSymbol, requested, StringComparison.OrdinalIgnoreCase) ||
+                    reportedSymbol.EndsWith(requested, StringComparison.OrdinalIgnoreCase))
+                {
+                    return requested;
+                }
+            }
+
+            return null;
         }
 
         private async Task<bool> WaitForQuoteConnectionReadyAsync(int timeoutMs)

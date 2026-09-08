@@ -2792,7 +2792,16 @@ namespace StockTracker.ViewModels
                     }
                 }
 
-                ProgressText = $"找到 {distinctSymbols.Count} 檔 4 碼股票，開始分析...";
+                ProgressText = $"找到 {distinctSymbols.Count} 檔 4 碼股票，正在取得群益即時報價...";
+                var instantQuoteMap = await _apiService.GetInstantQuoteSnapshotsAsync(
+                    distinctSymbols,
+                    (received, total) =>
+                    {
+                        ProgressValue = total == 0 ? 0d : ((double)received / total) * 10d;
+                        ProgressText = $"正在取得群益即時報價... ({received}/{total})";
+                    });
+
+                ProgressText = $"已取得 {instantQuoteMap.Count} 檔群益即時報價，開始下載日 K...";
 
                 // Capital API remains the only source for the stock universe and
                 // all market values. This creates a local classification record
@@ -2863,13 +2872,22 @@ namespace StockTracker.ViewModels
                         }
 
                         _apiService.KLineDataReceived -= onKLineReceived;
+
+                        // 日 K 僅提供歷史技術指標；最新一根日 K 以主頁同樣的群益即時
+                        // 報價快照更新，避免日 K API 在收盤後仍回傳前一日的收盤價。
+                        CandleData instantQuote;
+                        if (instantQuoteMap.TryGetValue(symbol, out instantQuote))
+                        {
+                            MergeInstantQuoteIntoDailyCandles(candles, instantQuote);
+                        }
+
                         symbolDataMap[symbol] = (stockInfo.bstrStockName, candles);
                     }
 
                     totalChecked++;
                     if (totalChecked % 25 == 0 || totalChecked == distinctSymbols.Count)
                     {
-                        ProgressValue = ((double)totalChecked / distinctSymbols.Count) * 50; // 下載佔 50%
+                        ProgressValue = 10 + (((double)totalChecked / distinctSymbols.Count) * 40); // 報價 10%、日 K 40%
                         ProgressText = $"下載K線資料至第 {totalChecked} 檔股票，共 {distinctSymbols.Count} 檔 4 碼股票";
                         await System.Windows.Threading.Dispatcher.Yield();
                     }
@@ -3090,6 +3108,39 @@ namespace StockTracker.ViewModels
                 _isScanning = false;
                 CommandManager.InvalidateRequerySuggested();
             }
+        }
+
+        private static void MergeInstantQuoteIntoDailyCandles(List<CandleData> candles, CandleData instantQuote)
+        {
+            if (candles == null || instantQuote == null || instantQuote.Close <= 0 || instantQuote.Time == DateTime.MinValue)
+            {
+                return;
+            }
+
+            var quoteDay = instantQuote.Time.Date;
+            var replacement = new CandleData
+            {
+                Time = quoteDay,
+                Open = instantQuote.Open > 0 ? instantQuote.Open : instantQuote.Close,
+                High = instantQuote.High > 0 ? instantQuote.High : instantQuote.Close,
+                Low = instantQuote.Low > 0 ? instantQuote.Low : instantQuote.Close,
+                Close = instantQuote.Close,
+                Volume = instantQuote.Volume
+            };
+
+            var existingIndex = candles.FindIndex(x => x.Time.Date == quoteDay);
+            if (existingIndex >= 0)
+            {
+                var existing = candles[existingIndex];
+                replacement.Open = existing.Open > 0 ? existing.Open : replacement.Open;
+                replacement.High = Math.Max(existing.High, replacement.High);
+                replacement.Low = existing.Low > 0 ? Math.Min(existing.Low, replacement.Low) : replacement.Low;
+                replacement.Volume = Math.Max(existing.Volume, replacement.Volume);
+                candles[existingIndex] = replacement;
+                return;
+            }
+
+            candles.Add(replacement);
         }
 
         private IReadOnlyDictionary<string, TdccLargeHolderMetric> SaveAndGetLargeHolderMetrics(TdccLargeHolderDataset dataset)
