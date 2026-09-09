@@ -2795,15 +2795,19 @@ namespace StockTracker.ViewModels
                 }
 
                 ProgressText = $"找到 {distinctSymbols.Count} 檔 4 碼股票，正在取得群益即時報價...";
-                var instantQuoteMap = await _apiService.GetInstantQuoteSnapshotsAsync(
+                var instantQuoteMap = await _apiService.GetFullMarketQuoteSnapshotsAsync(
                     distinctSymbols,
                     (received, total) =>
                     {
                         ProgressValue = total == 0 ? 0d : ((double)received / total) * 10d;
                         ProgressText = $"正在取得群益即時報價... ({received}/{total})";
                     });
-                // 群益即時快照先暫存；日期會在日 K 載入完成後依最新交易日判定。
-                DateTime instantQuoteSnapshotDate;
+                var requiredQuoteCount = (int)Math.Ceiling(distinctSymbols.Count * 0.95d);
+                if (instantQuoteMap.Count < requiredQuoteCount)
+                {
+                    throw new InvalidOperationException(
+                        $"群益即時報價未收齊（{instantQuoteMap.Count}/{distinctSymbols.Count}），已停止寫入，請稍後重新掃描。");
+                }
 
                 ProgressText = $"已取得 {instantQuoteMap.Count} 檔群益即時報價，開始下載日 K...";
 
@@ -2883,7 +2887,7 @@ namespace StockTracker.ViewModels
                     totalChecked++;
                     if (totalChecked % 25 == 0 || totalChecked == distinctSymbols.Count)
                     {
-                        ProgressValue = 10 + (((double)totalChecked / distinctSymbols.Count) * 40); // 報價 10%、日 K 40%
+                        ProgressValue = 10 + (((double)totalChecked / distinctSymbols.Count) * 40);
                         ProgressText = $"下載K線資料至第 {totalChecked} 檔股票，共 {distinctSymbols.Count} 檔 4 碼股票";
                         await System.Windows.Threading.Dispatcher.Yield();
                     }
@@ -2895,18 +2899,25 @@ namespace StockTracker.ViewModels
                     .Where(x => x != DateTime.MinValue.Date)
                     .DefaultIfEmpty(DateTime.MinValue)
                     .Max();
-                instantQuoteSnapshotDate = ResolveScanDate(scanStartedDate, latestHistoricalDate);
 
-                // 日 K 僅提供歷史技術指標；最新一根日 K 以主頁同樣的群益即時
-                // 報價快照更新，避免日 K API 在收盤後仍回傳前一日的收盤價。
+                // 日 K 用於技術指標；最新價格、漲跌幅則以同一個群益即時
+                // 訂閱通道的完整市場快照為準，避免收盤後日 K 晚一天更新。
                 foreach (var eachData in symbolDataMap)
                 {
                     CandleData instantQuote;
                     if (instantQuoteMap.TryGetValue(eachData.Key, out instantQuote))
                     {
-                        MergeInstantQuoteIntoDailyCandles(eachData.Value.Candles, instantQuote, instantQuoteSnapshotDate);
+                        MergeFreshQuoteIntoDailyCandles(eachData.Value.Candles, instantQuote);
                     }
                 }
+
+                var latestDataDate = symbolDataMap.Values
+                    .SelectMany(x => x.Candles ?? new List<CandleData>())
+                    .Select(x => x.Time.Date)
+                    .Where(x => x != DateTime.MinValue.Date)
+                    .DefaultIfEmpty(latestHistoricalDate)
+                    .Max();
+                var effectiveScoreDate = ResolveScanDate(scanStartedDate, latestDataDate);
 
                 // 第二階段：多執行緒計算推薦指標
                 ProgressText = "分析K線資料計算分數中...";
@@ -2972,11 +2983,7 @@ namespace StockTracker.ViewModels
                             }
 
                             var latestScore = latestRecommendation.Score;
-                            CandleData latestInstantQuote;
-                            var hasInstantQuote = instantQuoteMap.TryGetValue(symbol, out latestInstantQuote);
-                            var scoreDate = hasInstantQuote
-                                ? instantQuoteSnapshotDate
-                                : enrichedCandles.Last().Time.Date;
+                            var scoreDate = effectiveScoreDate;
                             var previousMa20 = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].MA20 : null;
                             var yesterdayPrice = enrichedCandles.Count > 1 ? (double?)enrichedCandles[enrichedCandles.Count - 2].Close : null;
                             var price20DaysAgo = enrichedCandles.Count > 20 ? (double?)enrichedCandles[enrichedCandles.Count - 21].Close : null;
@@ -3129,15 +3136,34 @@ namespace StockTracker.ViewModels
             }
         }
 
-        private static void MergeInstantQuoteIntoDailyCandles(List<CandleData> candles, CandleData instantQuote, DateTime snapshotDate)
+        private static void MergeFreshQuoteIntoDailyCandles(List<CandleData> candles, CandleData instantQuote)
         {
-            if (candles == null || instantQuote == null || instantQuote.Close <= 0 || snapshotDate == DateTime.MinValue)
+            if (candles == null || instantQuote == null || instantQuote.Close <= 0 || instantQuote.Time == DateTime.MinValue)
             {
                 return;
             }
 
-            var quoteDay = snapshotDate.Date;
-            var replacement = new CandleData
+            var quoteDay = instantQuote.Time.Date;
+            var existingIndex = candles.FindIndex(x => x.Time.Date == quoteDay);
+            if (existingIndex >= 0)
+            {
+                var existing = candles[existingIndex];
+                existing.Open = instantQuote.Open > 0 ? instantQuote.Open : existing.Open;
+                existing.High = instantQuote.High > 0 ? Math.Max(existing.High, instantQuote.High) : existing.High;
+                existing.Low = instantQuote.Low > 0
+                    ? (existing.Low > 0 ? Math.Min(existing.Low, instantQuote.Low) : instantQuote.Low)
+                    : existing.Low;
+                existing.Close = instantQuote.Close;
+                if (instantQuote.Volume > 0)
+                {
+                    existing.Volume = instantQuote.Volume;
+                }
+
+                candles[existingIndex] = existing;
+                return;
+            }
+
+            candles.Add(new CandleData
             {
                 Time = quoteDay,
                 Open = instantQuote.Open > 0 ? instantQuote.Open : instantQuote.Close,
@@ -3145,29 +3171,29 @@ namespace StockTracker.ViewModels
                 Low = instantQuote.Low > 0 ? instantQuote.Low : instantQuote.Close,
                 Close = instantQuote.Close,
                 Volume = instantQuote.Volume
-            };
-
-            var existingIndex = candles.FindIndex(x => x.Time.Date == quoteDay);
-            if (existingIndex >= 0)
-            {
-                var existing = candles[existingIndex];
-                replacement.Open = existing.Open > 0 ? existing.Open : replacement.Open;
-                replacement.High = Math.Max(existing.High, replacement.High);
-                replacement.Low = existing.Low > 0 ? Math.Min(existing.Low, replacement.Low) : replacement.Low;
-                replacement.Volume = Math.Max(existing.Volume, replacement.Volume);
-                candles[existingIndex] = replacement;
-                return;
-            }
-
-            candles.Add(replacement);
+            });
         }
 
         private static DateTime ResolveScanDate(DateTime scanStartedDate, DateTime latestHistoricalDate)
         {
-            if (latestHistoricalDate != DateTime.MinValue &&
-                scanStartedDate.Date > latestHistoricalDate.Date &&
-                scanStartedDate.TimeOfDay < TimeSpan.FromHours(9))
+            if (scanStartedDate.TimeOfDay < TimeSpan.FromHours(9))
             {
+                var previousWeekday = scanStartedDate.Date.AddDays(-1);
+                while (previousWeekday.DayOfWeek == DayOfWeek.Saturday ||
+                       previousWeekday.DayOfWeek == DayOfWeek.Sunday)
+                {
+                    previousWeekday = previousWeekday.AddDays(-1);
+                }
+
+                // 若日 K 顯示的日期只比前一平日早一天，視為資料延遲，
+                // 仍以最近平日作為手動凌晨掃描的有效交易日；較長落差則保留
+                // 日 K 日期，以涵蓋連續假日。
+                if (latestHistoricalDate == DateTime.MinValue ||
+                    latestHistoricalDate.Date >= previousWeekday.AddDays(-1))
+                {
+                    return previousWeekday;
+                }
+
                 return latestHistoricalDate.Date;
             }
 

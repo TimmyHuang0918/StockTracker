@@ -148,10 +148,11 @@ namespace StockTracker.Services
         }
 
         /// <summary>
-        /// 以和主畫面訂閱股票相同的群益即時報價通道，取得一批股票的最新日內快照。
-        /// 此方法使用第二個報價頁面，且不會取消使用者在主畫面（第一頁）的訂閱。
+        /// Uses the same SKQuoteLib subscription channel as the main screen to
+        /// collect a one-off full-market price snapshot.  Page 1 remains reserved
+        /// for the user's normal watchlist; scan requests use pages 2 through 49.
         /// </summary>
-        public async Task<Dictionary<string, CandleData>> GetInstantQuoteSnapshotsAsync(
+        public async Task<Dictionary<string, CandleData>> GetFullMarketQuoteSnapshotsAsync(
             IEnumerable<string> symbols,
             Action<int, int> progressCallback = null)
         {
@@ -161,129 +162,133 @@ namespace StockTracker.Services
                 return snapshots;
             }
 
-            var pendingSymbols = new List<string>();
-            var knownSymbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var requestedSymbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var item in symbols)
             {
                 var symbol = item == null ? string.Empty : item.Trim();
-                if (string.IsNullOrWhiteSpace(symbol) || !knownSymbols.Add(symbol))
+                if (!string.IsNullOrWhiteSpace(symbol))
                 {
-                    continue;
+                    requestedSymbols.Add(symbol);
                 }
-
-                // 主畫面已經訂閱的股票不需要再申請臨時報價，直接使用同一個即時快取。
-                if (_subscribedSymbols.Contains(symbol))
-                {
-                    var existingQuote = GetRelativeStockMessage(symbol);
-                    CandleData existingCandle;
-                    if (TryBuildScanInstantCandle(existingQuote, out existingCandle))
-                    {
-                        snapshots[symbol] = existingCandle;
-                    }
-                    continue;
-                }
-
-                pendingSymbols.Add(symbol);
             }
 
-            const int batchSize = 50;
-            const short scanQuotePageNo = 2;
-            var completed = snapshots.Count;
-            var total = knownSymbols.Count;
-            progressCallback?.Invoke(completed, total);
-
-            for (var offset = 0; offset < pendingSymbols.Count; offset += batchSize)
+            if (requestedSymbols.Count == 0)
             {
-                var batch = pendingSymbols.Skip(offset).Take(batchSize).ToList();
-                var requested = new HashSet<string>(batch, StringComparer.OrdinalIgnoreCase);
-                var received = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                Action<string, SKSTOCKLONG> onQuoteReceived = null;
+                return snapshots;
+            }
 
-                onQuoteReceived = (reportedSymbol, quote) =>
+            const int symbolsPerPage = 100;
+            const short firstScanPage = 2;
+            const short lastQuotePage = 49;
+            var batches = requestedSymbols
+                .Select((symbol, index) => new { symbol, index })
+                .GroupBy(x => x.index / symbolsPerPage)
+                .Select(group => group.Select(x => x.symbol).ToList())
+                .ToList();
+
+            if (batches.Count > lastQuotePage - firstScanPage + 1)
+            {
+                throw new InvalidOperationException("全市場股票數量超過群益報價頁面上限。");
+            }
+
+            Action<string, SKSTOCKLONG> onQuoteReceived = (reportedSymbol, quote) =>
+            {
+                var symbol = FindRequestedSymbol(quote.bstrStockNo, requestedSymbols);
+                if (symbol == null || !TryBuildInstantCandle(quote, out var candle))
                 {
-                    var matchedSymbol = FindRequestedSymbol(quote.bstrStockNo, requested);
-                    if (matchedSymbol == null)
-                    {
-                        return;
-                    }
+                    return;
+                }
 
-                    CandleData candle;
-                    if (!TryBuildScanInstantCandle(quote, out candle))
+                lock (snapshots)
+                {
+                    CandleData existing;
+                    if (!snapshots.TryGetValue(symbol, out existing) || candle.Time >= existing.Time)
                     {
-                        return;
+                        snapshots[symbol] = candle;
                     }
+                }
+            };
 
+            InstantDataRecevied += onQuoteReceived;
+            try
+            {
+                for (var batchIndex = 0; batchIndex < batches.Count; batchIndex++)
+                {
+                    var pageNo = (short)(firstScanPage + batchIndex);
+                    _api.SKQuoteLib_RequestStocks(pageNo, string.Join(",", batches[batchIndex]));
+                }
+
+                // RequestStocks first registers the items and then returns their
+                // snapshots through OnNotifyQuoteLONG.  Wait for this initial wave
+                // rather than replacing a whole scan with only the first few events.
+                var startedAt = DateTime.UtcNow;
+                var lastReported = -1;
+                while ((DateTime.UtcNow - startedAt).TotalSeconds < 12)
+                {
+                    int received;
                     lock (snapshots)
                     {
-                        snapshots[matchedSymbol] = candle;
-                        received.Add(matchedSymbol);
+                        received = snapshots.Count;
                     }
-                };
 
-                InstantDataRecevied += onQuoteReceived;
-                try
-                {
-                    var requestCode = _api.SKQuoteLib_RequestStocks(scanQuotePageNo, string.Join(",", batch));
-                    if (requestCode == 0)
+                    if (received != lastReported)
                     {
-                        var startedAt = DateTime.UtcNow;
-                        while ((DateTime.UtcNow - startedAt).TotalMilliseconds < 1500)
+                        progressCallback?.Invoke(received, requestedSymbols.Count);
+                        lastReported = received;
+                    }
+
+                    if (received >= requestedSymbols.Count)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(200);
+                }
+
+                // Some API versions update the local cache before raising the
+                // notification.  Read it once for any late events while keeping
+                // the event-derived trading date as the validation gate.
+                foreach (var symbol in requestedSymbols)
+                {
+                    lock (snapshots)
+                    {
+                        if (snapshots.ContainsKey(symbol))
                         {
-                            lock (snapshots)
-                            {
-                                if (received.Count == batch.Count)
-                                {
-                                    break;
-                                }
-                        }
-                            await Task.Delay(40);
+                            continue;
                         }
                     }
 
-                    // 先在臨時報價請求仍有效時讀取群益快取，避免取消請求後快取被清理。
-                    FillSnapshotGaps(batch, snapshots);
-                }
-                finally
-                {
-                    InstantDataRecevied -= onQuoteReceived;
-                    _api.SKQuoteLib_CancelRequestStocks(string.Join(",", batch));
-                }
-
-                lock (snapshots)
-                {
-                    completed = snapshots.Count;
-                }
-                progressCallback?.Invoke(completed, total);
-            }
-
-            return snapshots;
-        }
-
-        private void FillSnapshotGaps(IEnumerable<string> symbols, Dictionary<string, CandleData> snapshots)
-        {
-            // 群益有時會更新內部報價快取，但不對每一檔觸發通知事件。
-            // 事件只作為快速路徑，缺漏的股票改從同一個群益快取逐檔讀回，
-            // 避免把「沒有事件」誤判成「沒有即時資料」。
-            foreach (var symbol in symbols)
-            {
-                lock (snapshots)
-                {
-                    if (snapshots.ContainsKey(symbol))
+                    var cachedQuote = GetRelativeStockMessage(symbol);
+                    if (!TryBuildInstantCandle(cachedQuote, out var cachedCandle))
                     {
                         continue;
                     }
-                }
 
-                var cachedQuote = GetRelativeStockMessage(symbol);
-                CandleData cachedCandle;
-                if (TryBuildScanInstantCandle(cachedQuote, out cachedCandle))
-                {
                     lock (snapshots)
                     {
                         snapshots[symbol] = cachedCandle;
                     }
                 }
             }
+            finally
+            {
+                InstantDataRecevied -= onQuoteReceived;
+
+                foreach (var batch in batches)
+                {
+                    _api.SKQuoteLib_CancelRequestStocks(string.Join(",", batch));
+                }
+
+                // CancelRequestStocks is symbol-based, so restore the main page
+                // after cleaning up the scan pages.
+                if (_subscribedSymbols.Count > 0)
+                {
+                    _api.SKQuoteLib_RequestStocks(1, GetSubscribedSymbolsAsCsv());
+                }
+            }
+
+            progressCallback?.Invoke(snapshots.Count, requestedSymbols.Count);
+            return snapshots;
         }
 
         private void RegisterSkEventsIfNeeded()
@@ -338,19 +343,25 @@ namespace StockTracker.Services
             return string.Join(",", _subscribedSymbols);
         }
 
-        private static string FindRequestedSymbol(string reportedSymbol, IEnumerable<string> requestedSymbols)
+        private static string FindRequestedSymbol(string reportedSymbol, ISet<string> requestedSymbols)
         {
-            if (string.IsNullOrWhiteSpace(reportedSymbol))
+            if (string.IsNullOrWhiteSpace(reportedSymbol) || requestedSymbols == null)
             {
                 return null;
             }
 
-            foreach (var requested in requestedSymbols)
+            var normalized = reportedSymbol.Trim();
+            if (requestedSymbols.Contains(normalized))
             {
-                if (string.Equals(reportedSymbol, requested, StringComparison.OrdinalIgnoreCase) ||
-                    reportedSymbol.EndsWith(requested, StringComparison.OrdinalIgnoreCase))
+                return normalized;
+            }
+
+            if (normalized.Length >= 4)
+            {
+                var trailingFourDigits = normalized.Substring(normalized.Length - 4);
+                if (requestedSymbols.Contains(trailingFourDigits))
                 {
-                    return requested;
+                    return trailingFourDigits;
                 }
             }
 
@@ -466,41 +477,6 @@ namespace StockTracker.Services
                 Volume = skStock.nYQty
             };
 
-            return true;
-        }
-
-        private static bool TryBuildScanInstantCandle(SKSTOCKLONG skStock, out CandleData candle)
-        {
-            if (TryBuildInstantCandle(skStock, out candle))
-            {
-                return true;
-            }
-
-            // 報價快取可能只有價格，未帶完整成交日期時間；掃描日期由掃描端
-            // 以本次請求日期統一標記，價格仍然完全來自群益快取。
-            var close = NormalizePrice(skStock.nClose);
-            if (close <= 0)
-            {
-                candle = null;
-                return false;
-            }
-
-            var open = NormalizePrice(skStock.nOpen);
-            var high = NormalizePrice(skStock.nHigh);
-            var low = NormalizePrice(skStock.nLow);
-            if (open <= 0) open = close;
-            if (high <= 0) high = Math.Max(open, close);
-            if (low <= 0) low = Math.Min(open, close);
-
-            candle = new CandleData
-            {
-                Time = DateTime.Today,
-                Open = open,
-                High = high,
-                Low = low,
-                Close = close,
-                Volume = skStock.nYQty
-            };
             return true;
         }
 
