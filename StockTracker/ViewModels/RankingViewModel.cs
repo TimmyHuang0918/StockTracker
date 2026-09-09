@@ -2794,22 +2794,7 @@ namespace StockTracker.ViewModels
                     }
                 }
 
-                ProgressText = $"找到 {distinctSymbols.Count} 檔 4 碼股票，正在取得群益即時報價...";
-                var instantQuoteMap = await _apiService.GetFullMarketQuoteSnapshotsAsync(
-                    distinctSymbols,
-                    (received, total) =>
-                    {
-                        ProgressValue = total == 0 ? 0d : ((double)received / total) * 10d;
-                        ProgressText = $"正在取得群益即時報價... ({received}/{total})";
-                    });
-                var requiredQuoteCount = (int)Math.Ceiling(distinctSymbols.Count * 0.95d);
-                if (instantQuoteMap.Count < requiredQuoteCount)
-                {
-                    throw new InvalidOperationException(
-                        $"群益即時報價未收齊（{instantQuoteMap.Count}/{distinctSymbols.Count}），已停止寫入，請稍後重新掃描。");
-                }
-
-                ProgressText = $"已取得 {instantQuoteMap.Count} 檔群益即時報價，開始下載日 K...";
+                ProgressText = $"找到 {distinctSymbols.Count} 檔 4 碼股票，開始分析...";
 
                 // Capital API remains the only source for the stock universe and
                 // all market values. This creates a local classification record
@@ -2899,17 +2884,6 @@ namespace StockTracker.ViewModels
                     .Where(x => x != DateTime.MinValue.Date)
                     .DefaultIfEmpty(DateTime.MinValue)
                     .Max();
-
-                // 日 K 用於技術指標；最新價格、漲跌幅則以同一個群益即時
-                // 訂閱通道的完整市場快照為準，避免收盤後日 K 晚一天更新。
-                foreach (var eachData in symbolDataMap)
-                {
-                    CandleData instantQuote;
-                    if (instantQuoteMap.TryGetValue(eachData.Key, out instantQuote))
-                    {
-                        MergeFreshQuoteIntoDailyCandles(eachData.Value.Candles, instantQuote);
-                    }
-                }
 
                 var latestDataDate = symbolDataMap.Values
                     .SelectMany(x => x.Candles ?? new List<CandleData>())
@@ -3134,44 +3108,6 @@ namespace StockTracker.ViewModels
                 _isScanning = false;
                 CommandManager.InvalidateRequerySuggested();
             }
-        }
-
-        private static void MergeFreshQuoteIntoDailyCandles(List<CandleData> candles, CandleData instantQuote)
-        {
-            if (candles == null || instantQuote == null || instantQuote.Close <= 0 || instantQuote.Time == DateTime.MinValue)
-            {
-                return;
-            }
-
-            var quoteDay = instantQuote.Time.Date;
-            var existingIndex = candles.FindIndex(x => x.Time.Date == quoteDay);
-            if (existingIndex >= 0)
-            {
-                var existing = candles[existingIndex];
-                existing.Open = instantQuote.Open > 0 ? instantQuote.Open : existing.Open;
-                existing.High = instantQuote.High > 0 ? Math.Max(existing.High, instantQuote.High) : existing.High;
-                existing.Low = instantQuote.Low > 0
-                    ? (existing.Low > 0 ? Math.Min(existing.Low, instantQuote.Low) : instantQuote.Low)
-                    : existing.Low;
-                existing.Close = instantQuote.Close;
-                if (instantQuote.Volume > 0)
-                {
-                    existing.Volume = instantQuote.Volume;
-                }
-
-                candles[existingIndex] = existing;
-                return;
-            }
-
-            candles.Add(new CandleData
-            {
-                Time = quoteDay,
-                Open = instantQuote.Open > 0 ? instantQuote.Open : instantQuote.Close,
-                High = instantQuote.High > 0 ? instantQuote.High : instantQuote.Close,
-                Low = instantQuote.Low > 0 ? instantQuote.Low : instantQuote.Close,
-                Close = instantQuote.Close,
-                Volume = instantQuote.Volume
-            });
         }
 
         private static DateTime ResolveScanDate(DateTime scanStartedDate, DateTime latestHistoricalDate)
