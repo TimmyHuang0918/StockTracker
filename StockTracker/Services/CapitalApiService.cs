@@ -191,10 +191,13 @@ namespace StockTracker.Services
                 throw new InvalidOperationException("全市場股票數量超過群益報價頁面上限。");
             }
 
-            Action<string, SKSTOCKLONG> onQuoteReceived = (reportedSymbol, quote) =>
+            // Use the exact same normalized candle event consumed by MainWindow.
+            // It is raised only after SKQuoteLib_GetStockByIndexLONG has supplied
+            // a complete quote with a valid trading date and deal time.
+            Action<string, CandleData> onQuoteReceived = (reportedSymbol, candle) =>
             {
-                var symbol = FindRequestedSymbol(quote.bstrStockNo, requestedSymbols);
-                if (symbol == null || !TryBuildInstantCandle(quote, out var candle))
+                var symbol = FindRequestedSymbol(reportedSymbol, requestedSymbols);
+                if (symbol == null || candle == null || candle.Close <= 0)
                 {
                     return;
                 }
@@ -209,13 +212,28 @@ namespace StockTracker.Services
                 }
             };
 
-            InstantDataRecevied += onQuoteReceived;
+            InstantCandleReceived += onQuoteReceived;
             try
             {
+                var requestFailures = new List<string>();
                 for (var batchIndex = 0; batchIndex < batches.Count; batchIndex++)
                 {
                     var pageNo = (short)(firstScanPage + batchIndex);
-                    _api.SKQuoteLib_RequestStocks(pageNo, string.Join(",", batches[batchIndex]));
+                    var resultCode = _api.SKQuoteLib_RequestStocks(pageNo, string.Join(",", batches[batchIndex]));
+                    if (resultCode != 0)
+                    {
+                        requestFailures.Add($"第 {pageNo} 頁：{GetReturnCodeMessage(resultCode)} ({resultCode})");
+                    }
+
+                    // Unlike the single call on the main page, a full-market
+                    // scan must register multiple pages.  Space the calls out so
+                    // SKQuoteLib has completed each page registration first.
+                    await Task.Delay(120);
+                }
+
+                if (requestFailures.Count > 0)
+                {
+                    throw new InvalidOperationException("群益即時報價訂閱失敗：" + string.Join("；", requestFailures));
                 }
 
                 // RequestStocks first registers the items and then returns their
@@ -223,7 +241,7 @@ namespace StockTracker.Services
                 // rather than replacing a whole scan with only the first few events.
                 var startedAt = DateTime.UtcNow;
                 var lastReported = -1;
-                while ((DateTime.UtcNow - startedAt).TotalSeconds < 12)
+                while ((DateTime.UtcNow - startedAt).TotalSeconds < 30)
                 {
                     int received;
                     lock (snapshots)
@@ -245,34 +263,10 @@ namespace StockTracker.Services
                     await Task.Delay(200);
                 }
 
-                // Some API versions update the local cache before raising the
-                // notification.  Read it once for any late events while keeping
-                // the event-derived trading date as the validation gate.
-                foreach (var symbol in requestedSymbols)
-                {
-                    lock (snapshots)
-                    {
-                        if (snapshots.ContainsKey(symbol))
-                        {
-                            continue;
-                        }
-                    }
-
-                    var cachedQuote = GetRelativeStockMessage(symbol);
-                    if (!TryBuildInstantCandle(cachedQuote, out var cachedCandle))
-                    {
-                        continue;
-                    }
-
-                    lock (snapshots)
-                    {
-                        snapshots[symbol] = cachedCandle;
-                    }
-                }
             }
             finally
             {
-                InstantDataRecevied -= onQuoteReceived;
+                InstantCandleReceived -= onQuoteReceived;
 
                 foreach (var batch in batches)
                 {
