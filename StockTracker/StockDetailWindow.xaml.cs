@@ -11,6 +11,18 @@ namespace StockTracker
             InitializeComponent();
         }
 
+        private void CreateTradePlanButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is StockViewModel stock)
+            {
+                new TradePlanWindow
+                {
+                    Owner = this,
+                    DataContext = new TradePlanViewModel(stock)
+                }.ShowDialog();
+            }
+        }
+
         private void ChartViewbox_OnSizeChanged(object sender, SizeChangedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is StockViewModel stock)

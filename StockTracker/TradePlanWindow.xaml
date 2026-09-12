@@ -1,0 +1,76 @@
+<Window x:Class="StockTracker.TradePlanWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="建立隔日交易計畫" Height="770" Width="720" MinHeight="620" MinWidth="620"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource AppForegroundBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="18">
+            <DockPanel Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock FontSize="20" FontWeight="Bold"><Run Text="{Binding Symbol}"/><Run Text="  "/><Run Text="{Binding Name}"/></TextBlock>
+                    <TextBlock Text="建立隔日交易計畫" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"/>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Right" Text="僅供手動決策" FontWeight="SemiBold" Foreground="Orange" Margin="12,5,0,0"/>
+            </DockPanel>
+
+            <Border Background="#32CC7A00" BorderBrush="#FFFFA657" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,12">
+                <TextBlock Text="這裡只會計算、儲存與複製交易備忘，不會連接券商、建立委託或自動下單。" TextWrapping="Wrap" FontSize="12"/>
+            </Border>
+
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Text="策略與依據" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,14,8"><TextBlock Text="策略" Margin="0,0,0,4"/><ComboBox ItemsSource="{Binding StrategyOptions}" SelectedItem="{Binding SelectedStrategy, Mode=TwoWay}" Width="150" Height="28"/></StackPanel>
+                        <StackPanel Margin="0,0,14,8"><TextBlock Text="有效期限" Margin="0,0,0,4"/><TextBlock Text="{Binding ValidUntilText}" Height="28" VerticalAlignment="Center" FontWeight="SemiBold"/></StackPanel>
+                        <Button Content="重新套用策略" Command="{Binding ApplyStrategyCommand}" Width="112" Height="30" Margin="0,20,0,0"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding QualitySummary}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Text="可自行調整的價格計畫" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <StackPanel Margin="0,0,12,10"><TextBlock Text="買入區下緣" Margin="0,0,0,4"/><TextBox Text="{Binding EntryLower, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
+                        <StackPanel Grid.Column="1" Margin="0,0,0,10"><TextBlock Text="買入區上緣" Margin="0,0,0,4"/><TextBox Text="{Binding EntryUpper, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
+                        <StackPanel Grid.Row="1" Margin="0,0,12,10"><TextBlock Text="停損價" Margin="0,0,0,4"/><TextBox Text="{Binding StopLoss, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,10"><TextBlock Text="每股風險" Margin="0,0,0,4"/><TextBlock Text="{Binding RiskPerShare, StringFormat={}{0:F2}}" Height="30" VerticalAlignment="Center" FontWeight="SemiBold"/></StackPanel>
+                        <StackPanel Grid.Row="2" Margin="0,0,12,0"><TextBlock Text="目標一（分段停利）" Margin="0,0,0,4"/><TextBox Text="{Binding TargetOne, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="1"><TextBlock Text="目標二（追蹤停利）" Margin="0,0,0,4"/><TextBox Text="{Binding TargetTwo, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
+                    </Grid>
+                    <WrapPanel Margin="0,10,0,0"><TextBlock Text="停損幅度："/><TextBlock Text="{Binding RiskPercentText}" FontWeight="SemiBold" Margin="0,0,16,0"/><TextBlock Text="目標一："/><TextBlock Text="{Binding RewardRiskOneText}" FontWeight="SemiBold" Margin="0,0,16,0"/><TextBlock Text="目標二："/><TextBlock Text="{Binding RewardRiskTwoText}" FontWeight="SemiBold"/></WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Text="部位與放棄條件" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock Text="本次最多可承受損失（元）" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding RiskBudget, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N0}}" Height="30" Width="180" HorizontalAlignment="Left" VerticalContentAlignment="Center"/>
+                    <TextBlock Text="{Binding SuggestedSharesText}" FontWeight="SemiBold" Margin="0,6,0,12"/>
+                    <TextBlock Text="放棄買進條件" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding CancelCondition}" TextWrapping="Wrap" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Text="自己的備註（選填）" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" Height="70" VerticalScrollBarVisibility="Auto"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+            <WrapPanel HorizontalAlignment="Right">
+                <Button Content="複製交易備忘" Command="{Binding CopyPlanCommand}" Width="112" Height="32" Margin="0,0,8,0"/>
+                <Button Content="儲存交易計畫" Command="{Binding SavePlanCommand}" Width="120" Height="32" Margin="0,0,8,0"/>
+                <Button Content="關閉" Click="CloseButton_Click" Width="80" Height="32"/>
+            </WrapPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

@@ -25,6 +25,11 @@
                     <Run Text="{Binding Signal, Mode=OneWay}"/>
                 </TextBlock>
 
+                <WrapPanel Margin="0,0,0,10">
+                    <Button Content="建立隔日交易計畫" Click="CreateTradePlanButton_Click" Width="132" Height="30" Margin="0,0,10,0"/>
+                    <TextBlock Text="只會建立手動交易計畫，不會自動下單" VerticalAlignment="Center" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11"/>
+                </WrapPanel>
+
                 <Border Margin="0,0,0,10" Padding="10" CornerRadius="6" BorderThickness="1.5"
                         Background="#221A1A1A"
                         BorderBrush="{Binding StrategyOutput.ActionColor, Mode=OneWay}">
