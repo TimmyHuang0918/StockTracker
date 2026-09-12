@@ -267,6 +267,7 @@ namespace StockTracker.ViewModels
         public int InstitutionalSensitivityConfidence { get; set; }
         public string InstitutionalLeadershipLabel { get; set; }
         public string InstitutionalSensitivitySummary { get; set; }
+        public string PriceStructureJson { get; set; }
         public decimal? LargeHolder400PlusRatio { get; set; }
         public decimal? LargeHolder1000PlusRatio { get; set; }
         public decimal? LargeHolder400PlusWeeklyChange { get; set; }
@@ -1064,7 +1065,8 @@ namespace StockTracker.ViewModels
                             TrustSensitivity INTEGER NOT NULL DEFAULT 0,
                             InstitutionalSensitivityConfidence INTEGER NOT NULL DEFAULT 0,
                             InstitutionalLeadershipLabel TEXT NOT NULL DEFAULT '',
-                            InstitutionalSensitivitySummary TEXT NOT NULL DEFAULT ''
+                            InstitutionalSensitivitySummary TEXT NOT NULL DEFAULT '',
+                            PriceStructureJson TEXT NOT NULL DEFAULT ''
                         );";
                     cmd.ExecuteNonQuery();
                 }
@@ -1078,6 +1080,7 @@ namespace StockTracker.ViewModels
                 AddRankingColumnIfMissing(conn, "InstitutionalSensitivityConfidence INTEGER NOT NULL DEFAULT 0");
                 AddRankingColumnIfMissing(conn, "InstitutionalLeadershipLabel TEXT NOT NULL DEFAULT ''");
                 AddRankingColumnIfMissing(conn, "InstitutionalSensitivitySummary TEXT NOT NULL DEFAULT ''");
+                AddRankingColumnIfMissing(conn, "PriceStructureJson TEXT NOT NULL DEFAULT ''");
 
                 using (var cmd = conn.CreateCommand())
                 {
@@ -1366,7 +1369,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary, PriceStructureJson FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -1413,7 +1416,8 @@ namespace StockTracker.ViewModels
                                     TrustSensitivity = reader.IsDBNull(29) ? 0 : reader.GetInt32(29),
                                     InstitutionalSensitivityConfidence = reader.IsDBNull(30) ? 0 : reader.GetInt32(30),
                                     InstitutionalLeadershipLabel = reader.IsDBNull(31) ? string.Empty : reader.GetString(31),
-                                    InstitutionalSensitivitySummary = reader.IsDBNull(32) ? string.Empty : reader.GetString(32)
+                                    InstitutionalSensitivitySummary = reader.IsDBNull(32) ? string.Empty : reader.GetString(32),
+                                    PriceStructureJson = reader.IsDBNull(33) ? string.Empty : reader.GetString(33)
                                 });
                             }
                         }
@@ -1540,8 +1544,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText, @largeHolder400, @largeHolder1000, @largeHolderWeeklyChange, @largeHolderDate, @foreignSensitivity, @trustSensitivity, @sensitivityConfidence, @leadershipLabel, @sensitivitySummary)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary, PriceStructureJson)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText, @largeHolder400, @largeHolder1000, @largeHolderWeeklyChange, @largeHolderDate, @foreignSensitivity, @trustSensitivity, @sensitivityConfidence, @leadershipLabel, @sensitivitySummary, @priceStructureJson)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -1578,6 +1582,7 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@sensitivityConfidence", s.InstitutionalSensitivityConfidence);
                                 cmd.Parameters.AddWithValue("@leadershipLabel", s.InstitutionalLeadershipLabel ?? string.Empty);
                                 cmd.Parameters.AddWithValue("@sensitivitySummary", s.InstitutionalSensitivitySummary ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@priceStructureJson", s.PriceStructureJson ?? string.Empty);
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -1914,6 +1919,7 @@ namespace StockTracker.ViewModels
                 sensitivityConfidence = s.InstitutionalSensitivityConfidence,
                 leadershipLabel = HtmlEncode(s.InstitutionalLeadershipLabel ?? string.Empty),
                 sensitivitySummary = HtmlEncode(s.InstitutionalSensitivitySummary ?? string.Empty),
+                priceStructure = DeserializePriceStructure(s.PriceStructureJson),
                 action = HtmlEncode(s.StrategyActionText),
                 stage = HtmlEncode(s.StrategyStageLabel),
                 suggestion = HtmlEncode(s.Suggestion),
@@ -2859,7 +2865,7 @@ namespace StockTracker.ViewModels
 
             html.AppendLine("</script>");
             html.AppendLine("<script src='portfolio-enhancements.js'></script>");
-            html.AppendLine("<script src='trade-plan-enhancements.js'></script>");
+            html.AppendLine("<script src='trade-plan-enhancements.js?v=2'></script>");
             html.AppendLine("</body></html>");
             return html.ToString();
         }
@@ -3101,6 +3107,7 @@ namespace StockTracker.ViewModels
                             long dealerNet = ResolveDealerNetByDate(t86History, scoreDate);
                             long trustNet = ResolveInvestmentTrustNetByDate(t86History, scoreDate);
                             var institutionalSensitivity = InstitutionalSensitivityAnalyzer.Analyze(enrichedCandles, t86History);
+                            var priceStructure = PriceStructureAnalyzer.Analyze(enrichedCandles);
                             largeHolderMetrics.TryGetValue(symbol, out var largeHolderMetric);
 
                             lock (lockObj)
@@ -3146,6 +3153,7 @@ namespace StockTracker.ViewModels
                                     InstitutionalSensitivityConfidence = Math.Max(institutionalSensitivity.Foreign.Confidence, institutionalSensitivity.InvestmentTrust.Confidence),
                                     InstitutionalLeadershipLabel = institutionalSensitivity.LeadershipLabel,
                                     InstitutionalSensitivitySummary = institutionalSensitivity.Summary,
+                                    PriceStructureJson = Newtonsoft.Json.JsonConvert.SerializeObject(priceStructure),
                                     LargeHolder400PlusRatio = largeHolderMetric?.Holding400PlusRatio,
                                     LargeHolder1000PlusRatio = largeHolderMetric?.Holding1000PlusRatio,
                                     LargeHolder400PlusWeeklyChange = largeHolderMetric?.Holding400PlusWeeklyChange,
@@ -3536,6 +3544,24 @@ namespace StockTracker.ViewModels
             return string.Join("|", (recentScores ?? Enumerable.Empty<RankedStockScorePoint>())
                 .OrderByDescending(x => x.Date)
                 .Select(x => $"{x.Date:yyyyMMdd}:{x.Score}"));
+        }
+
+        private static PriceStructureAnalysis DeserializePriceStructure(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return null;
+            }
+
+            try
+            {
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<PriceStructureAnalysis>(raw);
+            }
+            catch
+            {
+                // A prior scan may not have stored this optional snapshot.
+                return null;
+            }
         }
 
         private static List<RankedStockScorePoint> DeserializeRecentScores(string raw, int fallbackScore)

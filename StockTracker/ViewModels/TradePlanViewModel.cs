@@ -17,6 +17,7 @@ namespace StockTracker.ViewModels
     {
         private readonly StockViewModel _stock;
         private readonly List<CandleData> _candles;
+        private readonly PriceStructureAnalysis _priceStructure;
         private string _selectedStrategy;
         private decimal _entryLower;
         private decimal _entryUpper;
@@ -36,6 +37,7 @@ namespace StockTracker.ViewModels
                 .Where(item => item != null && item.Close > 0)
                 .OrderBy(item => item.Time)
                 .ToList();
+            _priceStructure = PriceStructureAnalyzer.Analyze(_candles);
 
             StrategyOptions = new ObservableCollection<string> { "突破買進", "拉回買進" };
             ApplyStrategyCommand = new RelayCommand(_ => ApplyStrategy());
@@ -56,6 +58,12 @@ namespace StockTracker.ViewModels
         public string InstitutionalLeadership => _stock.InstitutionalLeadershipLabel;
         public double MA5 => _stock.MA5;
         public double MA20 => _stock.MA20;
+        public string StructureSummary => _priceStructure?.Message ?? "尚無結構資料。";
+        public string SupportOneText => FormatZone(_priceStructure?.Supports?.ElementAtOrDefault(0));
+        public string SupportTwoText => FormatZone(_priceStructure?.Supports?.ElementAtOrDefault(1));
+        public string ResistanceOneText => FormatZone(_priceStructure?.Resistances?.ElementAtOrDefault(0));
+        public string ResistanceTwoText => FormatZone(_priceStructure?.Resistances?.ElementAtOrDefault(1));
+        public string ResistanceThreeText => FormatZone(_priceStructure?.Resistances?.ElementAtOrDefault(2));
         public DateTime ValidUntil => GetNextWeekday(DateTime.Today);
         public string ValidUntilText => ValidUntil.ToString("yyyy/MM/dd（ddd）");
         public ObservableCollection<string> StrategyOptions { get; }
@@ -104,13 +112,25 @@ namespace StockTracker.ViewModels
         public decimal TargetOne
         {
             get => _targetOne;
-            set { _targetOne = value; OnPropertyChanged(); OnPropertyChanged(nameof(RewardRiskOneText)); }
+            set
+            {
+                _targetOne = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(RewardRiskOneText));
+                if (!_isApplyingDefaults) RecalculateSizingAndValidation();
+            }
         }
 
         public decimal TargetTwo
         {
             get => _targetTwo;
-            set { _targetTwo = value; OnPropertyChanged(); OnPropertyChanged(nameof(RewardRiskTwoText)); }
+            set
+            {
+                _targetTwo = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(RewardRiskTwoText));
+                if (!_isApplyingDefaults) RecalculateSizingAndValidation();
+            }
         }
 
         public decimal RiskBudget
@@ -156,66 +176,115 @@ namespace StockTracker.ViewModels
 
         private void ApplyStrategy()
         {
-            var price = LatestPrice > 0 ? LatestPrice : _candles.LastOrDefault()?.Close ?? 0m;
-            if (price <= 0)
+            if (_priceStructure == null || !_priceStructure.HasSufficientData)
             {
-                StatusText = "尚無有效價格，無法建立交易計畫。";
+                ClearPricePlan("日 K 結構資料不足，請切換或補足日 K 後再建立計畫；你仍可手動填寫價格。" );
                 return;
             }
 
-            var latest = _candles.LastOrDefault();
-            var recentCandles = _candles.Skip(Math.Max(0, _candles.Count - 3)).ToList();
-            var recentLow = recentCandles.Where(item => item.Low > 0).Select(item => item.Low).DefaultIfEmpty(price * 0.96m).Min();
-            var latestHigh = latest?.High > 0 ? latest.High : price;
+            var primarySupport = _priceStructure.Supports.ElementAtOrDefault(0);
+            var firstResistance = _priceStructure.Resistances.ElementAtOrDefault(0);
+            var secondResistance = _priceStructure.Resistances.ElementAtOrDefault(1);
+            var thirdResistance = _priceStructure.Resistances.ElementAtOrDefault(2);
+            if (primarySupport == null || firstResistance == null)
+            {
+                ClearPricePlan("目前找不到足夠的支撐或壓力區，請先手動判讀，不自動預填交易價格。" );
+                return;
+            }
 
             _isApplyingDefaults = true;
             if (SelectedStrategy == "拉回買進")
             {
-                var support = MA5 > 0 ? (decimal)MA5 : price * 0.99m;
-                EntryLower = RoundToTick(support * 0.995m, false);
-                EntryUpper = RoundToTick(support * 1.005m, true);
-                StopLoss = BuildStop(EntryLower, recentLow);
-                CancelCondition = "價格跌破停損價或 MA20 支撐時，取消買進；若反彈直接高於買入區上緣，等待下一次拉回，不追價。";
+                EntryLower = primarySupport.Low;
+                EntryUpper = primarySupport.High;
+                StopLoss = PriceStructureAnalyzer.RoundToTick(primarySupport.Low - GetZoneBuffer(primarySupport), false);
+                TargetOne = TargetBelowResistance(firstResistance);
+                TargetTwo = TargetBelowResistance(secondResistance);
+                CancelCondition = "僅在支撐區內止跌、隔日再突破反彈 K 高點時考慮；若收盤跌破支撐區下緣，取消買進。";
             }
             else
             {
-                EntryLower = RoundToTick(Math.Max(price * 1.001m, latestHigh * 1.001m), true);
-                EntryUpper = RoundToTick(EntryLower * 1.008m, true);
-                StopLoss = BuildStop(EntryLower, recentLow);
-                CancelCondition = "僅在突破買入區時考慮；若開盤或盤中直接高於買入區上緣，或回落跌破今日低點，取消買進、不追價。";
+                EntryLower = PriceStructureAnalyzer.RoundToTick(firstResistance.High + PriceStructureAnalyzer.GetPriceTick(firstResistance.High), true);
+                EntryUpper = PriceStructureAnalyzer.RoundToTick(EntryLower + Math.Max(_priceStructure.Atr14 * 0.25m, PriceStructureAnalyzer.GetPriceTick(EntryLower) * 2m), true);
+                StopLoss = PriceStructureAnalyzer.RoundToTick(firstResistance.Low - GetZoneBuffer(firstResistance), false);
+                TargetOne = TargetBelowResistance(secondResistance);
+                TargetTwo = TargetBelowResistance(thirdResistance);
+                CancelCondition = "只在壓力區上緣有效突破後考慮；若突破後收盤回到壓力區內，視為假突破，取消或退出計畫。";
             }
             _isApplyingDefaults = false;
 
-            RecalculateTargetsAndSizing();
-            StatusText = "此計畫僅供你手動判斷、儲存與複製備忘；不會連接券商或送出委託。";
+            RecalculateSizingAndValidation();
         }
 
-        private decimal BuildStop(decimal entry, decimal recentLow)
+        private void ClearPricePlan(string message)
         {
-            var structureStop = recentLow * 0.995m;
-            var hardStop = entry * 0.94m;
-            var stop = Math.Max(structureStop, hardStop);
-            if (stop >= entry) stop = hardStop;
-            return RoundToTick(stop, false);
+            _isApplyingDefaults = true;
+            EntryLower = 0m;
+            EntryUpper = 0m;
+            StopLoss = 0m;
+            TargetOne = 0m;
+            TargetTwo = 0m;
+            _isApplyingDefaults = false;
+            CancelCondition = "尚未產生結構化條件；若自行輸入價格，請自行確認支撐區下緣與壓力區上緣。";
+            StatusText = message;
+            RecalculateSizingAndValidation();
+        }
+
+        private decimal GetZoneBuffer(PriceStructureZone zone)
+        {
+            var zoneWidth = zone == null ? 0m : Math.Max(0m, zone.High - zone.Low);
+            return Math.Max(PriceStructureAnalyzer.GetPriceTick(Math.Max(0.01m, LatestPrice)), Math.Max(_priceStructure?.Atr14 ?? 0m, zoneWidth) * 0.15m);
+        }
+
+        private decimal TargetBelowResistance(PriceStructureZone zone)
+        {
+            if (zone == null) return 0m;
+            return PriceStructureAnalyzer.RoundToTick(zone.Low - GetZoneBuffer(zone), false);
         }
 
         private void RecalculateTargetsAndSizing()
         {
-            var risk = RiskPerShare;
-            if (risk > 0)
+            if (RiskPerShare > 0 && TargetOne <= EntryLower)
             {
-                _targetOne = RoundToTick(EntryLower + risk * 1.5m, true);
-                _targetTwo = RoundToTick(EntryLower + risk * 2.5m, true);
-                OnPropertyChanged(nameof(TargetOne));
-                OnPropertyChanged(nameof(TargetTwo));
+                StatusText = "尚未找到第一層壓力目標；請手動確認上方壓力區。";
             }
 
+            RecalculateSizingAndValidation();
+        }
+
+        private void RecalculateSizingAndValidation()
+        {
             OnPropertyChanged(nameof(RiskPerShare));
             OnPropertyChanged(nameof(RiskPercentText));
             OnPropertyChanged(nameof(RewardRiskOneText));
             OnPropertyChanged(nameof(RewardRiskTwoText));
             OnPropertyChanged(nameof(SuggestedShares));
             OnPropertyChanged(nameof(SuggestedSharesText));
+
+            if (EntryLower <= 0 || StopLoss <= 0 || StopLoss >= EntryLower)
+            {
+                return;
+            }
+
+            if (RiskPerShare / EntryLower > 0.06m)
+            {
+                StatusText = "結構停損距離超過 6%，這筆交易風險過大；建議等待更好的買點，不用硬縮停損。";
+                return;
+            }
+
+            if (TargetOne <= EntryLower || (TargetOne - EntryLower) / RiskPerShare < 1.5m)
+            {
+                StatusText = "第一層壓力距離不足 1.5R，風報比不佳，標示為不建議進場。";
+                return;
+            }
+
+            if (TargetTwo <= TargetOne)
+            {
+                StatusText = "尚未找到第二層壓力；可先以第一層壓力作為分段停利，剩餘部位等待後續結構確認。";
+                return;
+            }
+
+            StatusText = "計畫已依支撐／壓力區預填；僅供你手動判斷、儲存與複製備忘，不會送出委託。";
         }
 
         private void SavePlan()
@@ -279,19 +348,11 @@ namespace StockTracker.ViewModels
             return next;
         }
 
-        private static decimal RoundToTick(decimal price, bool roundUp)
+        private static string FormatZone(PriceStructureZone zone)
         {
-            if (price <= 0) return 0;
-            decimal tick;
-            if (price < 10m) tick = 0.01m;
-            else if (price < 50m) tick = 0.05m;
-            else if (price < 100m) tick = 0.1m;
-            else if (price < 500m) tick = 0.5m;
-            else if (price < 1000m) tick = 1m;
-            else tick = 5m;
-
-            var units = price / tick;
-            return (roundUp ? Math.Ceiling(units) : Math.Floor(units)) * tick;
+            return zone == null
+                ? "—"
+                : $"{zone.Low:F2} ～ {zone.High:F2}（強度 {zone.Strength}／觸及 {zone.Touches} 次）";
         }
     }
 }

@@ -32,6 +32,24 @@
 
             <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
                 <StackPanel>
+                    <TextBlock Text="日 K 結構地圖" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding StructureSummary}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,9"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,14,0">
+                            <TextBlock Text="支撐一" FontSize="11" Foreground="{DynamicResource MutedForegroundBrush}"/><TextBlock Text="{Binding SupportOneText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,2,0,6"/>
+                            <TextBlock Text="支撐二" FontSize="11" Foreground="{DynamicResource MutedForegroundBrush}"/><TextBlock Text="{Binding SupportTwoText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="壓力一／突破區" FontSize="11" Foreground="{DynamicResource MutedForegroundBrush}"/><TextBlock Text="{Binding ResistanceOneText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,2,0,6"/>
+                            <TextBlock Text="壓力二／三（停利區）" FontSize="11" Foreground="{DynamicResource MutedForegroundBrush}"/><TextBlock Text="{Binding ResistanceTwoText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,2,0,2"/><TextBlock Text="{Binding ResistanceThreeText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                <StackPanel>
                     <TextBlock Text="可自行調整的價格計畫" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>

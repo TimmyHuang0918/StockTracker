@@ -221,6 +221,7 @@
     <Compile Include="Models\ChartMarker.cs" />
     <Compile Include="Models\HoldingPoint.cs" />
     <Compile Include="Models\PortfolioHolding.cs" />
+    <Compile Include="Models\PriceStructure.cs" />
     <Compile Include="Models\TradePlan.cs" />
     <Compile Include="RankingWindow.xaml.cs">
       <DependentUpon>RankingWindow.xaml</DependentUpon>
@@ -237,6 +238,7 @@
     <Compile Include="Services\MarginDataFetcher.cs" />
     <Compile Include="Services\MarginMetricCalculator.cs" />
     <Compile Include="Services\MarketInstitutionalAmountService.cs" />
+    <Compile Include="Services\PriceStructureAnalyzer.cs" />
     <Compile Include="Services\TwseMarketCreditService.cs" />
     <Compile Include="Services\TdccLargeHolderService.cs" />
     <Compile Include="Services\SKAPI.cs" />
