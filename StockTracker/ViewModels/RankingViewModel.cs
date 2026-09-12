@@ -425,10 +425,14 @@ namespace StockTracker.ViewModels
         private int? _minLatestScoreFilter;
         private int? _minCrashRiskScoreFilter;
         private int? _minPatternTagCountFilter;
+        private int? _minForeignSensitivityFilter;
+        private int? _minTrustSensitivityFilter;
+        private int? _minInstitutionalSensitivityConfidenceFilter;
         private string _selectedPatternTag = "全部";
         private string _selectedStrategyAction = "全部";
         private string _selectedStrategyHolding = "全部";
         private string _selectedSuggestion = "全部";
+        private string _selectedInstitutionalLeadership = "全部";
         private double? _minAverageScoreFilter;
         private bool _requireScoreTrendUp;
         private int _minConsecutiveDays;
@@ -479,6 +483,10 @@ namespace StockTracker.ViewModels
             StrategyActionOptions = new ObservableCollection<string> { "全部" };
             StrategyHoldingOptions = new ObservableCollection<string> { "全部" };
             SuggestionOptions = new ObservableCollection<string> { "全部" };
+            InstitutionalLeadershipOptions = new ObservableCollection<string>
+            {
+                "全部", "外資敏感型", "投信敏感型", "法人共振", "法人敏感度不明顯", "資料不足"
+            };
 
             _rankedStocksView = System.Windows.Data.CollectionViewSource.GetDefaultView(RankedStocks);
             _rankedStocksView.Filter = FilterRankedStocks;
@@ -559,6 +567,24 @@ namespace StockTracker.ViewModels
             set { _minPatternTagCountFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
         }
 
+        public int? MinForeignSensitivityFilter
+        {
+            get => _minForeignSensitivityFilter;
+            set { _minForeignSensitivityFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public int? MinTrustSensitivityFilter
+        {
+            get => _minTrustSensitivityFilter;
+            set { _minTrustSensitivityFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public int? MinInstitutionalSensitivityConfidenceFilter
+        {
+            get => _minInstitutionalSensitivityConfidenceFilter;
+            set { _minInstitutionalSensitivityConfidenceFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
         public ObservableCollection<string> PatternTagOptions { get; }
 
         public ObservableCollection<string> StrategyActionOptions { get; }
@@ -566,6 +592,8 @@ namespace StockTracker.ViewModels
         public ObservableCollection<string> StrategyHoldingOptions { get; }
 
         public ObservableCollection<string> SuggestionOptions { get; }
+
+        public ObservableCollection<string> InstitutionalLeadershipOptions { get; }
 
         public string SelectedPatternTag
         {
@@ -625,6 +653,17 @@ namespace StockTracker.ViewModels
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(GroupEditorVisibility));
                 OnPropertyChanged(nameof(GroupEditorToggleText));
+            }
+        }
+
+        public string SelectedInstitutionalLeadership
+        {
+            get => _selectedInstitutionalLeadership;
+            set
+            {
+                _selectedInstitutionalLeadership = string.IsNullOrWhiteSpace(value) ? "全部" : value;
+                OnPropertyChanged();
+                _rankedStocksView.Refresh();
             }
         }
 
@@ -829,6 +868,19 @@ namespace StockTracker.ViewModels
                 if (MinLatestScoreFilter.HasValue && stock.Score < MinLatestScoreFilter.Value) return false;
                 if (MinCrashRiskScoreFilter.HasValue && stock.CrashRiskScore > MinCrashRiskScoreFilter.Value) return false;
                 if (MinPatternTagCountFilter.HasValue && stock.PatternTagCount < MinPatternTagCountFilter.Value) return false;
+                if (MinForeignSensitivityFilter.HasValue && stock.ForeignSensitivity < MinForeignSensitivityFilter.Value) return false;
+                if (MinTrustSensitivityFilter.HasValue && stock.TrustSensitivity < MinTrustSensitivityFilter.Value) return false;
+                if (MinInstitutionalSensitivityConfidenceFilter.HasValue && stock.InstitutionalSensitivityConfidence < MinInstitutionalSensitivityConfidenceFilter.Value) return false;
+                if (!string.IsNullOrWhiteSpace(SelectedInstitutionalLeadership) && SelectedInstitutionalLeadership != "全部")
+                {
+                    var leadershipLabel = string.IsNullOrWhiteSpace(stock.InstitutionalLeadershipLabel)
+                        ? "資料不足"
+                        : stock.InstitutionalLeadershipLabel;
+                    if (!string.Equals(leadershipLabel, SelectedInstitutionalLeadership, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+                }
                 if (!string.IsNullOrWhiteSpace(SelectedPatternTag) && SelectedPatternTag != "全部")
                 {
                     if (string.IsNullOrWhiteSpace(stock.PatternTagsText) || stock.PatternTagsText.IndexOf(SelectedPatternTag, StringComparison.OrdinalIgnoreCase) < 0)
@@ -2018,6 +2070,10 @@ namespace StockTracker.ViewModels
             html.AppendLine("<div class='filter-group'><label>建議倉位</label><select id='holdingFilter'><option value=''>全部</option></select></div>");
             html.AppendLine("<div class='filter-group'><label>綜合建議</label><select id='suggestionFilter'><option value=''>全部</option></select></div>");
             html.AppendLine("<div class='filter-group'><label>5日均分 ≥</label><input id='minAvg' type='number' step='0.1' placeholder='0' /></div>");
+            html.AppendLine("<div class='filter-group'><label>外資敏感度 ≥</label><input id='minForeignSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>");
+            html.AppendLine("<div class='filter-group'><label>投信敏感度 ≥</label><input id='minTrustSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>");
+            html.AppendLine("<div class='filter-group'><label>資料信心 ≥</label><input id='minSensitivityConfidence' type='number' min='0' max='100' step='1' placeholder='0' /></div>");
+            html.AppendLine("<div class='filter-group'><label>法人主導型態</label><select id='leadershipFilter'><option value=''>全部</option><option value='外資敏感型'>外資敏感型</option><option value='投信敏感型'>投信敏感型</option><option value='法人共振'>法人共振</option><option value='法人敏感度不明顯'>法人敏感度不明顯</option><option value='資料不足'>資料不足</option></select></div>");
             html.AppendLine("<div class='filter-group'><label>連續天數條件</label><div class='row-inputs'><input id='minConDays' type='number' step='1' placeholder='天數' /><input id='minConScore' type='number' step='1' placeholder='分數' value='60' /></div></div>");
             html.AppendLine("<div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>");
             html.AppendLine("</div>");
@@ -2273,7 +2329,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  $('hero-suggestion').textContent = stock0050Data.suggestion || '無特別建議';");
             html.AppendLine("  $('hero-reason').textContent = decodeHtmlEntities(stock0050Data.scoreReason) || '評分理由尚未載入';");
             html.AppendLine("}");
-            html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
+            html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),minForeignSensitivity:$('minForeignSensitivity'),minTrustSensitivity:$('minTrustSensitivity'),minSensitivityConfidence:$('minSensitivityConfidence'),leadership:$('leadershipFilter'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
 
             html.AppendLine("let filteredData = [...rawData];");
             html.AppendLine("let renderedCount = 0;");
@@ -2714,7 +2770,8 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const minNet=parseNum(f.minNet.value),maxNet=parseNum(f.maxNet.value),minNetAmount=parseNum(f.minNetAmount.value),maxNetAmount=parseNum(f.maxNetAmount.value);");
             html.AppendLine("  const minScore=parseNum(f.minScore.value),minCrash=parseNum(f.minCrash.value),minPatternCount=parseNum(f.minPatternCount.value);");
             html.AppendLine("  const minAvg=parseNum(f.minAvg.value),minConDays=Math.max(0,parseNum(f.minConDays.value)||0),minConScore=parseNum(f.minConScore.value)??60;");
-            html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,trendUp=f.trendUp.checked;");
+            html.AppendLine("  const minForeignSensitivity=parseNum(f.minForeignSensitivity.value),minTrustSensitivity=parseNum(f.minTrustSensitivity.value),minSensitivityConfidence=parseNum(f.minSensitivityConfidence.value);");
+            html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,leadership=f.leadership.value,trendUp=f.trendUp.checked;");
 
             html.AppendLine("  filteredData = rawData.filter(item => {");
             html.AppendLine("    if(selectedMarketGroup){const mapping=groupMappingBySymbol.get(String(item.symbol));const groups=mapping?[...(mapping.CoreThemes??mapping.coreThemes??[])].map(normalizeCoreThemeName):[];if(!groups.includes(selectedMarketGroup))return false;}");
@@ -2732,6 +2789,10 @@ namespace StockTracker.ViewModels
             html.AppendLine("    if(holding&&item.stage!==holding) return false;");
             html.AppendLine("    if(suggestion&&item.suggestion!==suggestion) return false;");
             html.AppendLine("    if(minAvg!==null&&item.avg<minAvg) return false;");
+            html.AppendLine("    if(minForeignSensitivity!==null&&(item.foreignSensitivity??0)<minForeignSensitivity) return false;");
+            html.AppendLine("    if(minTrustSensitivity!==null&&(item.trustSensitivity??0)<minTrustSensitivity) return false;");
+            html.AppendLine("    if(minSensitivityConfidence!==null&&(item.sensitivityConfidence??0)<minSensitivityConfidence) return false;");
+            html.AppendLine("    if(leadership&&decodeHtmlEntities(item.leadershipLabel||'資料不足')!==leadership) return false;");
             html.AppendLine("    if(trendUp&&item.trend<=0) return false;");
             html.AppendLine("    if(minConDays>0&&getConsecutive([item.d0,item.d1,item.d2,item.d3,item.d4],minConScore)<minConDays) return false;");
             html.AppendLine("    return true;");
@@ -3646,10 +3707,14 @@ namespace StockTracker.ViewModels
                 _minLatestScoreFilter = null;
                 _minCrashRiskScoreFilter = null;
                 _minPatternTagCountFilter = null;
+                _minForeignSensitivityFilter = null;
+                _minTrustSensitivityFilter = null;
+                _minInstitutionalSensitivityConfidenceFilter = null;
                 _selectedPatternTag = "全部";
                 _selectedStrategyAction = "全部";
                 _selectedStrategyHolding = "全部";
                 _selectedSuggestion = "全部";
+                _selectedInstitutionalLeadership = "全部";
                 _minAverageScoreFilter = null;
                 _requireScoreTrendUp = false;
                 _minConsecutiveDays = 0;
@@ -3730,10 +3795,14 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(MinLatestScoreFilter));
             OnPropertyChanged(nameof(MinCrashRiskScoreFilter));
             OnPropertyChanged(nameof(MinPatternTagCountFilter));
+            OnPropertyChanged(nameof(MinForeignSensitivityFilter));
+            OnPropertyChanged(nameof(MinTrustSensitivityFilter));
+            OnPropertyChanged(nameof(MinInstitutionalSensitivityConfidenceFilter));
             OnPropertyChanged(nameof(SelectedPatternTag));
             OnPropertyChanged(nameof(SelectedStrategyAction));
             OnPropertyChanged(nameof(SelectedStrategyHolding));
             OnPropertyChanged(nameof(SelectedSuggestion));
+            OnPropertyChanged(nameof(SelectedInstitutionalLeadership));
             OnPropertyChanged(nameof(MinAverageScoreFilter));
             OnPropertyChanged(nameof(RequireScoreTrendUp));
             OnPropertyChanged(nameof(MinConsecutiveDays));

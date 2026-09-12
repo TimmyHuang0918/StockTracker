@@ -369,6 +369,31 @@
                             </WrapPanel>
                         </StackPanel>
                     </Border>
+
+                    <Border Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,10">
+                        <StackPanel>
+                            <TextBlock Text="法人價格敏感度" FontWeight="SemiBold" Margin="0,0,0,3" />
+                            <TextBlock Text="近 60 日法人買賣超與後續兩日價格反應的關聯" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" Margin="0,0,0,8" />
+                            <WrapPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="外資敏感度 ≥" Margin="0,0,0,4" />
+                                    <TextBox Text="{Binding MinForeignSensitivityFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="投信敏感度 ≥" Margin="0,0,0,4" />
+                                    <TextBox Text="{Binding MinTrustSensitivityFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="資料信心 ≥" Margin="0,0,0,4" />
+                                    <TextBox Text="{Binding MinInstitutionalSensitivityConfidenceFilter, UpdateSourceTrigger=PropertyChanged}" Width="70" Height="28" VerticalContentAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="主導型態" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding InstitutionalLeadershipOptions}" SelectedItem="{Binding SelectedInstitutionalLeadership, Mode=TwoWay}" Width="150" Height="28" />
+                                </StackPanel>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
                 </WrapPanel>
                 </StackPanel>
             </StackPanel>
