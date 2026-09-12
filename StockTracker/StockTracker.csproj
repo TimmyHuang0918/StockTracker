@@ -238,6 +238,7 @@
     <Compile Include="Services\TwseMarketCreditService.cs" />
     <Compile Include="Services\TdccLargeHolderService.cs" />
     <Compile Include="Services\SKAPI.cs" />
+    <Compile Include="Services\InstitutionalSensitivityAnalyzer.cs" />
     <Compile Include="Services\TechnicalLineQuantizer.cs" />
     <Compile Include="Services\TaifexPutCallRatioService.cs" />
     <Compile Include="Services\TradingRecommendationLibrary.cs" />

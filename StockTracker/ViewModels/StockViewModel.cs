@@ -30,6 +30,7 @@ namespace StockTracker.ViewModels
         private StrategyOutputViewModel _latestBacktestStrategyOutput;
         private DateTime? _strategyHistoryLastCandleTime;
         private readonly Dictionary<DateTime, TwseT86Record> _twseByDate = new Dictionary<DateTime, TwseT86Record>();
+        private InstitutionalSensitivityResult _institutionalSensitivity = new InstitutionalSensitivityResult();
         private readonly Dictionary<DateTime, TwseMarginRecord> _marginByDate = new Dictionary<DateTime, TwseMarginRecord>();
         private string _exDividendTagText;
 
@@ -427,6 +428,14 @@ namespace StockTracker.ViewModels
         public decimal LatestVolume => _candles.Count == 0 ? 0 : _candles.Last().Volume;
         public long LatestMarginBalance => _marginByDate.Count == 0 ? 0 : _marginByDate.OrderBy(x => x.Key).Last().Value.MarginBalance;
         public double LatestMarginMaintenanceRatio => _marginMetricByDate.Count == 0 ? 0 : _marginMetricByDate.OrderBy(x => x.Key).Last().Value.MarginMaintenanceRatio;
+        public string InstitutionalLeadershipLabel => _institutionalSensitivity?.LeadershipLabel ?? "資料不足";
+        public string InstitutionalSensitivitySummary => _institutionalSensitivity?.Summary ?? "需至少 12 個法人有效訊號日，才能判讀價格敏感度。";
+        public int ForeignSensitivity => _institutionalSensitivity?.Foreign?.Score ?? 0;
+        public int TrustSensitivity => _institutionalSensitivity?.InvestmentTrust?.Score ?? 0;
+        public int ForeignSensitivityConfidence => _institutionalSensitivity?.Foreign?.Confidence ?? 0;
+        public int TrustSensitivityConfidence => _institutionalSensitivity?.InvestmentTrust?.Confidence ?? 0;
+        public string ForeignSensitivityText => FormatSensitivity(_institutionalSensitivity?.Foreign);
+        public string TrustSensitivityText => FormatSensitivity(_institutionalSensitivity?.InvestmentTrust);
         public double MacdSignal => _signalSeries.LastOrDefault();
         public double MacdHistogramValue => (_macdSeries.Any() && _signalSeries.Any()) ? _macdSeries.Last() - _signalSeries.Last() : 0;
 
@@ -793,6 +802,10 @@ namespace StockTracker.ViewModels
             ChangePercent = latest.PercentageChange;
             if (!lightweightMode)
             {
+                RefreshInstitutionalSensitivity();
+            }
+            if (!lightweightMode)
+            {
                 UpdateSignal();
                 RebuildVisuals();
             }
@@ -852,12 +865,20 @@ namespace StockTracker.ViewModels
             _recommendationScoreCache.Clear();
             _recommendationReasonsCache.Clear();
             _recommendationPatternTagsCache.Clear();
+            _institutionalSensitivity = new InstitutionalSensitivityResult();
             _lastDisplayMarginBalanceSeries.Clear();
             _lastDisplayMarginMaintenanceSeries.Clear();
             MarginCrosshairVisibility = Visibility.Collapsed;
             MarginHoverInfo = null;
             MarginMaintenanceCrosshairVisibility = Visibility.Collapsed;
             MarginMaintenanceHoverInfo = null;
+            foreach (var property in new[]
+            {
+                nameof(InstitutionalLeadershipLabel), nameof(InstitutionalSensitivitySummary),
+                nameof(ForeignSensitivity), nameof(TrustSensitivity),
+                nameof(ForeignSensitivityConfidence), nameof(TrustSensitivityConfidence),
+                nameof(ForeignSensitivityText), nameof(TrustSensitivityText)
+            }) OnPropertyChanged(property);
             _lastDisplayThreeMajorSeries.Clear();
             ThreeMajorZeroY = 0;
             ThreeMajorCrosshairVisibility = Visibility.Collapsed;
@@ -885,6 +906,32 @@ namespace StockTracker.ViewModels
             }
         }
 
+        private void RefreshInstitutionalSensitivity()
+        {
+            _institutionalSensitivity = InstitutionalSensitivityAnalyzer.Analyze(
+                _candles,
+                new TwseT86History
+                {
+                    Symbol = Symbol,
+                    Name = Name,
+                    RecordsByDate = new Dictionary<DateTime, TwseT86Record>(_twseByDate)
+                });
+            foreach (var property in new[]
+            {
+                nameof(InstitutionalLeadershipLabel), nameof(InstitutionalSensitivitySummary),
+                nameof(ForeignSensitivity), nameof(TrustSensitivity),
+                nameof(ForeignSensitivityConfidence), nameof(TrustSensitivityConfidence),
+                nameof(ForeignSensitivityText), nameof(TrustSensitivityText)
+            }) OnPropertyChanged(property);
+        }
+
+        private static string FormatSensitivity(InstitutionalSensitivityMetric metric)
+        {
+            if (metric == null || !metric.HasSufficientData) return "資料不足";
+            var level = metric.Score >= 75 ? "高度" : metric.Score >= 60 ? "明顯" : metric.Score >= 40 ? "輕度" : "低度";
+            return $"{metric.Score}／100　{level}（信心 {metric.Confidence}）";
+        }
+
         public void SetTwseT86Records(IEnumerable<TwseT86Record> records)
         {
             _twseByDate.Clear();
@@ -901,6 +948,8 @@ namespace StockTracker.ViewModels
                     _twseByDate[record.TradeDate.Date] = record;
                 }
             }
+
+            RefreshInstitutionalSensitivity();
 
             RebuildVisuals();
 
@@ -2459,6 +2508,7 @@ namespace StockTracker.ViewModels
             }
 
             _candles.Sort((a, b) => a.Time.CompareTo(b.Time));
+            RefreshInstitutionalSensitivity();
             if (_candles.Count == 0)
             {
                 return;

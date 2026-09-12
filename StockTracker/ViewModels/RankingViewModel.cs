@@ -262,6 +262,11 @@ namespace StockTracker.ViewModels
         public long ForeignNet { get; set; }
         public long DealerNet { get; set; }
         public long InvestmentTrustNet { get; set; }
+        public int ForeignSensitivity { get; set; }
+        public int TrustSensitivity { get; set; }
+        public int InstitutionalSensitivityConfidence { get; set; }
+        public string InstitutionalLeadershipLabel { get; set; }
+        public string InstitutionalSensitivitySummary { get; set; }
         public decimal? LargeHolder400PlusRatio { get; set; }
         public decimal? LargeHolder1000PlusRatio { get; set; }
         public decimal? LargeHolder400PlusWeeklyChange { get; set; }
@@ -1002,7 +1007,12 @@ namespace StockTracker.ViewModels
                             LargeHolder400PlusRatio REAL NULL,
                             LargeHolder1000PlusRatio REAL NULL,
                             LargeHolder400PlusWeeklyChange REAL NULL,
-                            LargeHolderDataDate TEXT NOT NULL DEFAULT ''
+                            LargeHolderDataDate TEXT NOT NULL DEFAULT '',
+                            ForeignSensitivity INTEGER NOT NULL DEFAULT 0,
+                            TrustSensitivity INTEGER NOT NULL DEFAULT 0,
+                            InstitutionalSensitivityConfidence INTEGER NOT NULL DEFAULT 0,
+                            InstitutionalLeadershipLabel TEXT NOT NULL DEFAULT '',
+                            InstitutionalSensitivitySummary TEXT NOT NULL DEFAULT ''
                         );";
                     cmd.ExecuteNonQuery();
                 }
@@ -1011,6 +1021,11 @@ namespace StockTracker.ViewModels
                 AddRankingColumnIfMissing(conn, "LargeHolder1000PlusRatio REAL NULL");
                 AddRankingColumnIfMissing(conn, "LargeHolder400PlusWeeklyChange REAL NULL");
                 AddRankingColumnIfMissing(conn, "LargeHolderDataDate TEXT NOT NULL DEFAULT ''");
+                AddRankingColumnIfMissing(conn, "ForeignSensitivity INTEGER NOT NULL DEFAULT 0");
+                AddRankingColumnIfMissing(conn, "TrustSensitivity INTEGER NOT NULL DEFAULT 0");
+                AddRankingColumnIfMissing(conn, "InstitutionalSensitivityConfidence INTEGER NOT NULL DEFAULT 0");
+                AddRankingColumnIfMissing(conn, "InstitutionalLeadershipLabel TEXT NOT NULL DEFAULT ''");
+                AddRankingColumnIfMissing(conn, "InstitutionalSensitivitySummary TEXT NOT NULL DEFAULT ''");
 
                 using (var cmd = conn.CreateCommand())
                 {
@@ -1299,7 +1314,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -1341,7 +1356,12 @@ namespace StockTracker.ViewModels
                                     LargeHolder400PlusRatio = reader.IsDBNull(24) ? (decimal?)null : Convert.ToDecimal(reader.GetValue(24), CultureInfo.InvariantCulture),
                                     LargeHolder1000PlusRatio = reader.IsDBNull(25) ? (decimal?)null : Convert.ToDecimal(reader.GetValue(25), CultureInfo.InvariantCulture),
                                     LargeHolder400PlusWeeklyChange = reader.IsDBNull(26) ? (decimal?)null : Convert.ToDecimal(reader.GetValue(26), CultureInfo.InvariantCulture),
-                                    LargeHolderDataDate = reader.IsDBNull(27) || !DateTime.TryParse(reader.GetString(27), out var largeHolderDate) ? DateTime.MinValue : largeHolderDate.Date
+                                    LargeHolderDataDate = reader.IsDBNull(27) || !DateTime.TryParse(reader.GetString(27), out var largeHolderDate) ? DateTime.MinValue : largeHolderDate.Date,
+                                    ForeignSensitivity = reader.IsDBNull(28) ? 0 : reader.GetInt32(28),
+                                    TrustSensitivity = reader.IsDBNull(29) ? 0 : reader.GetInt32(29),
+                                    InstitutionalSensitivityConfidence = reader.IsDBNull(30) ? 0 : reader.GetInt32(30),
+                                    InstitutionalLeadershipLabel = reader.IsDBNull(31) ? string.Empty : reader.GetString(31),
+                                    InstitutionalSensitivitySummary = reader.IsDBNull(32) ? string.Empty : reader.GetString(32)
                                 });
                             }
                         }
@@ -1468,8 +1488,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText, @largeHolder400, @largeHolder1000, @largeHolderWeeklyChange, @largeHolderDate)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText, @largeHolder400, @largeHolder1000, @largeHolderWeeklyChange, @largeHolderDate, @foreignSensitivity, @trustSensitivity, @sensitivityConfidence, @leadershipLabel, @sensitivitySummary)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -1501,6 +1521,11 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@largeHolder1000", s.LargeHolder1000PlusRatio.HasValue ? (object)s.LargeHolder1000PlusRatio.Value : DBNull.Value);
                                 cmd.Parameters.AddWithValue("@largeHolderWeeklyChange", s.LargeHolder400PlusWeeklyChange.HasValue ? (object)s.LargeHolder400PlusWeeklyChange.Value : DBNull.Value);
                                 cmd.Parameters.AddWithValue("@largeHolderDate", s.LargeHolderDataDate == DateTime.MinValue ? string.Empty : s.LargeHolderDataDate.ToString("yyyy-MM-dd"));
+                                cmd.Parameters.AddWithValue("@foreignSensitivity", s.ForeignSensitivity);
+                                cmd.Parameters.AddWithValue("@trustSensitivity", s.TrustSensitivity);
+                                cmd.Parameters.AddWithValue("@sensitivityConfidence", s.InstitutionalSensitivityConfidence);
+                                cmd.Parameters.AddWithValue("@leadershipLabel", s.InstitutionalLeadershipLabel ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@sensitivitySummary", s.InstitutionalSensitivitySummary ?? string.Empty);
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -1832,6 +1857,11 @@ namespace StockTracker.ViewModels
                 trustNet = (double)s.InvestmentTrustNet,
                 trustNetStr = FormatNetShares((double)s.InvestmentTrustNet),
                 trustNetClass = ResolveValueColorClass((double)s.InvestmentTrustNet),
+                foreignSensitivity = s.ForeignSensitivity,
+                trustSensitivity = s.TrustSensitivity,
+                sensitivityConfidence = s.InstitutionalSensitivityConfidence,
+                leadershipLabel = HtmlEncode(s.InstitutionalLeadershipLabel ?? string.Empty),
+                sensitivitySummary = HtmlEncode(s.InstitutionalSensitivitySummary ?? string.Empty),
                 action = HtmlEncode(s.StrategyActionText),
                 stage = HtmlEncode(s.StrategyStageLabel),
                 suggestion = HtmlEncode(s.Suggestion),
@@ -2136,6 +2166,16 @@ namespace StockTracker.ViewModels
             html.AppendLine("  <div class='detail-section' id='md-pattern-section'>");
             html.AppendLine("    <div class='detail-section-title'>📊 型態標籤</div>");
             html.AppendLine("    <div class='tag-list' id='md-patterns'></div>");
+            html.AppendLine("  </div>");
+            html.AppendLine("  <div class='detail-section'>");
+            html.AppendLine("    <div class='detail-section-title'>法人價格敏感度（近 60 日）</div>");
+            html.AppendLine("    <div class='detail-grid' style='margin-bottom:10px;'>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>主導特性</div><div class='detail-item-value' id='md-leadership'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>外資敏感度</div><div class='detail-item-value' id='md-foreign-sensitivity'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>投信敏感度</div><div class='detail-item-value' id='md-trust-sensitivity'></div></div>");
+            html.AppendLine("      <div class='detail-item'><div class='detail-item-label'>資料信心</div><div class='detail-item-value' id='md-sensitivity-confidence'></div></div>");
+            html.AppendLine("    </div>");
+            html.AppendLine("    <div class='reason-box' id='md-sensitivity-summary'></div>");
             html.AppendLine("  </div>");
             html.AppendLine("  <div class='detail-section'>");
             html.AppendLine("    <div class='detail-section-title'>📈 策略建議</div>");
@@ -2602,6 +2642,11 @@ namespace StockTracker.ViewModels
             html.AppendLine("  } else {");
             html.AppendLine("    patternSection.style.display = 'none';");
             html.AppendLine("  }");
+            html.AppendLine("  $('md-leadership').textContent = decodeHtmlEntities(s.leadershipLabel || '資料不足');");
+            html.AppendLine("  $('md-foreign-sensitivity').textContent = (s.foreignSensitivity || 0) + '／100';");
+            html.AppendLine("  $('md-trust-sensitivity').textContent = (s.trustSensitivity || 0) + '／100';");
+            html.AppendLine("  $('md-sensitivity-confidence').textContent = (s.sensitivityConfidence || 0) + '／100';");
+            html.AppendLine("  $('md-sensitivity-summary').textContent = decodeHtmlEntities(s.sensitivitySummary || '需至少 12 個法人有效訊號日，才能判讀價格敏感度。');");
             html.AppendLine("  $('md-action').textContent = s.action || '—';");
             html.AppendLine("  $('md-stage').textContent = s.stage || '—';");
             html.AppendLine("  $('md-suggestion').textContent = s.suggestion || '無特別建議';");
@@ -2752,6 +2797,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("renderBatch();");
 
             html.AppendLine("</script>");
+            html.AppendLine("<script src='portfolio-enhancements.js'></script>");
             html.AppendLine("</body></html>");
             return html.ToString();
         }
@@ -2992,6 +3038,7 @@ namespace StockTracker.ViewModels
                             long foreignNet = ResolveForeignNetByDate(t86History, scoreDate);
                             long dealerNet = ResolveDealerNetByDate(t86History, scoreDate);
                             long trustNet = ResolveInvestmentTrustNetByDate(t86History, scoreDate);
+                            var institutionalSensitivity = InstitutionalSensitivityAnalyzer.Analyze(enrichedCandles, t86History);
                             largeHolderMetrics.TryGetValue(symbol, out var largeHolderMetric);
 
                             lock (lockObj)
@@ -3032,6 +3079,11 @@ namespace StockTracker.ViewModels
                                     ForeignNet = foreignNet,
                                     DealerNet = dealerNet,
                                     InvestmentTrustNet = trustNet,
+                                    ForeignSensitivity = institutionalSensitivity.Foreign.Score,
+                                    TrustSensitivity = institutionalSensitivity.InvestmentTrust.Score,
+                                    InstitutionalSensitivityConfidence = Math.Max(institutionalSensitivity.Foreign.Confidence, institutionalSensitivity.InvestmentTrust.Confidence),
+                                    InstitutionalLeadershipLabel = institutionalSensitivity.LeadershipLabel,
+                                    InstitutionalSensitivitySummary = institutionalSensitivity.Summary,
                                     LargeHolder400PlusRatio = largeHolderMetric?.Holding400PlusRatio,
                                     LargeHolder1000PlusRatio = largeHolderMetric?.Holding1000PlusRatio,
                                     LargeHolder400PlusWeeklyChange = largeHolderMetric?.Holding400PlusWeeklyChange,
