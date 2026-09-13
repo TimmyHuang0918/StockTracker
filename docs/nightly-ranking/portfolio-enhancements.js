@@ -12,9 +12,54 @@
   const marginLots = symbol => portfolio.marginLots
     .filter(lot => String(lot.symbol).toUpperCase() === String(symbol).toUpperCase() && number(lot.remaining) > 0);
 
+  function restoreMissingMarginLots() {
+    if ((Array.isArray(portfolio.marginLots) && portfolio.marginLots.length) || !Array.isArray(portfolio.trades)) return;
+    const marginTrades = portfolio.trades.filter(trade => trade && trade.type === 'marginBuy');
+    if (!marginTrades.length) return;
+
+    const restoredLots = [];
+    portfolio.trades.slice().sort((left, right) => String(left.date).localeCompare(String(right.date))).forEach((trade, index) => {
+      if (!trade || !/^[0-9]{4,6}$/.test(String(trade.symbol || ''))) return;
+      const symbol = String(trade.symbol).toUpperCase();
+      const quantity = number(trade.quantity);
+      if (!(quantity > 0)) return;
+
+      if (trade.type === 'marginBuy') {
+        const principal = number(trade.marginPrincipal);
+        if (!(principal > 0)) return;
+        restoredLots.push({
+          id: 'recovered-' + index,
+          openDate: trade.date,
+          symbol,
+          original: quantity,
+          remaining: quantity,
+          cost: (number(trade.price) * quantity + number(trade.fee) + number(trade.tax)) / quantity,
+          principal,
+          annualRate: number(trade.marginAnnualRate)
+        });
+        return;
+      }
+
+      if (trade.type !== 'sell') return;
+      let quantityToOffset = quantity;
+      restoredLots.filter(lot => lot.symbol === symbol && number(lot.remaining) > 0)
+        .sort((left, right) => String(left.openDate).localeCompare(String(right.openDate)))
+        .forEach(lot => {
+          if (!(quantityToOffset > 0)) return;
+          const before = number(lot.remaining);
+          const sold = Math.min(before, quantityToOffset);
+          lot.remaining = before - sold;
+          lot.principal = number(lot.principal) * lot.remaining / before;
+          quantityToOffset -= sold;
+        });
+    });
+    portfolio.marginLots = restoredLots.filter(lot => number(lot.remaining) > 0 && number(lot.principal) > 0);
+  }
+
   function normalizePositions() {
     portfolio.holdings = Array.isArray(portfolio.holdings) ? portfolio.holdings : [];
     portfolio.marginLots = Array.isArray(portfolio.marginLots) ? portfolio.marginLots : [];
+    restoreMissingMarginLots();
     portfolio.marginLots = portfolio.marginLots.filter(lot => lot && /^[0-9]{4,6}$/.test(String(lot.symbol || '')) && number(lot.remaining) > 0 && number(lot.principal) > 0);
     portfolio.holdings.forEach(holding => {
       if (!Object.prototype.hasOwnProperty.call(holding, 'cashShares')) {
@@ -163,7 +208,7 @@
       cashImpact = -selfFunded;
       setCash(number(portfolio.cash) + cashImpact);
     }
-    portfolio.trades.push({ date, type: tradeType, symbol, quantity, price, fee, tax, realized, isMargin: tradeType === 'marginBuy' || paidPrincipal > 0, marginPrincipal: paidPrincipal, marginInterestPaid: paidInterest, cashImpact });
+    portfolio.trades.push({ date, type: tradeType, symbol, quantity, price, fee, tax, realized, isMargin: tradeType === 'marginBuy' || paidPrincipal > 0, marginPrincipal: paidPrincipal, marginInterestPaid: paidInterest, marginAnnualRate: tradeType === 'marginBuy' ? annualRate / 100 : 0, cashImpact });
     ['tradeSymbol','tradeQuantity','tradePrice','tradeFee','tradeTax'].forEach(id => { document.getElementById(id).value = ''; });
     savePortfolio(); renderPortfolio();
   }, true);
