@@ -40,7 +40,7 @@
         return;
       }
 
-      if (trade.type !== 'sell') return;
+      if (trade.type !== 'marginSell' && !(trade.type === 'sell' && trade.isMargin)) return;
       let quantityToOffset = quantity;
       restoredLots.filter(lot => lot.symbol === symbol && number(lot.remaining) > 0)
         .sort((left, right) => String(left.openDate).localeCompare(String(right.openDate)))
@@ -134,10 +134,36 @@
     note.textContent = `歷史損益已納入總資產；融資部位 ${portfolio.marginLots.length} 筆，負債與每日應計利息已扣除。${maintenance === null ? '' : ' 維持率以融資部位市值 ÷（本金＋應計利息）計算。'}`;
   }
 
+  function renderPositionTypeColumn() {
+    const header = document.querySelector('.portfolio-table thead tr');
+    if (!header) return;
+    if (!header.querySelector('.portfolio-position-type')) {
+      const cell = document.createElement('th');
+      cell.className = 'portfolio-position-type';
+      cell.textContent = '持有方式';
+      header.insertBefore(cell, header.children[3]);
+    }
+    document.querySelectorAll('#portfolioBody .portfolio-row').forEach(row => {
+      if (row.querySelector('.portfolio-position-type')) return;
+      const symbol = row.querySelector('td strong')?.textContent?.trim();
+      const holding = portfolio.holdings.find(item => String(item.symbol).toUpperCase() === String(symbol).toUpperCase());
+      if (!holding) return;
+      const cashShares = number(holding.cashShares);
+      const marginShares = marginLots(symbol).reduce((sum, lot) => sum + number(lot.remaining), 0);
+      const cell = document.createElement('td');
+      cell.className = 'portfolio-position-type portfolio-muted';
+      cell.textContent = marginShares > 0
+        ? (cashShares > 0 ? '現股 ' + cashShares.toLocaleString() + '／融資 ' + marginShares.toLocaleString() : '融資 ' + marginShares.toLocaleString())
+        : '現股 ' + cashShares.toLocaleString();
+      row.insertBefore(cell, row.children[3]);
+    });
+  }
+
   const baseRender = renderPortfolio;
   renderPortfolio = function () {
     normalizePositions();
     baseRender();
+    renderPositionTypeColumn();
     renderMarginSummary();
     savePortfolio();
   };
@@ -148,12 +174,18 @@
     const option = document.createElement('option');
     option.value = 'marginBuy'; option.textContent = '融資買入'; type.append(option);
   }
+  const cashSellOption = [...type.options].find(option => option.value === 'sell');
+  if (cashSellOption) cashSellOption.textContent = '現股賣出';
+  if (![...type.options].some(option => option.value === 'marginSell')) {
+    const option = document.createElement('option');
+    option.value = 'marginSell'; option.textContent = '融資賣出'; type.append(option);
+  }
   const options = document.createElement('div');
   options.id = 'portfolioMarginInputs';
   options.style.cssText = 'display:grid;grid-template-columns:150px 150px 1fr;gap:8px;align-items:end;margin-top:8px';
   options.innerHTML = `<div><label class='portfolio-muted'>融資成數 %</label><input id='marginRatio' type='number' min='1' max='99' step='1' value='60'></div>` +
     `<div><label class='portfolio-muted'>年利率 %</label><input id='marginAnnualRate' type='number' min='0' step='.01' value='0'></div>` +
-    `<div class='portfolio-muted'>僅「融資買入」使用。賣出會優先依最早融資批次沖銷、還本金並計入利息。</div>`;
+    `<div class='portfolio-muted'>融資買入只扣自備款；融資賣出只沖銷最早融資批次、償還本金與利息；現股賣出只扣現股。</div>`;
   document.getElementById('tradeDate').parentElement.parentElement.after(options);
 
   document.getElementById('btnTradeAdd').addEventListener('click', event => {
@@ -174,21 +206,29 @@
       alert('融資成數請填 1 至 99，年利率請填大於或等於 0。'); return;
     }
     normalizePositions();
+    const isMarginSell = tradeType === 'marginSell';
     let holding = portfolio.holdings.find(item => String(item.symbol).toUpperCase() === symbol);
     let realized = 0, paidPrincipal = 0, paidInterest = 0, cashImpact = 0;
-    if (tradeType === 'sell') {
-      if (!holding || number(holding.shares) < quantity) { alert('賣出股數不得超過目前持有股數。'); return; }
+    if (tradeType === 'sell' || isMarginSell) {
+      const marginQuantity = marginLots(symbol).reduce((sum, lot) => sum + number(lot.remaining), 0);
+      if (!holding || (isMarginSell ? marginQuantity : number(holding.cashShares)) < quantity) {
+        alert(isMarginSell ? '融資賣出股數不得超過融資持有股數。' : '現股賣出股數不得超過現股持有股數。'); return;
+      }
       let remaining = quantity;
       const sellCost = (fee + tax) / quantity;
-      marginLots(symbol).sort((a, b) => String(a.openDate).localeCompare(String(b.openDate))).forEach(lot => {
-        if (!remaining) return;
-        const before = number(lot.remaining), sold = Math.min(before, remaining);
-        const principal = number(lot.principal) * sold / before, accrued = interest(lot) * sold / before;
-        realized += (price - number(lot.cost) - sellCost) * sold - accrued;
-        lot.remaining = before - sold; lot.principal = number(lot.principal) - principal;
-        paidPrincipal += principal; paidInterest += accrued; remaining -= sold;
-      });
-      if (remaining > 0) { realized += (price - number(holding.cashCost) - sellCost) * remaining; holding.cashShares -= remaining; }
+      if (isMarginSell) {
+        marginLots(symbol).sort((a, b) => String(a.openDate).localeCompare(String(b.openDate))).forEach(lot => {
+          if (!remaining) return;
+          const before = number(lot.remaining), sold = Math.min(before, remaining);
+          const principal = number(lot.principal) * sold / before, accrued = interest(lot) * sold / before;
+          realized += (price - number(lot.cost) - sellCost) * sold - accrued;
+          lot.remaining = before - sold; lot.principal = number(lot.principal) - principal;
+          paidPrincipal += principal; paidInterest += accrued; remaining -= sold;
+        });
+      } else {
+        realized = (price - number(holding.cashCost) - sellCost) * quantity;
+        holding.cashShares -= quantity;
+      }
       portfolio.marginLots = portfolio.marginLots.filter(lot => number(lot.remaining) > 0 && number(lot.principal) > 0);
       cashImpact = price * quantity - fee - tax - paidPrincipal - paidInterest;
       setCash(number(portfolio.cash) + cashImpact);
@@ -208,7 +248,7 @@
       cashImpact = -selfFunded;
       setCash(number(portfolio.cash) + cashImpact);
     }
-    portfolio.trades.push({ date, type: tradeType, symbol, quantity, price, fee, tax, realized, isMargin: tradeType === 'marginBuy' || paidPrincipal > 0, marginPrincipal: paidPrincipal, marginInterestPaid: paidInterest, marginAnnualRate: tradeType === 'marginBuy' ? annualRate / 100 : 0, cashImpact });
+    portfolio.trades.push({ date, type: tradeType, symbol, quantity, price, fee, tax, realized, isMargin: tradeType === 'marginBuy' || isMarginSell || paidPrincipal > 0, marginPrincipal: paidPrincipal, marginInterestPaid: paidInterest, marginAnnualRate: tradeType === 'marginBuy' ? annualRate / 100 : 0, cashImpact });
     ['tradeSymbol','tradeQuantity','tradePrice','tradeFee','tradeTax'].forEach(id => { document.getElementById(id).value = ''; });
     savePortfolio(); renderPortfolio();
   }, true);

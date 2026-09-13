@@ -37,6 +37,10 @@ namespace StockTracker.ViewModels
         public double TargetWeight { get; private set; }
         public decimal SuggestedTradeAmount { get; private set; }
         public int MarginQuantity { get; private set; }
+        public int CashQuantity => Math.Max(0, Quantity - MarginQuantity);
+        public string PositionTypeText => MarginQuantity > 0
+            ? CashQuantity > 0 ? "現股＋融資" : "融資"
+            : "現股";
         public decimal MarginDebt { get; private set; }
         public decimal MarginMaintenanceRatio { get; private set; }
         public string MarginMaintenanceText => MarginDebt <= 0 ? "－" : $"{MarginMaintenanceRatio:N1}%";
@@ -62,7 +66,7 @@ namespace StockTracker.ViewModels
             else if (Weight > positionLimit) { Recommendation = "減碼至上限"; RecommendationBrush = Brushes.IndianRed; TargetWeight = positionLimit; SuggestedTradeAmount = totalAssets * (decimal)(TargetWeight / 100d) - MarketValue; Guidance = $"目前權重 {Weight:F1}% 超過 {positionLimit:F1}% 上限；參考減少約 {Math.Floor(Math.Abs(SuggestedTradeAmount) / LatestPrice):N0} 股。"; }
             else if (Weight + 0.5 < TargetWeight && availableToBuy > 0) { Recommendation = "分批加碼"; RecommendationBrush = Brushes.SeaGreen; SuggestedTradeAmount = Math.Min(SuggestedTradeAmount, availableToBuy); Guidance = $"分數 {Score}、風險 {Risk}，依合格持股的相對配置分數分配至 {TargetWeight:F1}%；參考分批買入約 {Math.Floor(SuggestedTradeAmount / LatestPrice):N0} 股。"; }
             else { Recommendation = "暫不交易"; RecommendationBrush = Brushes.DarkOrange; Guidance = $"目前權重 {Weight:F1}% 接近 {TargetWeight:F1}% 目標；等待下一次評分或價格更新再檢視。"; }
-            foreach (var property in new[] { nameof(Name), nameof(GroupName), nameof(LatestPrice), nameof(MarketValue), nameof(Weight), nameof(Score), nameof(Risk), nameof(ScoreRiskText), nameof(ProfitPercentage), nameof(TodayChangePercentage), nameof(Recommendation), nameof(Guidance), nameof(RecommendationBrush), nameof(TargetWeight), nameof(SuggestedTradeAmount), nameof(MarginQuantity), nameof(MarginDebt), nameof(MarginMaintenanceRatio), nameof(MarginMaintenanceText) }) OnPropertyChanged(property);
+            foreach (var property in new[] { nameof(Name), nameof(GroupName), nameof(LatestPrice), nameof(MarketValue), nameof(Weight), nameof(Score), nameof(Risk), nameof(ScoreRiskText), nameof(ProfitPercentage), nameof(TodayChangePercentage), nameof(Recommendation), nameof(Guidance), nameof(RecommendationBrush), nameof(TargetWeight), nameof(SuggestedTradeAmount), nameof(CashQuantity), nameof(MarginQuantity), nameof(PositionTypeText), nameof(MarginDebt), nameof(MarginMaintenanceRatio), nameof(MarginMaintenanceText) }) OnPropertyChanged(property);
         }
     }
 
@@ -80,7 +84,11 @@ namespace StockTracker.ViewModels
         public PortfolioTradeViewModel(PortfolioTrade trade) { Trade = trade; }
         public PortfolioTrade Trade { get; }
         public DateTime Date => Trade.Date;
-        public string TypeName => string.Equals(Trade.Type, "Sell", StringComparison.OrdinalIgnoreCase) ? "賣出" : Trade.IsMargin ? "融資買入" : "買入";
+        public string TypeName => string.Equals(Trade.Type, "MarginSell", StringComparison.OrdinalIgnoreCase)
+            ? "融資賣出"
+            : string.Equals(Trade.Type, "Sell", StringComparison.OrdinalIgnoreCase)
+                ? Trade.IsMargin ? "賣出（含融資）" : "現股賣出"
+                : Trade.IsMargin ? "融資買入" : "買入";
         public string Symbol => Trade.Symbol;
         public int Quantity => Trade.Quantity;
         public decimal Price => Trade.Price;
@@ -426,7 +434,8 @@ namespace StockTracker.ViewModels
                 return;
             }
 
-            var isSell = string.Equals(TradeType, "Sell", StringComparison.OrdinalIgnoreCase);
+            var isMarginSell = string.Equals(TradeType, "MarginSell", StringComparison.OrdinalIgnoreCase);
+            var isSell = string.Equals(TradeType, "Sell", StringComparison.OrdinalIgnoreCase) || isMarginSell;
             var isMarginBuy = string.Equals(TradeType, "MarginBuy", StringComparison.OrdinalIgnoreCase);
             var marginRatio = 0m;
             var annualInterestRate = 0m;
@@ -437,9 +446,14 @@ namespace StockTracker.ViewModels
                 return;
             }
             var holding = _settings.Holdings.FirstOrDefault(x => x.Symbol == symbol);
-            if (isSell && (holding == null || holding.Quantity < quantity))
+            if (isMarginSell && GetMarginLots(symbol).Sum(lot => lot.RemainingQuantity) < quantity)
             {
-                StatusMessage = "賣出股數不得超過目前持有股數。";
+                StatusMessage = "融資賣出股數不得超過該股票的融資持有股數。";
+                return;
+            }
+            if (!isMarginSell && isSell && (holding == null || holding.CashQuantity < quantity))
+            {
+                StatusMessage = "現股賣出股數不得超過該股票的現股持有股數。";
                 return;
             }
 
@@ -451,21 +465,24 @@ namespace StockTracker.ViewModels
             {
                 var remainingToSell = quantity;
                 var sellCostPerShare = (fee + tax) / quantity;
-                foreach (var lot in GetMarginLots(symbol).OrderBy(lot => lot.OpenDate).ThenBy(lot => lot.Id).ToList())
+                if (isMarginSell)
                 {
-                    if (remainingToSell == 0) break;
-                    var lotQuantityBeforeSale = lot.RemainingQuantity;
-                    var soldQuantity = Math.Min(remainingToSell, lotQuantityBeforeSale);
-                    var principalPaid = lot.OutstandingPrincipal * soldQuantity / lotQuantityBeforeSale;
-                    var interestPaid = CalculateAccruedInterest(lot, TradeDate.Value.Date) * soldQuantity / lotQuantityBeforeSale;
-                    realized += (price - lot.CostBasisPerShare - sellCostPerShare) * soldQuantity - interestPaid;
-                    lot.RemainingQuantity -= soldQuantity;
-                    lot.OutstandingPrincipal -= principalPaid;
-                    marginPrincipal += principalPaid;
-                    marginInterestPaid += interestPaid;
-                    remainingToSell -= soldQuantity;
+                    foreach (var lot in GetMarginLots(symbol).OrderBy(lot => lot.OpenDate).ThenBy(lot => lot.Id).ToList())
+                    {
+                        if (remainingToSell == 0) break;
+                        var lotQuantityBeforeSale = lot.RemainingQuantity;
+                        var soldQuantity = Math.Min(remainingToSell, lotQuantityBeforeSale);
+                        var principalPaid = lot.OutstandingPrincipal * soldQuantity / lotQuantityBeforeSale;
+                        var interestPaid = CalculateAccruedInterest(lot, TradeDate.Value.Date) * soldQuantity / lotQuantityBeforeSale;
+                        realized += (price - lot.CostBasisPerShare - sellCostPerShare) * soldQuantity - interestPaid;
+                        lot.RemainingQuantity -= soldQuantity;
+                        lot.OutstandingPrincipal -= principalPaid;
+                        marginPrincipal += principalPaid;
+                        marginInterestPaid += interestPaid;
+                        remainingToSell -= soldQuantity;
+                    }
                 }
-                if (remainingToSell > 0)
+                if (!isMarginSell && remainingToSell > 0)
                 {
                     realized += (price - holding.CashAverageCost - sellCostPerShare) * remainingToSell;
                     holding.CashQuantity -= remainingToSell;
@@ -509,12 +526,12 @@ namespace StockTracker.ViewModels
                 cashImpact = -cashRequired;
             }
 
-            var trade = new PortfolioTrade { Date = TradeDate.Value.Date, Type = isSell ? "Sell" : "Buy", Symbol = symbol, Quantity = quantity, Price = price, Fee = fee, Tax = tax, CostBasisPerShare = holding?.AverageCost ?? 0, RealizedProfitLoss = realized, IsMargin = isMarginBuy || marginPrincipal > 0, MarginRatio = isMarginBuy ? marginRatio / 100m : 0, MarginPrincipal = marginPrincipal, MarginInterestPaid = marginInterestPaid, CashImpact = cashImpact };
+            var trade = new PortfolioTrade { Date = TradeDate.Value.Date, Type = isMarginSell ? "MarginSell" : isSell ? "Sell" : "Buy", Symbol = symbol, Quantity = quantity, Price = price, Fee = fee, Tax = tax, CostBasisPerShare = holding?.AverageCost ?? 0, RealizedProfitLoss = realized, IsMargin = isMarginBuy || isMarginSell || marginPrincipal > 0, MarginRatio = isMarginBuy ? marginRatio / 100m : 0, MarginPrincipal = marginPrincipal, MarginInterestPaid = marginInterestPaid, CashImpact = cashImpact };
             _settings.Trades.Add(trade);
             Trades.Insert(0, new PortfolioTradeViewModel(trade));
             RebuildHoldingViewModels();
             TradeSymbolInput = TradeQuantityInput = TradePriceInput = TradeFeeInput = TradeTaxInput = string.Empty;
-            StatusMessage = isSell ? $"已記錄賣出，已實現損益 {realized:N0}；已償還融資 {marginPrincipal:N0}、利息 {marginInterestPaid:N0}。" : isMarginBuy ? $"已記錄融資買入：自備款 {Math.Abs(cashImpact):N0}、融資 {marginPrincipal:N0}。" : "已記錄買入交易。";
+            StatusMessage = isMarginSell ? $"已記錄融資賣出，已實現損益 {realized:N0}；已償還融資 {marginPrincipal:N0}、利息 {marginInterestPaid:N0}。" : isSell ? $"已記錄現股賣出，已實現損益 {realized:N0}。" : isMarginBuy ? $"已記錄融資買入：自備款 {Math.Abs(cashImpact):N0}、融資 {marginPrincipal:N0}。" : "已記錄現股買入。";
             Save();
         }
 
