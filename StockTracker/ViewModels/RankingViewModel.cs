@@ -2864,7 +2864,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("renderBatch();");
 
             html.AppendLine("</script>");
-            html.AppendLine("<script src='portfolio-enhancements.js?v=4'></script>");
+            html.AppendLine("<script src='portfolio-enhancements.js?v=5'></script>");
             html.AppendLine("<script src='trade-plan-enhancements.js?v=2'></script>");
             html.AppendLine("</body></html>");
             return html.ToString();

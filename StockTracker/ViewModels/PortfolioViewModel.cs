@@ -202,6 +202,7 @@ namespace StockTracker.ViewModels
         public decimal TotalAssets => StockMarketValue + Cash - MarginDebt - AccruedMarginInterest;
         public double CashRatio => TotalAssets == 0 ? 0 : (double)(Cash / TotalAssets * 100m);
         public double StockHoldingRatio => TotalAssets == 0 ? 0 : (double)(StockMarketValue / TotalAssets * 100m);
+        public double NetStockHoldingRatio => TotalAssets == 0 ? 0 : (double)((StockMarketValue - MarginDebt - AccruedMarginInterest) / TotalAssets * 100m);
         public decimal NetInvested => (_settings.CashFlows ?? new List<PortfolioCashFlow>()).Sum(x => x.Amount);
         public decimal TradeCashMovement => (_settings.Trades ?? new List<PortfolioTrade>()).Sum(GetTradeCashImpact);
         public decimal CumulativeProfitLoss => TotalAssets - NetInvested;
@@ -665,7 +666,7 @@ namespace StockTracker.ViewModels
                 var marginLots = GetMarginLots(holding.Symbol).ToList();
                 holding.Refresh(_stocks.FirstOrDefault(s => s.Symbol == holding.Symbol), rankedStock, total, SinglePositionLimitPercentage, available, targets.TryGetValue(holding, out var target) ? target : 0, groups.FirstOrDefault(), marginLots.Sum(lot => lot.RemainingQuantity), marginLots.Sum(lot => lot.OutstandingPrincipal), marginLots.Sum(lot => CalculateAccruedInterest(lot, DateTime.Today)));
             }
-            OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio)); OnPropertyChanged(nameof(StockHoldingRatio));
+            OnPropertyChanged(nameof(StockMarketValue)); OnPropertyChanged(nameof(TotalAssets)); OnPropertyChanged(nameof(CashRatio)); OnPropertyChanged(nameof(StockHoldingRatio)); OnPropertyChanged(nameof(NetStockHoldingRatio));
             OnPropertyChanged(nameof(Cash)); OnPropertyChanged(nameof(NetInvested)); OnPropertyChanged(nameof(TradeCashMovement)); OnPropertyChanged(nameof(CumulativeProfitLoss)); OnPropertyChanged(nameof(CumulativeReturnPercentage));
             OnPropertyChanged(nameof(TransactionRealizedProfitLoss)); OnPropertyChanged(nameof(HistoricalRealizedProfitLoss)); OnPropertyChanged(nameof(RealizedProfitLoss)); OnPropertyChanged(nameof(UnrealizedProfitLoss));
             OnPropertyChanged(nameof(MarginDebt)); OnPropertyChanged(nameof(AccruedMarginInterest)); OnPropertyChanged(nameof(MarginMarketValue)); OnPropertyChanged(nameof(MarginMaintenanceRatio)); OnPropertyChanged(nameof(MarginMaintenanceText));

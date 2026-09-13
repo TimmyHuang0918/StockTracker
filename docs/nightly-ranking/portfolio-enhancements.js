@@ -115,6 +115,7 @@
     const rate = netInvested ? profit / netInvested * 100 : 0;
     const cashRatio = values.total > 0 ? values.adjustedCash / values.total * 100 : 0;
     const stockHoldingRatio = values.total > 0 ? values.market / values.total * 100 : 0;
+    const netStockHoldingRatio = values.total > 0 ? (values.market - values.debt - values.accruedInterest) / values.total * 100 : 0;
     const maintenance = values.debt > 0 ? values.marginMarketValue / (values.debt + values.accruedInterest) * 100 : null;
     const summary = document.getElementById('portfolioSummary');
     if (!summary) return;
@@ -122,7 +123,8 @@
       `<div class='portfolio-stat'><span>股票市值</span><strong>${values.market.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>帳面現金</span><strong>${values.adjustedCash.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>現金比重</span><strong>${cashRatio.toFixed(1)}%</strong></div>` +
-      `<div class='portfolio-stat'><span>總持股比重</span><strong>${stockHoldingRatio.toFixed(1)}%</strong></div>` +
+      `<div class='portfolio-stat'><span>淨持股比重</span><strong>${netStockHoldingRatio.toFixed(1)}%</strong></div>` +
+      `<div class='portfolio-stat'><span>總持股曝險</span><strong>${stockHoldingRatio.toFixed(1)}%</strong></div>` +
       `<div class='portfolio-stat'><span>融資負債</span><strong>${values.debt.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>應計利息</span><strong>${values.accruedInterest.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>融資維持率</span><strong>${maintenance === null ? '—' : maintenance.toFixed(1) + '%'}</strong></div>` +
