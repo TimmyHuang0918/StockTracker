@@ -40,6 +40,8 @@ namespace StockTracker
         {
             _holdingDetailsVisible = !_holdingDetailsVisible;
             var visibility = _holdingDetailsVisible ? Visibility.Visible : Visibility.Collapsed;
+            HoldingCashQuantityColumn.Visibility = visibility;
+            HoldingMarginQuantityColumn.Visibility = visibility;
             HoldingQuantityColumn.Visibility = visibility;
             ToggleHoldingDetailsButton.Content = _holdingDetailsVisible ? "隱藏股數" : "顯示股數";
         }

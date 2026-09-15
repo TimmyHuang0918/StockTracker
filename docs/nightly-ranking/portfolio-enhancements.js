@@ -122,13 +122,13 @@
     summary.innerHTML = `<div class='portfolio-stat'><span>總資產</span><strong>${values.total.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>股票市值</span><strong>${values.market.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>帳面現金</span><strong>${values.adjustedCash.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
+      `<div class='portfolio-stat'><span>融資負債</span><strong>${values.debt.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
+      `<div class='portfolio-stat'><span>應計利息</span><strong>${values.accruedInterest.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
+      `<div class='portfolio-stat'><span>累計損益</span><strong style='color:${portfolioColor(profit)}'>${profit.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>現金比重</span><strong>${cashRatio.toFixed(1)}%</strong></div>` +
       `<div class='portfolio-stat'><span>淨持股比重</span><strong>${netStockHoldingRatio.toFixed(1)}%</strong></div>` +
       `<div class='portfolio-stat'><span>總持股曝險</span><strong>${stockHoldingRatio.toFixed(1)}%</strong></div>` +
-      `<div class='portfolio-stat'><span>融資負債</span><strong>${values.debt.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
-      `<div class='portfolio-stat'><span>應計利息</span><strong>${values.accruedInterest.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>融資維持率</span><strong>${maintenance === null ? '—' : maintenance.toFixed(1) + '%'}</strong></div>` +
-      `<div class='portfolio-stat'><span>累計損益</span><strong style='color:${portfolioColor(profit)}'>${profit.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>` +
       `<div class='portfolio-stat'><span>損益率</span><strong style='color:${portfolioColor(rate)}'>${netInvested ? portfolioPercent(rate) : '--'}</strong></div>`;
     let note = document.getElementById('portfolioMarginNote');
     if (!note) {
