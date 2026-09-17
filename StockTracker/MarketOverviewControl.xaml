@@ -1,0 +1,126 @@
+<UserControl x:Class="StockTracker.MarketOverviewControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Foreground="#e6edf3">
+    <UserControl.Resources>
+        <Style x:Key="MetaText" TargetType="TextBlock"><Setter Property="Foreground" Value="#8b949e"/><Setter Property="FontSize" Value="11"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock"><Setter Property="FontSize" Value="14"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="0,14,0,8"/></Style>
+        <Style x:Key="ReadOnlyGrid" TargetType="DataGrid">
+            <Setter Property="IsReadOnly" Value="True"/><Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/><Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="HeadersVisibility" Value="Column"/><Setter Property="RowHeaderWidth" Value="0"/>
+            <Setter Property="Background" Value="#161b22"/><Setter Property="Foreground" Value="#e6edf3"/>
+            <Setter Property="RowBackground" Value="#161b22"/><Setter Property="AlternatingRowBackground" Value="#1c222b"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/><Setter Property="HorizontalGridLinesBrush" Value="#30363d"/>
+            <Setter Property="BorderThickness" Value="0"/><Setter Property="MinColumnWidth" Value="72"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/><Setter Property="RowHeight" Value="32"/>
+            <Setter Property="ColumnHeaderStyle"><Setter.Value><Style TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="#21262d"/><Setter Property="Foreground" Value="#c9d1d9"/>
+                <Setter Property="Padding" Value="5,7"/><Setter Property="BorderThickness" Value="0"/>
+            </Style></Setter.Value></Setter>
+        </Style>
+    </UserControl.Resources>
+    <StackPanel>
+        <Border Padding="10" Background="#172437" CornerRadius="5">
+            <StackPanel><TextBlock Text="今日摘要" FontWeight="Bold" Margin="0,0,0,5"/><TextBlock Text="{Binding MarketSummary, Mode=OneWay}" TextWrapping="Wrap" LineHeight="21"/></StackPanel>
+        </Border>
+        <TextBlock Text="指數與成交" Style="{StaticResource SectionTitle}"/>
+        <TextBlock Text="{Binding MarketOverview.Trading.UpdatedText, Mode=OneWay}" Style="{StaticResource MetaText}"/>
+        <ItemsControl ItemsSource="{Binding MarketOverview.Trading.Markets}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate><DataTemplate>
+                <Border BorderBrush="#30363d" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,6,8,0" Background="#161b22">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding DateText}" Style="{StaticResource MetaText}" Margin="0,3,0,0"/>
+                        <WrapPanel Margin="0,6,0,0"><TextBlock Text="{Binding IndexText}" FontSize="23" FontWeight="Bold" Margin="0,0,12,0"/><TextBlock Text="{Binding ChangeText}" Foreground="{Binding Latest.IndexChangePercent, Converter={StaticResource ValueSignBrushConverter}}" FontSize="17" VerticalAlignment="Center"/></WrapPanel>
+                        <UniformGrid Columns="2">
+                            <StackPanel Margin="0,6,6,2"><TextBlock Text="成交金額" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding AmountText, Mode=OneWay}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
+                            <StackPanel Margin="0,6,6,2"><TextBlock Text="成交量" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding VolumeText, Mode=OneWay}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
+                            <StackPanel Margin="0,6,6,2"><TextBlock Text="較前一交易日成交金額" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding AmountChangeText, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" Foreground="{Binding Latest.TurnoverChangePercent, Converter={StaticResource ValueSignBrushConverter}}"/></StackPanel>
+                            <StackPanel Margin="0,6,6,2"><TextBlock Text="相對前 20 日平均成交金額" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding AmountRatioText, Mode=OneWay}" FontSize="16" FontWeight="SemiBold"/></StackPanel>
+                        </UniformGrid>
+                        <TextBlock Text="{Binding Reading}" Style="{StaticResource MetaText}" Margin="0,8,0,0"/>
+                        <TextBlock Text="{Binding Status}" Style="{StaticResource MetaText}"/>
+                    </StackPanel>
+                </Border>
+            </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="市場廣度" Style="{StaticResource SectionTitle}"/>
+        <WrapPanel><TextBlock Text="{Binding MarketBreadth.DataDateText}" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding MarketBreadth.TotalCount, StringFormat=；本次成功載入 {0:N0} 檔，上漲比例不含平盤。}" Style="{StaticResource MetaText}"/></WrapPanel>
+        <WrapPanel Margin="0,8,0,0">
+            <TextBlock Text="{Binding MarketBreadth.AdvancingCount, StringFormat=上漲 {0:N0}}" Foreground="IndianRed" FontSize="16" Margin="0,0,20,0"/>
+            <TextBlock Text="{Binding MarketBreadth.DecliningCount, StringFormat=下跌 {0:N0}}" Foreground="MediumSeaGreen" FontSize="16" Margin="0,0,20,0"/>
+            <TextBlock Text="{Binding MarketBreadth.UnchangedCount, StringFormat=平盤 {0:N0}}" FontSize="16" Margin="0,0,20,0"/>
+            <TextBlock Text="{Binding MarketBreadth.AdvanceRatioText}" FontSize="16" Margin="0,0,20,0"/>
+            <TextBlock Text="{Binding MarketBreadth.AverageChangeText}" Foreground="{Binding MarketBreadth.AverageChangePercent, Converter={StaticResource ValueSignBrushConverter}}" FontSize="16"/>
+        </WrapPanel>
+        <TextBlock Text="近五個交易日 · 量價明細" Style="{StaticResource SectionTitle}"/>
+        <TextBlock Text="逐日顯示含最新當日；20 日基準不含該日。當日資料仍在更新時，整日比較顯示 —。" Style="{StaticResource MetaText}" Margin="0,0,0,8"/>
+        <TabControl ItemsSource="{Binding MarketOverview.Trading.Markets}" SelectedIndex="0" Background="#161b22" BorderBrush="#30363d" Foreground="#e6edf3">
+            <TabControl.ItemContainerStyle><Style TargetType="TabItem">
+                <Setter Property="Padding" Value="12,6"/><Setter Property="Background" Value="#21262d"/>
+                <Setter Property="Foreground" Value="#c9d1d9"/>
+                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="#30363d" BorderThickness="1" Padding="{TemplateBinding Padding}" CornerRadius="4,4,0,0">
+                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#1f6feb"/><Setter Property="Foreground" Value="White"/></Trigger></ControlTemplate.Triggers>
+                </ControlTemplate></Setter.Value></Setter>
+            </Style></TabControl.ItemContainerStyle>
+            <TabControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate></TabControl.ItemTemplate>
+            <TabControl.ContentTemplate><DataTemplate><StackPanel>
+                <TextBlock Text="{Binding Status}" Style="{StaticResource MetaText}" Margin="6"/>
+                <DataGrid ItemsSource="{Binding Days}" Style="{StaticResource ReadOnlyGrid}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="日期" Binding="{Binding DateText, Mode=OneWay}" Width="95"></DataGridTextColumn>
+                        <DataGridTextColumn Header="收盤／最新指數" Binding="{Binding IndexText, Mode=OneWay}" Width="95"></DataGridTextColumn>
+                        <DataGridTextColumn Header="漲跌幅" Binding="{Binding ChangeText, Mode=OneWay}" Width="75"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{Binding IndexChangePercent, Converter={StaticResource ValueSignBrushConverter}}"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
+                        <DataGridTextColumn Header="成交金額" Binding="{Binding AmountText, Mode=OneWay}" Width="100"></DataGridTextColumn>
+                        <DataGridTextColumn Header="較前日" Binding="{Binding AmountChangeText, Mode=OneWay}" Width="75"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{Binding TurnoverChangePercent, Converter={StaticResource ValueSignBrushConverter}}"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
+                        <DataGridTextColumn Header="成交量" Binding="{Binding VolumeText, Mode=OneWay}" Width="105"></DataGridTextColumn>
+                        <DataGridTextColumn Header="前 20 日均值倍數" Binding="{Binding AmountRatioText, Mode=OneWay}" Width="115"></DataGridTextColumn>
+                        <DataGridTextColumn Header="資料狀態" Binding="{Binding SessionText, Mode=OneWay}" Width="160"></DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel></DataTemplate></TabControl.ContentTemplate>
+        </TabControl>
+        <TextBlock Text="近五個交易日 · 法人、資券與 P/C" Style="{StaticResource SectionTitle}"/>
+        <TextBlock Text="{Binding MarketOverview.FundingStatusText}" Style="{StaticResource MetaText}" Margin="0,0,0,8"/>
+        <DataGrid ItemsSource="{Binding MarketOverview.RecentFundingDays}" Style="{StaticResource ReadOnlyGrid}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="日期" Binding="{Binding FullTradeDateText, Mode=OneWay}" Width="95"></DataGridTextColumn>
+                <DataGridTextColumn Header="外資" Binding="{Binding ForeignNetText, Mode=OneWay}" Width="75"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{Binding ForeignNet, Converter={StaticResource ValueSignBrushConverter}}"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
+                <DataGridTextColumn Header="投信" Binding="{Binding TrustNetText, Mode=OneWay}" Width="75"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{Binding TrustNet, Converter={StaticResource ValueSignBrushConverter}}"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
+                <DataGridTextColumn Header="自營商" Binding="{Binding DealerNetText, Mode=OneWay}" Width="75"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{Binding DealerNet, Converter={StaticResource ValueSignBrushConverter}}"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
+                <DataGridTextColumn Header="法人合計" Binding="{Binding ThreeMajorNetText, Mode=OneWay}" Width="85"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{Binding ThreeMajorNet, Converter={StaticResource ValueSignBrushConverter}}"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>
+                <DataGridTemplateColumn Header="融資餘額（億元）" Width="150"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="{Binding MarginBalanceText, Mode=OneWay}"/><TextBlock Text="{Binding MarginAmountChangeDisplayText, Mode=OneWay}" Foreground="{Binding MarginAmountChangeBrush}" Margin="4,0,0,0"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="融券餘額（張）" Width="150"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="{Binding ShortBalanceText, Mode=OneWay}"/><TextBlock Text="{Binding ShortBalanceChangeDisplayText, Mode=OneWay}" Foreground="{Binding ShortBalanceChangeBrush}" Margin="4,0,0,0"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                <DataGridTextColumn Header="P/C 未平倉" Binding="{Binding PutCallOpenInterestRatioText, Mode=OneWay}" Width="95"></DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+        <Expander Header="資料來源與計算方式" Margin="0,12,0,0" Foreground="#c9d1d9">
+            <StackPanel Margin="4,8">
+                <TextBlock Text="成交增加代表交易活躍，不代表淨流入。1 萬張 = 1,000 萬股；相對成交金額 = 該日成交金額 ÷ 前 20 個完整交易日平均，不足 20 日顯示 —。" Style="{StaticResource MetaText}"/>
+                <ItemsControl ItemsSource="{Binding MarketOverview.Trading.Markets}"><ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,6"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Scope}" Style="{StaticResource MetaText}"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            </StackPanel>
+        </Expander>
+        <DockPanel Margin="0,16,0,8">
+            <Button Content="顯示全部" DockPanel.Dock="Right" Command="{Binding ClearMarketGroupFilterCommand}" Padding="8,3"/>
+            <TextBlock Text="族群氣氛" FontWeight="SemiBold" FontSize="14"/>
+            <TextBlock Text="{Binding SelectedMarketGroup}" Style="{StaticResource MetaText}" Margin="8,3"/>
+        </DockPanel>
+        <ItemsControl ItemsSource="{Binding TopMarketGroups}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate><DataTemplate>
+                <Button Width="190" Margin="0,0,8,8" Padding="10" Background="#21262d" BorderBrush="{Binding DirectionBrush}"
+                        Command="{Binding DataContext.FilterMarketGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding GroupName}">
+                    <StackPanel HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding GroupName}" Foreground="White" FontWeight="Bold"/>
+                        <WrapPanel Margin="0,5"><TextBlock Text="{Binding AverageChangePercent, StringFormat={}{0:+0.00;-0.00;0.00}%}" Foreground="{Binding DirectionBrush}" FontSize="18" FontWeight="Bold"/><TextBlock Text="{Binding DirectionText}" Foreground="{Binding DirectionBrush}" Margin="8,4,0,0"/></WrapPanel>
+                        <WrapPanel><TextBlock Text="{Binding AdvancingCount, StringFormat=↑ {0:N0}}" Foreground="IndianRed" Margin="0,0,10,0"/><TextBlock Text="{Binding DecliningCount, StringFormat=↓ {0:N0}}" Foreground="MediumSeaGreen" Margin="0,0,10,0"/><TextBlock Text="{Binding TotalCount, StringFormat=共 {0:N0}}" Foreground="#8b949e"/></WrapPanel>
+                    </StackPanel>
+                </Button>
+            </DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

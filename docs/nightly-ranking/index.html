@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8" />
@@ -99,50 +99,67 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
     <button id='btnDownloadCsv' class='btn-csv'>💾 下載 CSV 檔</button>
   </div>
 </div>
-<section class='panel'><h3 style='margin:0 0 10px'>全市場資金總覽（最近五個交易日，含當日）</h3><div style='overflow:auto'><table><thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th><th>三大法人</th><th>融資餘額<br>（億元）</th><th>融券餘額<br>（張）</th><th>P/C 未平倉</th></tr></thead><tbody>
-<tr><td>09/11</td><td class='fall'>-1,008.9 億</td><td class='rise'>+60.0 億</td><td class='fall'>-282.5 億</td><td class='fall'>-1,231.4 億</td><td>5,878.7 <span class='fall'>（-40.3 億）</span></td><td>197,926 <span class='rise'>（+479 張）</span></td><td>87.7%</td></tr><tr><td>09/14</td><td class='fall'>-485.8 億</td><td class='rise'>+14.8 億</td><td class='fall'>-131.4 億</td><td class='fall'>-602.4 億</td><td>5,838.8 <span class='fall'>（-39.9 億）</span></td><td>201,486 <span class='rise'>（+3,560 張）</span></td><td>88.0%</td></tr><tr><td>09/15</td><td class='fall'>-743.1 億</td><td class='fall'>-42.1 億</td><td class='fall'>-122.5 億</td><td class='fall'>-907.7 億</td><td>5,822.4 <span class='fall'>（-16.4 億）</span></td><td>198,052 <span class='fall'>（-3,434 張）</span></td><td>85.9%</td></tr><tr><td>09/16</td><td class='fall'>-296.0 億</td><td class='rise'>+84.3 億</td><td class='fall'>-110.2 億</td><td class='fall'>-321.9 億</td><td>5,861.7 <span class='rise'>（+39.3 億）</span></td><td>197,048 <span class='fall'>（-1,004 張）</span></td><td>83.6%</td></tr><tr><td>09/17</td><td class='rise'>+5.7 億</td><td class='rise'>+94.9 億</td><td class='rise'>+35.3 億</td><td class='rise'>+135.9 億</td><td>5,894.0 <span class='rise'>（+32.3 億）</span></td><td>216,288 <span class='rise'>（+18,940 張）</span></td><td>76.5%</td></tr>
-</tbody></table></div><p class='muted' style='margin:8px 0 0'>法人為上市、上櫃三大法人官方買賣超金額（億元）；融資為上市信用交易餘額金額（億元），融券為上市信用交易餘額（張）；P/C 為臺指選擇權未平倉量比率。</p></section>
-<section class='panel market-regime' aria-label='市場狀態'>
-<div class='regime-lead'><span class='regime-eyebrow'>市場狀態（本次掃描）</span><strong class='rise'>偏多延續</strong><p>依市場廣度、近五日法人與融資、臺指 P/C 未平倉綜合判讀；不是加權指數預測。<br>偏多 3 項／偏空 1 項</p></div>
-<div class='regime-signal'><span>市場廣度</span><strong>上漲比 67%：漲勢擴散</strong></div>
-<div class='regime-signal'><span>三大法人（近五日）</span><strong>-2,927.5 億：賣超</strong></div>
-<div class='regime-signal'><span>融資（近五日）</span><strong>+15.3 億：槓桿升溫</strong></div>
-<div class='regime-signal'><span>臺指 P/C 未平倉</span><strong>76.5%：買方相對積極</strong></div>
-</section>
-<div class='filter-breadth-layout'>
-<div class="panel filter-panel">
-<div class='filter-grid'>
-<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/建議/策略' /></div>
-<div class='filter-group'><label>Top 數量</label><input id='topCount' type='number' min='1' placeholder='100' /></div>
-<div class='filter-group'><label>價格區間</label><div class='row-inputs'><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /></div></div>
-<div class='filter-group'><label>漲跌幅%</label><div class='row-inputs'><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div></div>
-<div class='filter-group'><label>法人買賣超(張)</label><div class='row-inputs'><input id='minNet' type='number' step='1' placeholder='Min' /><input id='maxNet' type='number' step='1' placeholder='Max' /></div></div>
-<div class='filter-group'><label>買賣超金額</label><div class='row-inputs'><input id='minNetAmount' type='number' step='1' placeholder='Min' /><input id='maxNetAmount' type='number' step='1' placeholder='Max' /></div></div>
-<div class='filter-group'><label>最新分數 ≥</label><input id='minScore' type='number' step='1' placeholder='0' /></div>
-<div class='filter-group'><label>風險分數 ≦</label><input id='minCrash' type='number' step='1' placeholder='0' /></div>
-<div class='filter-group'><label>型態數量 ≥</label><input id='minPatternCount' type='number' step='1' placeholder='0' /></div>
-<div class='filter-group'><label>指定型態</label><select id='patternFilter'><option value=''>全部</option></select></div>
-<div class='filter-group'><label>策略動作</label><select id='actionFilter'><option value=''>全部</option></select></div>
-<div class='filter-group'><label>建議倉位</label><select id='holdingFilter'><option value=''>全部</option></select></div>
-<div class='filter-group'><label>綜合建議</label><select id='suggestionFilter'><option value=''>全部</option></select></div>
-<div class='filter-group'><label>5日均分 ≥</label><input id='minAvg' type='number' step='0.1' placeholder='0' /></div>
-<div class='filter-group'><label>外資敏感度 ≥</label><input id='minForeignSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>
-<div class='filter-group'><label>投信敏感度 ≥</label><input id='minTrustSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>
-<div class='filter-group'><label>資料信心 ≥</label><input id='minSensitivityConfidence' type='number' min='0' max='100' step='1' placeholder='0' /></div>
-<div class='filter-group'><label>法人主導型態</label><select id='leadershipFilter'><option value=''>全部</option><option value='外資敏感型'>外資敏感型</option><option value='投信敏感型'>投信敏感型</option><option value='法人共振'>法人共振</option><option value='法人敏感度不明顯'>法人敏感度不明顯</option><option value='資料不足'>資料不足</option></select></div>
-<div class='filter-group'><label>連續天數條件</label><div class='row-inputs'><input id='minConDays' type='number' step='1' placeholder='天數' /><input id='minConScore' type='number' step='1' placeholder='分數' value='60' /></div></div>
-<div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>
+<section class='panel market-overview' id='fullMarketOverview' aria-label='全市場總覽'>
+<style>
+                .market-overview{display:block;grid-template-columns:none;gap:0}.market-overview h3{margin:0 0 10px}.market-overview h4{margin:18px 0 10px}.market-overview .overview-meta{color:var(--muted,#8b949e);font-size:12px;line-height:1.6}
+                .market-overview .overview-lead{white-space:pre-line;line-height:1.85;padding:14px 16px;background:rgba(56,139,253,.07);border-left:3px solid #58a6ff;border-radius:6px;margin:12px 0}
+                .market-overview .overview-markets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+                .market-overview .overview-market{padding:16px;background:rgba(139,148,158,.04);border:1px solid var(--border,#30363d);border-radius:10px;min-width:0}
+                .market-overview .overview-index{font-size:24px;font-weight:700;margin:8px 0}.market-overview .overview-index small{font-size:16px;margin-left:10px}
+                .market-overview dl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.market-overview dt{font-size:12px;color:var(--muted,#8b949e)}.market-overview dd{font-weight:600;margin:4px 0 0}
+                .market-overview .overview-breadth{display:flex;gap:18px;flex-wrap:wrap;padding:12px;border:1px solid var(--border,#30363d);border-radius:8px}.market-overview .overview-breadth b{display:block;font-size:19px}
+                .market-overview .overview-table{overflow-x:auto}.market-overview table{width:100%;min-width:680px}.market-overview th,.market-overview td{white-space:nowrap;padding:10px;text-align:right}.market-overview th:first-child,.market-overview td:first-child{text-align:left}
+                .market-overview .overview-quantity-tabs{display:flex;gap:6px;margin:8px 0}.market-overview .overview-quantity-tabs button{background:transparent;border:1px solid var(--border,#30363d);color:inherit;border-radius:6px;padding:7px 18px;cursor:pointer}.market-overview .overview-quantity-tabs button[aria-pressed=true]{background:#1f6feb;color:white}
+                .market-overview .rise{color:var(--rise,#ff453a)}.market-overview .fall{color:var(--fall,#32d74b)}.market-overview .flat{color:var(--muted,#8b949e)}
+                .market-overview details{margin-top:12px}.market-overview details p{overflow-wrap:anywhere}.market-overview a{color:#58a6ff}
+                @media(max-width:700px){.market-overview .overview-markets{grid-template-columns:1fr}.market-overview .overview-index{font-size:22px}}
+                </style>
+<h3>全市場總覽</h3><div class='overview-meta'>今日摘要 → 指數與成交、市場廣度 → 近五日量價與資金明細</div>
+<div class='overview-lead'>上市 &#183; 加權指數（09/17）：指數上漲，成交較前一交易日增加；低於前 20 日平均。
+上櫃 &#183; 櫃買指數（09/17）：指數下跌，成交較前一交易日增加；達到或高於前 20 日平均。
+資料日期：2026-09-17 &#183; 筆數：2339，上漲 1,391／下跌 698／平盤 250 檔。
+法人 09/11–09/17（5 日已公布）合計 -2927.5 億。</div>
+<h4>指數與成交</h4><div class='overview-meta'>成交資料擷取：2026/09/17 23:13（台北時間）</div><div class='overview-markets'>
+<article class='overview-market'><strong>上市 &#183; 加權指數</strong><div class='overview-meta'>2026/09/17 &#183; 盤後資料</div>
+<div class='overview-index'>46,288.00<small class='rise'>+1.0%</small></div><dl>
+<div><dt>成交金額</dt><dd class=''>8,666.2 億</dd></div><div><dt>成交量</dt><dd class=''>1,071.03 萬張</dd></div><div><dt>較前一交易日成交金額</dt><dd class='rise'>+28.2%</dd></div><div><dt>相對前 20 日平均成交金額</dt><dd class=''>1.00 倍</dd></div></dl><div class='overview-meta'>指數上漲，成交較前一交易日增加；低於前 20 日平均。<br>盤後資料</div></article>
+<article class='overview-market'><strong>上櫃 &#183; 櫃買指數</strong><div class='overview-meta'>2026/09/17 &#183; 盤後資料</div>
+<div class='overview-index'>398.17<small class='fall'>-0.3%</small></div><dl>
+<div><dt>成交金額</dt><dd class=''>2,632.4 億</dd></div><div><dt>成交量</dt><dd class=''>101.83 萬張</dd></div><div><dt>較前一交易日成交金額</dt><dd class='rise'>+43.3%</dd></div><div><dt>相對前 20 日平均成交金額</dt><dd class=''>1.22 倍</dd></div></dl><div class='overview-meta'>指數下跌，成交較前一交易日增加；達到或高於前 20 日平均。<br>盤後資料</div></article>
+</div><h4>市場廣度</h4><div class='overview-meta'>資料日期：2026-09-17 &#183; 筆數：2339；本次成功載入 2,339 檔，上漲比例不含平盤。</div>
+<div class='overview-breadth'><span>上漲<b class='rise'>1,391</b></span><span>下跌<b class='fall'>698</b></span><span>平盤<b>250</b></span><span>上漲比例<b>66.6%</b></span><span>平均漲跌<b class='rise'>+0.6%</b></span></div>
+<h4>近五個交易日 · 量價明細</h4><div class='overview-meta'>逐日顯示含最新當日；20 日基準不含該日。當日累計尚未完整時，整日比較顯示 —。</div><div class='overview-quantity-tabs' aria-label='量價市場切換'>
+<button type='button' data-market-tab='TWSE' aria-pressed='true'>上市 &#183; 加權指數</button>
+<button type='button' data-market-tab='TPEX' aria-pressed='false'>上櫃 &#183; 櫃買指數</button>
 </div>
-</div>
-<section class='panel breadth-card' aria-label='Market breadth'>
-<h3 class='breadth-title'>&#24066;&#22580;&#24291;&#24230;</h3>
-<p class='breadth-subtitle'>&#26412;&#27425;&#36617;&#20837;&#27161;&#30340;</p>
-<div class='breadth-donut' style='background:conic-gradient(var(--rise) 0 59.470%,var(--fall) 59.470% 89.312%,var(--flat) 89.312% 100%);'><div class='breadth-center'><span class='breadth-tone rise'>偏多</span><span class='breadth-ratio'>67%</span></div></div>
-<div class='breadth-counts'><span class='rise'>&#8593; 1,391</span><span class='fall'>&#8595; 698</span><span class='flat'>&#8212; 250</span></div>
-<p class='breadth-average'>&#24179;&#22343; <span class='rise'>+0.62%</span></p>
-<p class='breadth-note'>&#20849; 2,339 &#27284;&#65307;&#19978;&#28450;&#27604;&#29575;&#19981;&#21547;&#24179;&#30436;</p>
-</section>
-</div>
+<div class='overview-table' data-market-table='TWSE'><table><thead><tr><th>日期／狀態</th><th>收盤／最新指數</th><th>漲跌幅</th><th>成交金額</th><th>較前日</th><th>成交量</th><th>前 20 日均值倍數</th></tr></thead><tbody>
+<tr><td>2026/09/17<br><small class='overview-meta'>盤後資料</small></td><td>46,288.00</td><td class='rise'>+1.0%</td><td>8,666.2 億</td><td class='rise'>+28.2%</td><td>1,071.03 萬張</td><td>1.00 倍</td></tr>
+<tr><td>2026/09/16<br><small class='overview-meta'>盤後資料</small></td><td>45,848.90</td><td class='rise'>+0.7%</td><td>6,759.7 億</td><td class='rise'>+6.5%</td><td>835.26 萬張</td><td>0.77 倍</td></tr>
+<tr><td>2026/09/15<br><small class='overview-meta'>盤後資料</small></td><td>45,511.49</td><td class='fall'>-0.8%</td><td>6,347.1 億</td><td class='fall'>-4.6%</td><td>822.87 萬張</td><td>0.71 倍</td></tr>
+<tr><td>2026/09/14<br><small class='overview-meta'>盤後資料</small></td><td>45,862.52</td><td class='fall'>-0.7%</td><td>6,653.2 億</td><td class='fall'>-12.7%</td><td>882.20 萬張</td><td>0.73 倍</td></tr>
+<tr><td>2026/09/11<br><small class='overview-meta'>盤後資料</small></td><td>46,184.85</td><td class='fall'>-1.6%</td><td>7,622.5 億</td><td class='rise'>+1.5%</td><td>1,011.16 萬張</td><td>0.82 倍</td></tr>
+</tbody></table></div>
+<div class='overview-table' data-market-table='TPEX' hidden><table><thead><tr><th>日期／狀態</th><th>收盤／最新指數</th><th>漲跌幅</th><th>成交金額</th><th>較前日</th><th>成交量</th><th>前 20 日均值倍數</th></tr></thead><tbody>
+<tr><td>2026/09/17<br><small class='overview-meta'>盤後資料</small></td><td>398.17</td><td class='fall'>-0.3%</td><td>2,632.4 億</td><td class='rise'>+43.3%</td><td>101.83 萬張</td><td>1.22 倍</td></tr>
+<tr><td>2026/09/16<br><small class='overview-meta'>盤後資料</small></td><td>399.21</td><td class='rise'>+2.7%</td><td>1,836.8 億</td><td class='rise'>+4.7%</td><td>77.74 萬張</td><td>0.86 倍</td></tr>
+<tr><td>2026/09/15<br><small class='overview-meta'>盤後資料</small></td><td>388.73</td><td class='fall'>-1.5%</td><td>1,754.0 億</td><td class='rise'>+4.5%</td><td>73.70 萬張</td><td>0.81 倍</td></tr>
+<tr><td>2026/09/14<br><small class='overview-meta'>盤後資料</small></td><td>394.67</td><td class='fall'>-0.2%</td><td>1,678.5 億</td><td class='fall'>-9.4%</td><td>71.05 萬張</td><td>0.77 倍</td></tr>
+<tr><td>2026/09/11<br><small class='overview-meta'>盤後資料</small></td><td>395.52</td><td class='fall'>-2.4%</td><td>1,851.8 億</td><td class='rise'>+6.9%</td><td>82.62 萬張</td><td>0.84 倍</td></tr>
+</tbody></table></div>
+<h4>近五個交易日 · 法人、資券與 P/C</h4><div class='overview-meta'>法人：上市＋上櫃（億元）；資券：上市；P/C：臺指選擇權未平倉比率。各日依來源公布，— 為待更新。</div><div class='overview-table'><table><thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th><th>法人合計</th><th>融資餘額（億元）</th><th>融券餘額（張）</th><th>P/C 未平倉</th></tr></thead><tbody>
+<tr><td>2026/09/17</td><td class='rise'>+5.7 億</td><td class='rise'>+94.9 億</td><td class='rise'>+35.3 億</td><td class='rise'>+135.9 億</td><td>5,894.0 <span class='rise'>（+32.3 億）</span></td><td>216,288 <span class='rise'>（+18,940 張）</span></td><td>76.5%</td></tr>
+<tr><td>2026/09/16</td><td class='fall'>-296.0 億</td><td class='rise'>+84.3 億</td><td class='fall'>-110.2 億</td><td class='fall'>-321.9 億</td><td>5,861.7 <span class='rise'>（+39.3 億）</span></td><td>197,048 <span class='fall'>（-1,004 張）</span></td><td>83.6%</td></tr>
+<tr><td>2026/09/15</td><td class='fall'>-743.1 億</td><td class='fall'>-42.1 億</td><td class='fall'>-122.5 億</td><td class='fall'>-907.7 億</td><td>5,822.4 <span class='fall'>（-16.4 億）</span></td><td>198,052 <span class='fall'>（-3,434 張）</span></td><td>85.9%</td></tr>
+<tr><td>2026/09/14</td><td class='fall'>-485.8 億</td><td class='rise'>+14.8 億</td><td class='fall'>-131.4 億</td><td class='fall'>-602.4 億</td><td>5,838.8 <span class='fall'>（-39.9 億）</span></td><td>201,486 <span class='rise'>（+3,560 張）</span></td><td>88.0%</td></tr>
+<tr><td>2026/09/11</td><td class='fall'>-1,008.9 億</td><td class='rise'>+60.0 億</td><td class='fall'>-282.5 億</td><td class='fall'>-1,231.4 億</td><td>5,878.7 <span class='fall'>（-40.3 億）</span></td><td>197,926 <span class='rise'>（+479 張）</span></td><td>87.7%</td></tr>
+</tbody></table></div><details><summary>資料來源與計算方式</summary><p class='overview-meta'>成交金額以億元、成交股數以萬張顯示（1 萬張 = 1,000 萬股）。相對成交金額 = 該日成交金額 ÷ 前 20 個完整交易日平均；不足 20 日顯示 —。成交增加代表交易活躍，不代表淨流入。</p>
+<p class='overview-meta'><a href='https://www.twse.com.tw/zh/trading/historical/fmtqik.html' target='_blank' rel='noopener noreferrer'>上市 &#183; 加權指數官方來源</a>：當日統計資訊含大盤、零股、盤後定價及鉅額交易，不含拍賣、標購。 外幣成交值係以本公司當日下午3時30分公告匯率換算後加入成交金額。公告匯率請參考本公司首頁&gt;產品與服務&gt;交易系統&gt;雙幣ETF專區&gt;代號對應及每日公告匯率。</p>
+<p class='overview-meta'><a href='https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_index/st41_result.php?l=zh-tw&amp;o=json' target='_blank' rel='noopener noreferrer'>上櫃 &#183; 櫃買指數官方來源</a>：上櫃股票：等價、零股、盤後定價交易；不含鉅額。</p>
+</details></section><script>(function(){const host=document.getElementById('fullMarketOverview');if(!host)return;host.querySelectorAll('[data-market-tab]').forEach(button=>button.addEventListener('click',()=>{host.querySelectorAll('[data-market-tab]').forEach(b=>b.setAttribute('aria-pressed',b===button?'true':'false'));host.querySelectorAll('[data-market-table]').forEach(t=>t.hidden=t.dataset.marketTable!==button.dataset.marketTab);}));})();</script>
+
+
+
+
 <section class='panel' style='margin:0 0 16px;'>
 <div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;'><h3 style='margin:0'>&#26063;&#32676;&#27683;&#27675;</h3><span id='activeGroupFilter' class='muted'></span><button id='clearGroupFilter' type='button' class='btn-csv' style='padding:5px 8px'>&#39023;&#31034;&#20840;&#37096;</button></div>
 <div id='marketGroupCards' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;max-height:300px;overflow-y:auto;padding:2px 8px 2px 2px;'>
@@ -178,6 +195,34 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
 <button type='button' class='group-filter' data-group='高速材料／CCL' style='min-height:132px;text-align:left;color:inherit;border:1px solid var(--border);border-radius:12px;padding:14px;background:rgba(139,148,158,.06);cursor:pointer'><div style='display:flex;justify-content:space-between;gap:8px'><strong>高速材料／CCL</strong><span class='fall'>轉弱</span></div><div style='font-size:22px;font-weight:700;margin:8px 0' class='fall'>-8.13%</div><div class='muted' style='font-size:12px'>&#19978;&#28450; 0 / &#19979;&#36300; 3 / &#20849; 3</div><div class='muted' style='font-size:12px;margin-top:4px'>&#19978;&#28450;&#29575; 0%</div><div class='muted' style='font-size:12px;margin-top:3px'>&#36817;5&#26085; -7.55%&#65307;&#37327;&#33021; 2.70x</div></button>
 </div>
 </section>
+<div class='filter-breadth-layout' style='display:block'>
+<div class="panel filter-panel">
+<div class='filter-grid'>
+<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/建議/策略' /></div>
+<div class='filter-group'><label>Top 數量</label><input id='topCount' type='number' min='1' placeholder='100' /></div>
+<div class='filter-group'><label>價格區間</label><div class='row-inputs'><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /></div></div>
+<div class='filter-group'><label>漲跌幅%</label><div class='row-inputs'><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div></div>
+<div class='filter-group'><label>法人買賣超(張)</label><div class='row-inputs'><input id='minNet' type='number' step='1' placeholder='Min' /><input id='maxNet' type='number' step='1' placeholder='Max' /></div></div>
+<div class='filter-group'><label>買賣超金額</label><div class='row-inputs'><input id='minNetAmount' type='number' step='1' placeholder='Min' /><input id='maxNetAmount' type='number' step='1' placeholder='Max' /></div></div>
+<div class='filter-group'><label>最新分數 ≥</label><input id='minScore' type='number' step='1' placeholder='0' /></div>
+<div class='filter-group'><label>風險分數 ≦</label><input id='minCrash' type='number' step='1' placeholder='0' /></div>
+<div class='filter-group'><label>型態數量 ≥</label><input id='minPatternCount' type='number' step='1' placeholder='0' /></div>
+<div class='filter-group'><label>指定型態</label><select id='patternFilter'><option value=''>全部</option></select></div>
+<div class='filter-group'><label>策略動作</label><select id='actionFilter'><option value=''>全部</option></select></div>
+<div class='filter-group'><label>建議倉位</label><select id='holdingFilter'><option value=''>全部</option></select></div>
+<div class='filter-group'><label>綜合建議</label><select id='suggestionFilter'><option value=''>全部</option></select></div>
+<div class='filter-group'><label>5日均分 ≥</label><input id='minAvg' type='number' step='0.1' placeholder='0' /></div>
+<div class='filter-group'><label>外資敏感度 ≥</label><input id='minForeignSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>
+<div class='filter-group'><label>投信敏感度 ≥</label><input id='minTrustSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>
+<div class='filter-group'><label>資料信心 ≥</label><input id='minSensitivityConfidence' type='number' min='0' max='100' step='1' placeholder='0' /></div>
+<div class='filter-group'><label>法人主導型態</label><select id='leadershipFilter'><option value=''>全部</option><option value='外資敏感型'>外資敏感型</option><option value='投信敏感型'>投信敏感型</option><option value='法人共振'>法人共振</option><option value='法人敏感度不明顯'>法人敏感度不明顯</option><option value='資料不足'>資料不足</option></select></div>
+<div class='filter-group'><label>連續天數條件</label><div class='row-inputs'><input id='minConDays' type='number' step='1' placeholder='天數' /><input id='minConScore' type='number' step='1' placeholder='分數' value='60' /></div></div>
+<div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>
+</div>
+</div>
+
+</div>
+
 <div id='hero0050Card' class='hero-card' style='display:none;'>
 <div class='hero-header'>
 <div class='hero-title'>
@@ -865,5 +910,5 @@ document.getElementById('btnDownloadCsv').addEventListener('click', () => {
 renderBatch();
 </script>
 <script src='portfolio-enhancements.js?v=6'></script>
-<script src='trade-plan-enhancements.js?v=2'></script>
+<script src='trade-plan-enhancements.js?v=3'></script>
 </body></html>

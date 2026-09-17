@@ -22,11 +22,13 @@
                 <StackPanel>
                     <TextBlock Text="策略與依據" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
                     <WrapPanel>
-                        <StackPanel Margin="0,0,14,8"><TextBlock Text="策略" Margin="0,0,0,4"/><ComboBox ItemsSource="{Binding StrategyOptions}" SelectedItem="{Binding SelectedStrategy, Mode=TwoWay}" Width="150" Height="28"/></StackPanel>
+                        <StackPanel Margin="0,0,14,8"><TextBlock Text="進場情境" Margin="0,0,0,4"/><ComboBox ItemsSource="{Binding StrategyOptions}" SelectedItem="{Binding SelectedStrategy, Mode=TwoWay}" Width="150" Height="28"/></StackPanel>
+                        <StackPanel Margin="0,0,14,8"><TextBlock Text="預計持有" Margin="0,0,0,4"/><ComboBox ItemsSource="{Binding HoldingPeriodOptions}" SelectedItem="{Binding SelectedHoldingPeriod, Mode=TwoWay}" Width="170" Height="28"/></StackPanel>
                         <StackPanel Margin="0,0,14,8"><TextBlock Text="有效期限" Margin="0,0,0,4"/><TextBlock Text="{Binding ValidUntilText}" Height="28" VerticalAlignment="Center" FontWeight="SemiBold"/></StackPanel>
                         <Button Content="重新套用策略" Command="{Binding ApplyStrategyCommand}" Width="112" Height="30" Margin="0,20,0,0"/>
                     </WrapPanel>
                     <TextBlock Text="{Binding QualitySummary}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding ReferencePriceText}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
@@ -34,6 +36,7 @@
                 <StackPanel>
                     <TextBlock Text="日 K 結構地圖" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,4"/>
                     <TextBlock Text="{Binding StructureSummary}" Foreground="{DynamicResource MutedForegroundBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,9"/>
+                    <Border Background="#1A388BFD" BorderBrush="#3A4553" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,9"><TextBlock Text="{Binding PlanStructureText}" TextWrapping="Wrap" FontSize="11"/></Border>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <StackPanel Margin="0,0,14,0">
@@ -56,10 +59,10 @@
                         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                         <StackPanel Margin="0,0,12,10"><TextBlock Text="買入區下緣" Margin="0,0,0,4"/><TextBox Text="{Binding EntryLower, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
                         <StackPanel Grid.Column="1" Margin="0,0,0,10"><TextBlock Text="買入區上緣" Margin="0,0,0,4"/><TextBox Text="{Binding EntryUpper, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
-                        <StackPanel Grid.Row="1" Margin="0,0,12,10"><TextBlock Text="停損價" Margin="0,0,0,4"/><TextBox Text="{Binding StopLoss, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
+                        <StackPanel Grid.Row="1" Margin="0,0,12,10"><TextBlock Text="結構失效價（非保證成交）" Margin="0,0,0,4"/><TextBox Text="{Binding StopLoss, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
                         <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,10"><TextBlock Text="每股風險" Margin="0,0,0,4"/><TextBlock Text="{Binding RiskPerShare, StringFormat={}{0:F2}}" Height="30" VerticalAlignment="Center" FontWeight="SemiBold"/></StackPanel>
-                        <StackPanel Grid.Row="2" Margin="0,0,12,0"><TextBlock Text="目標一（分段停利）" Margin="0,0,0,4"/><TextBox Text="{Binding TargetOne, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
-                        <StackPanel Grid.Row="2" Grid.Column="1"><TextBlock Text="目標二（追蹤停利）" Margin="0,0,0,4"/><TextBox Text="{Binding TargetTwo, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
+                        <StackPanel Grid.Row="2" Margin="0,0,12,0"><TextBlock Text="目標一（第一壓力區前減碼）" Margin="0,0,0,4"/><TextBox Text="{Binding TargetOne, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
+                        <StackPanel Grid.Row="2" Grid.Column="1"><TextBlock Text="目標二（下一壓力區；不足可留空）" Margin="0,0,0,4"/><TextBox Text="{Binding TargetTwo, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F2}}" Height="30" VerticalContentAlignment="Center"/></StackPanel>
                     </Grid>
                     <WrapPanel Margin="0,10,0,0"><TextBlock Text="停損幅度："/><TextBlock Text="{Binding RiskPercentText}" FontWeight="SemiBold" Margin="0,0,16,0"/><TextBlock Text="目標一："/><TextBlock Text="{Binding RewardRiskOneText}" FontWeight="SemiBold" Margin="0,0,16,0"/><TextBlock Text="目標二："/><TextBlock Text="{Binding RewardRiskTwoText}" FontWeight="SemiBold"/></WrapPanel>
                 </StackPanel>

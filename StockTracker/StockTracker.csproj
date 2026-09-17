@@ -221,8 +221,13 @@
     <Compile Include="Models\ChartMarker.cs" />
     <Compile Include="Models\HoldingPoint.cs" />
     <Compile Include="Models\PortfolioHolding.cs" />
+    <Compile Include="Models\MarketTradingOverview.cs" />
     <Compile Include="Models\PriceStructure.cs" />
     <Compile Include="Models\TradePlan.cs" />
+    <Compile Include="Models\TradePlanProposal.cs" />
+    <Compile Include="MarketOverviewControl.xaml.cs">
+      <DependentUpon>MarketOverviewControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="RankingWindow.xaml.cs">
       <DependentUpon>RankingWindow.xaml</DependentUpon>
     </Compile>
@@ -238,6 +243,8 @@
     <Compile Include="Services\MarginDataFetcher.cs" />
     <Compile Include="Services\MarginMetricCalculator.cs" />
     <Compile Include="Services\MarketInstitutionalAmountService.cs" />
+    <Compile Include="Services\MarketTradingOverviewService.cs" />
+    <Compile Include="Services\MarketOverviewHtmlRenderer.cs" />
     <Compile Include="Services\PriceStructureAnalyzer.cs" />
     <Compile Include="Services\TwseMarketCreditService.cs" />
     <Compile Include="Services\TdccLargeHolderService.cs" />
@@ -285,6 +292,10 @@
     <Compile Include="PortfolioWindow.xaml.cs">
       <DependentUpon>PortfolioWindow.xaml</DependentUpon>
     </Compile>
+    <Page Include="MarketOverviewControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="RankingWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

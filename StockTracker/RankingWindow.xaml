@@ -3,6 +3,7 @@
 <Window x:Class="StockTracker.RankingWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:StockTracker"
         Title="全市場推薦排名" Height="760" Width="1280" MinWidth="1100" MinHeight="680"
         Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource AppForegroundBrush}">
     <Window.Resources>
@@ -56,7 +57,7 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="0" />
                 <ColumnDefinition Width="*" MinWidth="620" />
                 <ColumnDefinition Width="310" />
             </Grid.ColumnDefinitions>
@@ -65,79 +66,12 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-        <Border Grid.Column="0" Grid.RowSpan="2" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="10" CornerRadius="6" Margin="0,0,10,0">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="&#26063;&#32676;&#27683;&#27675;" FontSize="16" FontWeight="SemiBold" Foreground="White" />
-                    <Button DockPanel.Dock="Right" Content="&#39023;&#31034;&#20840;&#37096;" Padding="8,3" Command="{Binding ClearMarketGroupFilterCommand}" Visibility="{Binding IsMarketGroupFilterActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedMarketGroup}" Foreground="#8b949e" Margin="0,3,8,0" />
-                </DockPanel>
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding TopMarketGroups}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Width="156" Background="#21262d" BorderBrush="{Binding DirectionBrush}" BorderThickness="2" CornerRadius="4" Padding="7,5" Margin="0,0,8,8">
-                                <StackPanel>
-                                    <DockPanel><TextBlock Text="{Binding GroupName}" FontWeight="SemiBold" Foreground="White" /><TextBlock Text="{Binding DirectionText}" DockPanel.Dock="Right" Foreground="{Binding DirectionBrush}" FontWeight="Bold" /></DockPanel>
-                                    <DockPanel Margin="0,3,0,0"><TextBlock Text="{Binding AverageChangePercent, StringFormat={}{0:+0.00;-0.00;0.00}%}" FontSize="16" FontWeight="Bold" Foreground="{Binding DirectionBrush}" /><TextBlock DockPanel.Dock="Right" Text="{Binding AdvancingCount, StringFormat=↑ {0:N0}}" Foreground="IndianRed" FontSize="11" Margin="5,2,0,0" /><TextBlock DockPanel.Dock="Right" Text="{Binding DecliningCount, StringFormat=↓ {0:N0}}" Foreground="MediumSeaGreen" FontSize="11" Margin="5,2,0,0" /></DockPanel>
-                                    <Button Content="篩選此族群" FontSize="10" Padding="4,1" Margin="0,4,0,0" HorizontalAlignment="Right" Command="{Binding DataContext.FilterMarketGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding GroupName}" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                </ScrollViewer>
-            </Grid>
-        </Border>
-
         <Border Grid.Column="1" Grid.Row="0" Margin="0,0,0,10" Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" Padding="10" CornerRadius="6">
-            <StackPanel>
-                <DockPanel Margin="0,0,0,8">
-                    <TextBlock Text="全市場資金總覽" FontSize="15" FontWeight="SemiBold" Foreground="White" />
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding MarketOverview.TradeDateText}" Foreground="#8b949e" FontSize="11" />
-                </DockPanel>
-                <Border Background="#21262d" BorderBrush="#3a4553" BorderThickness="1" CornerRadius="5" Padding="9" Margin="0,0,0,8">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="170" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="市場狀態（本次掃描）" FontSize="11" Foreground="#8b949e" />
-                            <TextBlock Text="{Binding MarketRegime.Title}" FontSize="18" FontWeight="Bold" Foreground="{Binding MarketRegime.ToneBrush}" />
-                            <TextBlock Text="{Binding MarketRegime.SignalCountText}" FontSize="10" Foreground="#8b949e" />
-                        </StackPanel>
-                        <WrapPanel Grid.Column="1" VerticalAlignment="Center">
-                            <StackPanel Width="135" Margin="0,0,8,4"><TextBlock Text="市場廣度" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketRegime.BreadthSignal}" TextWrapping="Wrap" FontSize="11" Foreground="White" /></StackPanel>
-                            <StackPanel Width="150" Margin="0,0,8,4"><TextBlock Text="三大法人（近五日）" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketRegime.InstitutionalSignal}" TextWrapping="Wrap" FontSize="11" Foreground="White" /></StackPanel>
-                            <StackPanel Width="140" Margin="0,0,8,4"><TextBlock Text="融資（近五日）" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketRegime.MarginSignal}" TextWrapping="Wrap" FontSize="11" Foreground="White" /></StackPanel>
-                            <StackPanel Width="135" Margin="0,0,8,4"><TextBlock Text="臺指 P/C 未平倉" FontSize="10" Foreground="#8b949e" /><TextBlock Text="{Binding MarketRegime.PutCallSignal}" TextWrapping="Wrap" FontSize="11" Foreground="White" /></StackPanel>
-                        </WrapPanel>
-                    </Grid>
-                </Border>
-                <ItemsControl ItemsSource="{Binding MarketOverview.Days}">
-                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="#21262d" BorderBrush="#30363d" BorderThickness="1" CornerRadius="4" Padding="7" Margin="0,0,7,0">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding TradeDateText}" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                                    <TextBlock Text="法人淨額（億元）：外／投／自／合" FontSize="9" Foreground="#8b949e" /><TextBlock Text="{Binding ForeignNetText}" FontSize="10" Foreground="{Binding ForeignNetBrush}" /><TextBlock Text="{Binding TrustNetText}" FontSize="10" Foreground="{Binding TrustNetBrush}" /><TextBlock Text="{Binding DealerNetText}" FontSize="10" Foreground="{Binding DealerNetBrush}" /><TextBlock Text="{Binding ThreeMajorNetText}" FontSize="10" FontWeight="Bold" Foreground="{Binding ThreeMajorNetBrush}" />
-                                    <TextBlock Text="融資餘額（億元）／融券餘額（張）" FontSize="9" Foreground="#8b949e" Margin="0,4,0,0" /><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding MarginBalanceText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding MarginAmountChangeDisplayText}" FontSize="10" Foreground="{Binding MarginAmountChangeBrush}" /></StackPanel><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding ShortBalanceText}" FontSize="10" Foreground="White" /><TextBlock Text="{Binding ShortBalanceChangeDisplayText}" FontSize="10" Foreground="{Binding ShortBalanceChangeBrush}" /></StackPanel>
-                                    <TextBlock Text="P/C 未平倉" FontSize="9" Foreground="#8b949e" Margin="0,4,0,0" /><TextBlock Text="{Binding PutCallOpenInterestRatioText}" FontSize="10" FontWeight="Bold" Foreground="White" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
+            <Expander Header="全市場總覽" IsExpanded="True" FontSize="13">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="340" Margin="0,10,0,0">
+                    <local:MarketOverviewControl Margin="0,0,8,0"/>
+                </ScrollViewer>
+            </Expander>
         </Border>
 
         <ScrollViewer Grid.Column="2" Grid.RowSpan="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="10,0,0,0">
@@ -151,25 +85,6 @@
                     <TextBlock Text="通知 Email 清單" VerticalAlignment="Center" Margin="4,0,8,0" />
                     <TextBox Text="{Binding NotificationEmailList, UpdateSourceTrigger=PropertyChanged}" Width="270" Height="30" VerticalContentAlignment="Center" />
                 </WrapPanel>
-                    <Border Background="#1a1d23" BorderBrush="#3a4553" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,8,0,0">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="74" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                            <Viewbox Width="70" Height="70" Grid.Column="0">
-                                <Grid Width="160" Height="160">
-                                    <Path Data="{Binding MarketBreadth.AdvancingArc}" Stroke="IndianRed" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                    <Path Data="{Binding MarketBreadth.DecliningArc}" Stroke="MediumSeaGreen" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                    <Path Data="{Binding MarketBreadth.UnchangedArc}" Stroke="#8b949e" StrokeThickness="16" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                    <TextBlock Text="{Binding MarketBreadth.AdvanceRatioPercent, StringFormat={}{0:F0}%}" FontSize="32" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Grid>
-                            </Viewbox>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="&#24066;&#22580;&#24291;&#24230;" FontSize="12" Foreground="#8b949e" />
-                                <TextBlock Text="{Binding MarketBreadth.MarketTone}" FontSize="16" FontWeight="Bold" Foreground="{Binding MarketBreadth.MarketToneBrush}" />
-                                <TextBlock Text="{Binding MarketBreadth.AdvancingCount, StringFormat=&#8593; {0:N0}}" FontSize="11" Foreground="IndianRed" />
-                                <TextBlock Text="{Binding MarketBreadth.DecliningCount, StringFormat=&#8595; {0:N0}}" FontSize="11" Foreground="MediumSeaGreen" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
                 </StackPanel>
 
                 <StackPanel Visibility="{Binding ControlPanelVisibility}">

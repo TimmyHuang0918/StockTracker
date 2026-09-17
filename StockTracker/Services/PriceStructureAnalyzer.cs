@@ -43,7 +43,11 @@ namespace StockTracker.Services
             var candles = dailyCandles.Skip(Math.Max(0, dailyCandles.Count - MaximumLookbackBars)).ToList();
             var atr = CalculateAtr14(candles);
             result.Atr14 = atr;
-            var zoneHalfWidth = Math.Max(atr * 0.35m, result.LatestPrice * 0.003m);
+            // A zone describes a nearby reaction area, not a broad percentage band.
+            // Keep it tight enough that a level overlapping the current price is not
+            // accidentally treated as both a support and a resistance.
+            var tick = GetPriceTick(result.LatestPrice);
+            var zoneHalfWidth = Math.Max(tick * 2m, Math.Min(atr * 0.20m, result.LatestPrice * 0.006m));
             var candidates = FindCandidates(candles);
             if (candidates.Count == 0)
             {
@@ -51,11 +55,12 @@ namespace StockTracker.Services
                 return result;
             }
 
-            result.Supports = BuildZones(candidates, result.LatestPrice, zoneHalfWidth, true);
-            result.Resistances = BuildZones(candidates, result.LatestPrice, zoneHalfWidth, false);
+            var deadBand = Math.Max(tick * 2m, atr * 0.15m);
+            result.Supports = BuildZones(candidates, result.LatestPrice, zoneHalfWidth, deadBand, true);
+            result.Resistances = BuildZones(candidates, result.LatestPrice, zoneHalfWidth, deadBand, false);
             result.HasSufficientData = result.Supports.Count > 0 || result.Resistances.Count > 0;
             result.Message = result.HasSufficientData
-                ? "支撐／壓力區由近 120 日日 K 的波段高低點、反應次數與量能聚集而成。"
+                ? "支撐／壓力區由近 120 日日 K 的確認波段高低點、反應次數與量能聚集而成；與現價重疊的盤整區不作為交易關卡。"
                 : "目前價格附近沒有足夠的結構區，請改以手動判斷。";
             return result;
         }
@@ -157,36 +162,14 @@ namespace StockTracker.Services
                 }
             }
 
-            AddRangeBoundaryCandidate(candidates, candles, 20, "20 日區間邊界");
-            AddRangeBoundaryCandidate(candidates, candles, 60, "60 日區間邊界");
             return candidates;
         }
 
-        private static void AddRangeBoundaryCandidate(ICollection<LevelCandidate> candidates, IReadOnlyList<CandleData> candles, int windowSize, string basis)
-        {
-            var period = candles.Skip(Math.Max(0, candles.Count - windowSize)).ToList();
-            if (period.Count == 0) return;
-            candidates.Add(new LevelCandidate
-            {
-                Price = period.Max(item => item.High > 0m ? item.High : item.Close),
-                Weight = 12m,
-                Date = period.Last().Time.Date,
-                Basis = basis
-            });
-            candidates.Add(new LevelCandidate
-            {
-                Price = period.Min(item => item.Low > 0m ? item.Low : item.Close),
-                Weight = 12m,
-                Date = period.Last().Time.Date,
-                Basis = basis
-            });
-        }
-
-        private static List<PriceStructureZone> BuildZones(IEnumerable<LevelCandidate> candidates, decimal latestPrice, decimal halfWidth, bool support)
+        private static List<PriceStructureZone> BuildZones(IEnumerable<LevelCandidate> candidates, decimal latestPrice, decimal halfWidth, decimal deadBand, bool support)
         {
             var relevant = (support
-                    ? candidates.Where(item => item.Price <= latestPrice + halfWidth).OrderByDescending(item => item.Price)
-                    : candidates.Where(item => item.Price >= latestPrice - halfWidth).OrderBy(item => item.Price))
+                    ? candidates.Where(item => item.Price < latestPrice - deadBand).OrderByDescending(item => item.Price)
+                    : candidates.Where(item => item.Price > latestPrice + deadBand).OrderBy(item => item.Price))
                 .ToList();
             var clusters = new List<List<LevelCandidate>>();
             foreach (var candidate in relevant)
@@ -203,7 +186,7 @@ namespace StockTracker.Services
             var zones = clusters.Select(cluster =>
             {
                 var distinctBasis = string.Join("、", cluster.Select(item => item.Basis).Distinct().Take(2));
-                var strength = (int)Math.Min(100m, Math.Round(cluster.Sum(item => item.Weight) + cluster.Count * 8m));
+                var strength = (int)Math.Min(100m, Math.Round(cluster.Sum(item => item.Weight) + cluster.Count * 10m));
                 return new PriceStructureZone
                 {
                     Low = RoundToTick(Math.Max(0.01m, cluster.Min(item => item.Price) - halfWidth), false),

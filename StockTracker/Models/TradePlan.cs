@@ -11,6 +11,7 @@ namespace StockTracker.Models
         public string Symbol { get; set; }
         public string Name { get; set; }
         public string Strategy { get; set; }
+        public string HoldingPeriod { get; set; }
         public decimal EntryLower { get; set; }
         public decimal EntryUpper { get; set; }
         public decimal StopLoss { get; set; }

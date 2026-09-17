@@ -31,11 +31,15 @@ namespace StockTracker.ViewModels
     /// </summary>
     public sealed class MarketBreadthSnapshot
     {
+        public string DataDateText { get; set; } = "掃描資料待更新";
         public int TotalCount { get; set; }
         public int AdvancingCount { get; set; }
         public int DecliningCount { get; set; }
         public int UnchangedCount { get; set; }
         public decimal AverageChangePercent { get; set; }
+
+        public string AdvanceRatioText => "上漲比例 " + (AdvancingCount + DecliningCount > 0 ? AdvanceRatioPercent.ToString("F1") + "%" : "—");
+        public string AverageChangeText => "平均 " + (TotalCount > 0 ? MarketTradingDay.Percent(AverageChangePercent) : "—");
 
         public decimal AdvanceRatioPercent =>
             AdvancingCount + DecliningCount == 0
@@ -89,6 +93,9 @@ namespace StockTracker.ViewModels
     /// <summary>全市場掃描頁使用的市場資金與選擇權情緒摘要。</summary>
     public sealed class MarketOverviewSnapshot
     {
+        public MarketTradingOverview Trading { get; set; } = new MarketTradingOverview();
+        public IEnumerable<MarketOverviewDay> RecentFundingDays => (Days ?? Array.Empty<MarketOverviewDay>()).OrderByDescending(x => x.TradeDate);
+        public string FundingStatusText => "法人：上市＋上櫃（億元）；資券：上市；P/C：臺指選擇權未平倉比率。各日依來源公布，— 為待更新。";
         public IReadOnlyList<MarketOverviewDay> Days { get; set; } = Array.Empty<MarketOverviewDay>();
         public DateTime TradeDate { get; set; }
         public decimal ForeignNet5D { get; set; }
@@ -168,6 +175,10 @@ namespace StockTracker.ViewModels
 
     public sealed class MarketOverviewDay
     {
+        public bool? InstitutionalAvailable { get; set; }
+        public bool? CreditAvailable { get; set; }
+        public bool HasInstitutional => InstitutionalAvailable ?? (ForeignNet != 0m || TrustNet != 0m || DealerNet != 0m);
+        public bool HasCredit => CreditAvailable ?? (MarginAmountThousand > 0 || ShortBalanceLots > 0);
         public DateTime TradeDate { get; set; }
         public decimal ForeignNet { get; set; }
         public decimal TrustNet { get; set; }
@@ -179,16 +190,17 @@ namespace StockTracker.ViewModels
         public long ShortBalanceChangeLots { get; set; }
         public decimal? PutCallOpenInterestRatio { get; set; }
         public string TradeDateText => TradeDate == DateTime.MinValue ? "—" : TradeDate.ToString("MM/dd");
-        public string ForeignNetText => FormatMoney(ForeignNet);
-        public string TrustNetText => FormatMoney(TrustNet);
-        public string DealerNetText => FormatMoney(DealerNet);
-        public string ThreeMajorNetText => FormatMoney(ThreeMajorNet);
-        public string MarginBalanceText => FormatCreditMoney(MarginAmountThousand);
-        public string ShortBalanceText => FormatLots(ShortBalanceLots);
+        public string FullTradeDateText => TradeDate == DateTime.MinValue ? "—" : TradeDate.ToString("yyyy/MM/dd");
+        public string ForeignNetText => HasInstitutional ? FormatMoney(ForeignNet) : "—";
+        public string TrustNetText => HasInstitutional ? FormatMoney(TrustNet) : "—";
+        public string DealerNetText => HasInstitutional ? FormatMoney(DealerNet) : "—";
+        public string ThreeMajorNetText => HasInstitutional ? FormatMoney(ThreeMajorNet) : "—";
+        public string MarginBalanceText => HasCredit ? FormatCreditMoney(MarginAmountThousand) : "—";
+        public string ShortBalanceText => HasCredit ? FormatLots(ShortBalanceLots) : "—";
         public string MarginAmountChangeText => FormatCreditMoneyChange(MarginAmountChangeThousand);
         public string ShortBalanceChangeText => FormatLotsChange(ShortBalanceChangeLots);
-        public string MarginAmountChangeDisplayText => $"（{MarginAmountChangeText}）";
-        public string ShortBalanceChangeDisplayText => $"（{ShortBalanceChangeText}）";
+        public string MarginAmountChangeDisplayText => HasCredit ? $"（{MarginAmountChangeText}）" : "";
+        public string ShortBalanceChangeDisplayText => HasCredit ? $"（{ShortBalanceChangeText}）" : "";
         public string PutCallOpenInterestRatioText => PutCallOpenInterestRatio.HasValue ? $"{PutCallOpenInterestRatio.Value:F1}%" : "—";
         public System.Windows.Media.Brush ForeignNetBrush => GetValueBrush(ForeignNet);
         public System.Windows.Media.Brush TrustNetBrush => GetValueBrush(TrustNet);
@@ -774,11 +786,13 @@ namespace StockTracker.ViewModels
                 _marketOverview = value ?? new MarketOverviewSnapshot();
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(MarketRegime));
+                OnPropertyChanged(nameof(MarketSummary));
             }
         }
 
         public MarketBreadthSnapshot MarketBreadth => CreateMarketBreadth(RankedStocks);
         public MarketRegimeSnapshot MarketRegime => CreateMarketRegime(MarketBreadth, MarketOverview);
+        public string MarketSummary => MarketOverviewHtmlRenderer.Summarize(MarketOverview, MarketBreadth);
         public IReadOnlyList<MarketGroupSnapshot> MarketGroups => CreateMarketGroups(RankedStocks, _stockGroupCatalog);
         public IReadOnlyList<MarketGroupSnapshot> TopMarketGroups => MarketGroups;
         public IReadOnlyList<string> GroupEditorGroups => _stockGroupCatalog.GetGroupNames();
@@ -1481,6 +1495,7 @@ namespace StockTracker.ViewModels
                             return;
 
                         overview.Days = overview.Days ?? Array.Empty<MarketOverviewDay>();
+                        overview.Trading = overview.Trading ?? new MarketTradingOverview();
                         MarketOverview = overview;
                     }
                 }
@@ -1493,7 +1508,8 @@ namespace StockTracker.ViewModels
 
         private void SaveMarketOverviewToDb(MarketOverviewSnapshot overview)
         {
-            if (!IsMarketOverviewComplete(overview))
+            if (overview == null || (!(overview.Days?.Any(d => d.HasCredit || d.HasInstitutional || d.PutCallOpenInterestRatio.HasValue) ?? false)
+                && !(overview.Trading?.Markets.Any(m => m.Days.Count > 0) ?? false)))
                 return;
 
             try
@@ -1739,7 +1755,6 @@ namespace StockTracker.ViewModels
         {
             var exportStocks = GetCurrentViewStocks();
             var marketBreadth = CreateMarketBreadth(RankedStocks);
-            var marketRegime = CreateMarketRegime(marketBreadth, MarketOverview);
             var marketGroups = CreateMarketGroups(RankedStocks, _stockGroupCatalog)
                 .ToList();
             var themeStatusByName = ThemeStatuses.ToDictionary(x => x.Theme, StringComparer.OrdinalIgnoreCase);
@@ -1760,8 +1775,6 @@ namespace StockTracker.ViewModels
             var largeHolderDataDateText = largeHolderDataDate.HasValue
                 ? largeHolderDataDate.Value.ToString("MM/dd", CultureInfo.InvariantCulture)
                 : "—";
-            var marketOverviewRows = string.Join(string.Empty, (MarketOverview.Days ?? Array.Empty<MarketOverviewDay>()).Select(day =>
-                $"<tr><td>{HtmlEncode(day.TradeDateText)}</td><td class='{ResolveValueColorClass((double)day.ForeignNet)}'>{HtmlEncode(day.ForeignNetText)}</td><td class='{ResolveValueColorClass((double)day.TrustNet)}'>{HtmlEncode(day.TrustNetText)}</td><td class='{ResolveValueColorClass((double)day.DealerNet)}'>{HtmlEncode(day.DealerNetText)}</td><td class='{ResolveValueColorClass((double)day.ThreeMajorNet)}'>{HtmlEncode(day.ThreeMajorNetText)}</td><td>{HtmlEncode(day.MarginBalanceText)} <span class='{ResolveValueColorClass(day.MarginAmountChangeThousand)}'>{HtmlEncode(day.MarginAmountChangeDisplayText)}</span></td><td>{HtmlEncode(day.ShortBalanceText)} <span class='{ResolveValueColorClass(day.ShortBalanceChangeLots)}'>{HtmlEncode(day.ShortBalanceChangeDisplayText)}</span></td><td>{HtmlEncode(day.PutCallOpenInterestRatioText)}</td></tr>"));
 
             // Fetch 0050 K-Line data for 120 days
             var kLineData0050Json = "[]";
@@ -2046,20 +2059,32 @@ namespace StockTracker.ViewModels
             html.AppendLine("  </div>");
             html.AppendLine("</div>");
 
-            html.AppendLine("<section class='panel'><h3 style='margin:0 0 10px'>全市場資金總覽（最近五個交易日，含當日）</h3><div style='overflow:auto'><table><thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th><th>三大法人</th><th>融資餘額<br>（億元）</th><th>融券餘額<br>（張）</th><th>P/C 未平倉</th></tr></thead><tbody>");
-            html.AppendLine(marketOverviewRows);
-            html.AppendLine("</tbody></table></div><p class='muted' style='margin:8px 0 0'>法人為上市、上櫃三大法人官方買賣超金額（億元）；融資為上市信用交易餘額金額（億元），融券為上市信用交易餘額（張）；P/C 為臺指選擇權未平倉量比率。</p></section>");
+            html.AppendLine(MarketOverviewHtmlRenderer.Render(MarketOverview, marketBreadth));
 
-            var marketRegimeToneClass = ResolveValueColorClass(marketRegime.PositiveSignals - marketRegime.NegativeSignals);
-            html.AppendLine("<section class='panel market-regime' aria-label='市場狀態'>");
-            html.AppendLine($"<div class='regime-lead'><span class='regime-eyebrow'>市場狀態（本次掃描）</span><strong class='{marketRegimeToneClass}'>{HtmlEncode(marketRegime.Title)}</strong><p>{HtmlEncode(marketRegime.Summary)}<br>{HtmlEncode(marketRegime.SignalCountText)}</p></div>");
-            html.AppendLine($"<div class='regime-signal'><span>市場廣度</span><strong>{HtmlEncode(marketRegime.BreadthSignal)}</strong></div>");
-            html.AppendLine($"<div class='regime-signal'><span>三大法人（近五日）</span><strong>{HtmlEncode(marketRegime.InstitutionalSignal)}</strong></div>");
-            html.AppendLine($"<div class='regime-signal'><span>融資（近五日）</span><strong>{HtmlEncode(marketRegime.MarginSignal)}</strong></div>");
-            html.AppendLine($"<div class='regime-signal'><span>臺指 P/C 未平倉</span><strong>{HtmlEncode(marketRegime.PutCallSignal)}</strong></div>");
+            html.AppendLine("<section class='panel' style='margin:0 0 16px;'>");
+            html.AppendLine("<div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;'><h3 style='margin:0'>&#26063;&#32676;&#27683;&#27675;</h3><span id='activeGroupFilter' class='muted'></span><button id='clearGroupFilter' type='button' class='btn-csv' style='padding:5px 8px'>&#39023;&#31034;&#20840;&#37096;</button></div>");
+            if (marketGroups.Count == 0)
+            {
+                html.AppendLine("<p class='muted' style='margin:0'>&#26283;&#28961;&#21487;&#29992;&#26063;&#32676;&#36039;&#26009;</p>");
+            }
+            else
+            {
+                html.AppendLine("<div id='marketGroupCards' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;max-height:300px;overflow-y:auto;padding:2px 8px 2px 2px;'>");
+                foreach (var group in marketGroups)
+                {
+                    var toneClass = ResolveValueColorClass((double)group.AverageChangePercent);
+                    themeStatusByName.TryGetValue(group.GroupName, out var status);
+                    var label = status?.MarketStatus ?? group.Tone;
+                    var extra = status == null
+                        ? string.Empty
+                        : $"<div class='muted' style='font-size:12px;margin-top:3px'>&#36817;5&#26085; {status.AverageChange5D:+0.00;-0.00;0.00}%&#65307;&#37327;&#33021; {status.AverageVolumeRatio20D:F2}x</div>";
+                    html.AppendLine($"<button type='button' class='group-filter' data-group='{HtmlEncode(group.GroupName)}' style='min-height:132px;text-align:left;color:inherit;border:1px solid var(--border);border-radius:12px;padding:14px;background:rgba(139,148,158,.06);cursor:pointer'><div style='display:flex;justify-content:space-between;gap:8px'><strong>{HtmlEncode(group.GroupName)}</strong><span class='{toneClass}'>{label}</span></div><div style='font-size:22px;font-weight:700;margin:8px 0' class='{toneClass}'>{group.AverageChangePercent:+0.00;-0.00;0.00}%</div><div class='muted' style='font-size:12px'>&#19978;&#28450; {group.AdvancingCount:N0} / &#19979;&#36300; {group.DecliningCount:N0} / &#20849; {group.TotalCount:N0}</div><div class='muted' style='font-size:12px;margin-top:4px'>&#19978;&#28450;&#29575; {group.AdvanceRatioPercent:F0}%</div>{extra}</button>");
+                }
+                html.AppendLine("</div>");
+            }
             html.AppendLine("</section>");
 
-            html.AppendLine("<div class='filter-breadth-layout'>");
+            html.AppendLine("<div class='filter-breadth-layout' style='display:block'>");
             html.AppendLine("<div class=\"panel filter-panel\">");
             html.AppendLine("<div class='filter-grid'>");
             html.AppendLine("<div class='filter-group'><label>關鍵字搜尋</label><input id='searchInput' placeholder='代號/名稱/型態/建議/策略' /></div>");
@@ -2085,40 +2110,8 @@ namespace StockTracker.ViewModels
             html.AppendLine("</div>");
             html.AppendLine("</div>");
 
-            var advancePercent = marketBreadth.TotalCount == 0 ? 0m : marketBreadth.AdvancingCount * 100m / marketBreadth.TotalCount;
-            var declinePercent = marketBreadth.TotalCount == 0 ? 0m : marketBreadth.DecliningCount * 100m / marketBreadth.TotalCount;
-            html.AppendLine("<section class='panel breadth-card' aria-label='Market breadth'>");
-            html.AppendLine("<h3 class='breadth-title'>&#24066;&#22580;&#24291;&#24230;</h3>");
-            html.AppendLine("<p class='breadth-subtitle'>&#26412;&#27425;&#36617;&#20837;&#27161;&#30340;</p>");
-            html.AppendLine($"<div class='breadth-donut' style='background:conic-gradient(var(--rise) 0 {advancePercent:F3}%,var(--fall) {advancePercent:F3}% {advancePercent + declinePercent:F3}%,var(--flat) {advancePercent + declinePercent:F3}% 100%);'><div class='breadth-center'><span class='breadth-tone {ResolveValueColorClass(marketBreadth.AdvancingCount - marketBreadth.DecliningCount)}'>{marketBreadth.MarketTone}</span><span class='breadth-ratio'>{marketBreadth.AdvanceRatioPercent:F0}%</span></div></div>");
-            html.AppendLine($"<div class='breadth-counts'><span class='rise'>&#8593; {marketBreadth.AdvancingCount:N0}</span><span class='fall'>&#8595; {marketBreadth.DecliningCount:N0}</span><span class='flat'>&#8212; {marketBreadth.UnchangedCount:N0}</span></div>");
-            html.AppendLine($"<p class='breadth-average'>&#24179;&#22343; <span class='{ResolveValueColorClass((double)marketBreadth.AverageChangePercent)}'>{marketBreadth.AverageChangePercent:+0.00;-0.00;0.00}%</span></p>");
-            html.AppendLine($"<p class='breadth-note'>&#20849; {marketBreadth.TotalCount:N0} &#27284;&#65307;&#19978;&#28450;&#27604;&#29575;&#19981;&#21547;&#24179;&#30436;</p>");
-            html.AppendLine("</section>");
             html.AppendLine("</div>");
 
-            html.AppendLine("<section class='panel' style='margin:0 0 16px;'>");
-            html.AppendLine("<div style='display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;'><h3 style='margin:0'>&#26063;&#32676;&#27683;&#27675;</h3><span id='activeGroupFilter' class='muted'></span><button id='clearGroupFilter' type='button' class='btn-csv' style='padding:5px 8px'>&#39023;&#31034;&#20840;&#37096;</button></div>");
-            if (marketGroups.Count == 0)
-            {
-                html.AppendLine("<p class='muted' style='margin:0'>&#26283;&#28961;&#21487;&#29992;&#26063;&#32676;&#36039;&#26009;</p>");
-            }
-            else
-            {
-                html.AppendLine("<div id='marketGroupCards' style='display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;max-height:300px;overflow-y:auto;padding:2px 8px 2px 2px;'>");
-                foreach (var group in marketGroups)
-                {
-                    var toneClass = ResolveValueColorClass((double)group.AverageChangePercent);
-                    themeStatusByName.TryGetValue(group.GroupName, out var status);
-                    var label = status?.MarketStatus ?? group.Tone;
-                    var extra = status == null
-                        ? string.Empty
-                        : $"<div class='muted' style='font-size:12px;margin-top:3px'>&#36817;5&#26085; {status.AverageChange5D:+0.00;-0.00;0.00}%&#65307;&#37327;&#33021; {status.AverageVolumeRatio20D:F2}x</div>";
-                    html.AppendLine($"<button type='button' class='group-filter' data-group='{HtmlEncode(group.GroupName)}' style='min-height:132px;text-align:left;color:inherit;border:1px solid var(--border);border-radius:12px;padding:14px;background:rgba(139,148,158,.06);cursor:pointer'><div style='display:flex;justify-content:space-between;gap:8px'><strong>{HtmlEncode(group.GroupName)}</strong><span class='{toneClass}'>{label}</span></div><div style='font-size:22px;font-weight:700;margin:8px 0' class='{toneClass}'>{group.AverageChangePercent:+0.00;-0.00;0.00}%</div><div class='muted' style='font-size:12px'>&#19978;&#28450; {group.AdvancingCount:N0} / &#19979;&#36300; {group.DecliningCount:N0} / &#20849; {group.TotalCount:N0}</div><div class='muted' style='font-size:12px;margin-top:4px'>&#19978;&#28450;&#29575; {group.AdvanceRatioPercent:F0}%</div>{extra}</button>");
-                }
-                html.AppendLine("</div>");
-            }
-            html.AppendLine("</section>");
 
             // 0050 Market Leader Summary Card
             html.AppendLine("<div id='hero0050Card' class='hero-card' style='display:none;'>");
@@ -2865,7 +2858,7 @@ namespace StockTracker.ViewModels
 
             html.AppendLine("</script>");
             html.AppendLine("<script src='portfolio-enhancements.js?v=6'></script>");
-            html.AppendLine("<script src='trade-plan-enhancements.js?v=2'></script>");
+            html.AppendLine("<script src='trade-plan-enhancements.js?v=3'></script>");
             html.AppendLine("</body></html>");
             return html.ToString();
         }
@@ -3350,6 +3343,18 @@ namespace StockTracker.ViewModels
         private async Task<MarketOverviewSnapshot> BuildMarketOverviewAsync(IReadOnlyDictionary<string, TwseT86History> t86HistoryMap)
         {
             var overview = new MarketOverviewSnapshot();
+            var now = MarketTradingOverviewService.TaipeiNow;
+            overview.Trading = await new MarketTradingOverviewService().GetRecentAsync(now);
+            // Preserve dated cached rows when a source is temporarily unavailable.
+            foreach (var market in overview.Trading.Markets)
+            {
+                var cached = MarketOverview.Trading?.Markets.FirstOrDefault(m => m.Code == market.Code);
+                if (cached?.Latest != null && (market.Latest == null || market.Latest.TradeDate < cached.Latest.TradeDate))
+                {
+                    market.Days = cached.Days;
+                    market.Status = $"來源暫時無法更新，保留 {market.Latest.DateText} 資料。";
+                }
+            }
             var allRecords = (t86HistoryMap ?? new Dictionary<string, TwseT86History>())
                 .Values
                 .Where(x => x?.RecordsByDate != null)
@@ -3357,12 +3362,19 @@ namespace StockTracker.ViewModels
                 .Where(x => x != null)
                 .ToList();
             var latestDates = allRecords.Select(x => x.TradeDate.Date)
+                .Concat(overview.Trading.Markets.SelectMany(m => m.Days).Select(d => d.TradeDate))
+                .Concat(MarketOverview.Days.Select(d => d.TradeDate))
+                .Where(d => d <= now.Date)
                 .Distinct()
                 .OrderByDescending(x => x)
                 .Take(5)
                 .OrderBy(x => x)
                 .ToList();
-            var institutionalAmountByDate = await new MarketInstitutionalAmountService().GetByDatesAsync(latestDates);
+            var institutionalTask = new MarketInstitutionalAmountService().GetByDatesAsync(latestDates);
+            var creditTask = new TwseMarketCreditService().GetByDatesAsync(latestDates);
+            var putCallTask = new TaifexPutCallRatioService().GetRecentAsync(10);
+            await Task.WhenAll(institutionalTask, creditTask, putCallTask);
+            var institutionalAmountByDate = await institutionalTask;
             if (latestDates.Count > 0)
                 overview.TradeDate = latestDates.Last();
             overview.ForeignNet5D = institutionalAmountByDate.Values.Sum(x => x.ForeignNet);
@@ -3370,7 +3382,7 @@ namespace StockTracker.ViewModels
             overview.DealerNet5D = institutionalAmountByDate.Values.Sum(x => x.DealerNet);
             overview.ThreeMajorNet5D = institutionalAmountByDate.Values.Sum(x => x.ThreeMajorNet);
 
-            var creditByDate = await new TwseMarketCreditService().GetByDatesAsync(latestDates);
+            var creditByDate = await creditTask;
             var creditDays = (creditByDate?.Values ?? Enumerable.Empty<MarketCreditDailyTotal>())
                 .OrderBy(x => x.TradeDate)
                 .ToList();
@@ -3384,8 +3396,9 @@ namespace StockTracker.ViewModels
                 overview.ShortBalanceChange5DLots = latest.ShortBalanceLots - first.ShortBalanceLots;
             }
 
-            var putCallRecords = await new TaifexPutCallRatioService().GetRecentAsync(5);
-            var putCallDays = (putCallRecords ?? Array.Empty<PutCallRatioRecord>()).ToList();
+            var putCallRecords = await putCallTask;
+            var putCallDays = (putCallRecords ?? Array.Empty<PutCallRatioRecord>())
+                .Where(d => latestDates.Contains(d.TradeDate.Date)).OrderBy(d => d.TradeDate).ToList();
             if (putCallDays.Count > 0)
             {
                 overview.PutCallOpenInterestRatio = putCallDays.Last().OpenInterestRatioPercent;
@@ -3399,20 +3412,30 @@ namespace StockTracker.ViewModels
                 institutionalAmountByDate.TryGetValue(date, out var institutionalAmount);
                 creditByTradeDate.TryGetValue(date, out var credit);
                 putCallByDate.TryGetValue(date, out var putCall);
+                var cachedDay = MarketOverview.Days.FirstOrDefault(d => d.TradeDate.Date == date);
                 return new MarketOverviewDay
                 {
                     TradeDate = date,
-                    ForeignNet = institutionalAmount?.ForeignNet ?? 0m,
-                    TrustNet = institutionalAmount?.TrustNet ?? 0m,
-                    DealerNet = institutionalAmount?.DealerNet ?? 0m,
-                    ThreeMajorNet = institutionalAmount?.ThreeMajorNet ?? 0m,
-                    MarginAmountThousand = credit?.MarginAmountThousand ?? 0,
-                    MarginAmountChangeThousand = credit?.MarginAmountChangeThousand ?? 0,
-                    ShortBalanceLots = credit?.ShortBalanceLots ?? 0,
-                    ShortBalanceChangeLots = credit?.ShortBalanceChangeLots ?? 0,
-                    PutCallOpenInterestRatio = putCall?.OpenInterestRatioPercent
+                    InstitutionalAvailable = institutionalAmount != null || (cachedDay?.HasInstitutional ?? false),
+                    CreditAvailable = credit != null || (cachedDay?.HasCredit ?? false),
+                    ForeignNet = institutionalAmount?.ForeignNet ?? cachedDay?.ForeignNet ?? 0m,
+                    TrustNet = institutionalAmount?.TrustNet ?? cachedDay?.TrustNet ?? 0m,
+                    DealerNet = institutionalAmount?.DealerNet ?? cachedDay?.DealerNet ?? 0m,
+                    ThreeMajorNet = institutionalAmount?.ThreeMajorNet ?? cachedDay?.ThreeMajorNet ?? 0m,
+                    MarginAmountThousand = credit?.MarginAmountThousand ?? cachedDay?.MarginAmountThousand ?? 0,
+                    MarginAmountChangeThousand = credit?.MarginAmountChangeThousand ?? cachedDay?.MarginAmountChangeThousand ?? 0,
+                    ShortBalanceLots = credit?.ShortBalanceLots ?? cachedDay?.ShortBalanceLots ?? 0,
+                    ShortBalanceChangeLots = credit?.ShortBalanceChangeLots ?? cachedDay?.ShortBalanceChangeLots ?? 0,
+                    PutCallOpenInterestRatio = putCall?.OpenInterestRatioPercent ?? cachedDay?.PutCallOpenInterestRatio
                 };
             }).ToList();
+
+            overview.ForeignNet5D = overview.Days.Where(d => d.HasInstitutional).Sum(d => d.ForeignNet);
+            overview.TrustNet5D = overview.Days.Where(d => d.HasInstitutional).Sum(d => d.TrustNet);
+            overview.DealerNet5D = overview.Days.Where(d => d.HasInstitutional).Sum(d => d.DealerNet);
+            overview.ThreeMajorNet5D = overview.Days.Where(d => d.HasInstitutional).Sum(d => d.ThreeMajorNet);
+            overview.MarginAmountChange5DThousand = overview.Days.Where(d => d.HasCredit).Sum(d => d.MarginAmountChangeThousand);
+            overview.ShortBalanceChange5DLots = overview.Days.Where(d => d.HasCredit).Sum(d => d.ShortBalanceChangeLots);
 
             return overview;
         }
@@ -3903,9 +3926,15 @@ namespace StockTracker.ViewModels
             var source = (stocks ?? Enumerable.Empty<RankedStock>()).ToList();
             var advancing = source.Count(s => s.ChangePercent > 0m);
             var declining = source.Count(s => s.ChangePercent < 0m);
+            var dates = source.Where(s => s.ScoreDate != DateTime.MinValue).Select(s => s.ScoreDate.Date).Distinct().OrderBy(d => d).ToList();
+            var dateText = dates.Count == 0 ? "掃描資料日期未提供"
+                : dates.Count == 1 ? $"掃描資料 {dates[0]:yyyy/MM/dd}"
+                : $"掃描資料日期混合：{dates.First():yyyy/MM/dd}–{dates.Last():yyyy/MM/dd}";
+            if (source.Any(s => s.ScoreDate == DateTime.MinValue)) dateText += "（部分日期未提供）";
 
             return new MarketBreadthSnapshot
             {
+                DataDateText = dateText,
                 TotalCount = source.Count,
                 AdvancingCount = advancing,
                 DecliningCount = declining,
@@ -4115,6 +4144,7 @@ namespace StockTracker.ViewModels
 
         private void RefreshMarketBreadth()
         {
+            OnPropertyChanged(nameof(MarketSummary));
             OnPropertyChanged(nameof(MarketBreadth));
             OnPropertyChanged(nameof(MarketRegime));
             OnPropertyChanged(nameof(MarketGroups));

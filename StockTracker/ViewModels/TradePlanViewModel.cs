@@ -19,6 +19,7 @@ namespace StockTracker.ViewModels
         private readonly List<CandleData> _candles;
         private readonly PriceStructureAnalysis _priceStructure;
         private string _selectedStrategy;
+        private string _selectedHoldingPeriod;
         private decimal _entryLower;
         private decimal _entryUpper;
         private decimal _stopLoss;
@@ -29,6 +30,7 @@ namespace StockTracker.ViewModels
         private string _cancelCondition;
         private string _statusText;
         private bool _isApplyingDefaults;
+        private TradePlanProposal _proposal;
 
         public TradePlanViewModel(StockViewModel stock)
         {
@@ -39,12 +41,14 @@ namespace StockTracker.ViewModels
                 .ToList();
             _priceStructure = PriceStructureAnalyzer.Analyze(_candles);
 
-            StrategyOptions = new ObservableCollection<string> { "突破買進", "拉回買進" };
+            StrategyOptions = new ObservableCollection<string> { TradePlanCalculator.Pullback, TradePlanCalculator.Breakout, TradePlanCalculator.Manual };
+            HoldingPeriodOptions = new ObservableCollection<string> { "短線：1～5 個交易日", "波段：1～4 週" };
             ApplyStrategyCommand = new RelayCommand(_ => ApplyStrategy());
             SavePlanCommand = new RelayCommand(_ => SavePlan());
             CopyPlanCommand = new RelayCommand(_ => CopyPlan());
 
-            _selectedStrategy = StrategyOptions[0];
+            _selectedStrategy = TradePlanCalculator.Pullback;
+            _selectedHoldingPeriod = HoldingPeriodOptions[0];
             ApplyStrategy();
         }
 
@@ -59,6 +63,10 @@ namespace StockTracker.ViewModels
         public double MA5 => _stock.MA5;
         public double MA20 => _stock.MA20;
         public string StructureSummary => _priceStructure?.Message ?? "尚無結構資料。";
+        public string PlanStructureText => !string.IsNullOrWhiteSpace(_proposal?.StructureText) ? _proposal.StructureText : "尚未形成可用交易情境；請參考下方支撐與壓力區，或選擇手動規劃。";
+        public string ReferencePriceText => _priceStructure == null || _priceStructure.LatestPrice <= 0m
+            ? "日 K 參考價待更新"
+            : $"日 K 參考價 {_priceStructure.LatestPrice:F2}／目前價格 {LatestPrice:F2}";
         public string SupportOneText => FormatZone(_priceStructure?.Supports?.ElementAtOrDefault(0));
         public string SupportTwoText => FormatZone(_priceStructure?.Supports?.ElementAtOrDefault(1));
         public string ResistanceOneText => FormatZone(_priceStructure?.Resistances?.ElementAtOrDefault(0));
@@ -67,6 +75,7 @@ namespace StockTracker.ViewModels
         public DateTime ValidUntil => GetNextWeekday(DateTime.Today);
         public string ValidUntilText => ValidUntil.ToString("yyyy/MM/dd（ddd）");
         public ObservableCollection<string> StrategyOptions { get; }
+        public ObservableCollection<string> HoldingPeriodOptions { get; }
 
         public string SelectedStrategy
         {
@@ -78,6 +87,18 @@ namespace StockTracker.ViewModels
                 _selectedStrategy = normalized;
                 OnPropertyChanged();
                 ApplyStrategy();
+            }
+        }
+
+        public string SelectedHoldingPeriod
+        {
+            get => _selectedHoldingPeriod;
+            set
+            {
+                var normalized = string.IsNullOrWhiteSpace(value) ? HoldingPeriodOptions[0] : value;
+                if (_selectedHoldingPeriod == normalized) return;
+                _selectedHoldingPeriod = normalized;
+                OnPropertyChanged();
             }
         }
 
@@ -168,7 +189,7 @@ namespace StockTracker.ViewModels
             ? "請輸入單筆最大可承受損失"
             : SuggestedShares <= 0
                 ? "風險金額不足以買進一股"
-                : $"{SuggestedShares:N0} 股（約 {SuggestedShares / 1000d:F2} 張）";
+                : $"{SuggestedShares:N0} 股（約 {SuggestedShares / 1000d:F2} 張；未含交易成本與跳空風險）";
         public string QualitySummary => $"分數 {Score}／風險 {RiskScore}；{InstitutionalLeadership}，外資 {ForeignSensitivity}／投信 {TrustSensitivity}";
         public ICommand ApplyStrategyCommand { get; }
         public ICommand SavePlanCommand { get; }
@@ -176,43 +197,18 @@ namespace StockTracker.ViewModels
 
         private void ApplyStrategy()
         {
-            if (_priceStructure == null || !_priceStructure.HasSufficientData)
-            {
-                ClearPricePlan("日 K 結構資料不足，請切換或補足日 K 後再建立計畫；你仍可手動填寫價格。" );
-                return;
-            }
-
-            var primarySupport = _priceStructure.Supports.ElementAtOrDefault(0);
-            var firstResistance = _priceStructure.Resistances.ElementAtOrDefault(0);
-            var secondResistance = _priceStructure.Resistances.ElementAtOrDefault(1);
-            var thirdResistance = _priceStructure.Resistances.ElementAtOrDefault(2);
-            if (primarySupport == null || firstResistance == null)
-            {
-                ClearPricePlan("目前找不到足夠的支撐或壓力區，請先手動判讀，不自動預填交易價格。" );
-                return;
-            }
-
+            _proposal = TradePlanCalculator.Create(_priceStructure, LatestPrice, SelectedStrategy);
             _isApplyingDefaults = true;
-            if (SelectedStrategy == "拉回買進")
-            {
-                EntryLower = primarySupport.Low;
-                EntryUpper = primarySupport.High;
-                StopLoss = PriceStructureAnalyzer.RoundToTick(primarySupport.Low - GetZoneBuffer(primarySupport), false);
-                TargetOne = TargetBelowResistance(firstResistance);
-                TargetTwo = TargetBelowResistance(secondResistance);
-                CancelCondition = "僅在支撐區內止跌、隔日再突破反彈 K 高點時考慮；若收盤跌破支撐區下緣，取消買進。";
-            }
-            else
-            {
-                EntryLower = PriceStructureAnalyzer.RoundToTick(firstResistance.High + PriceStructureAnalyzer.GetPriceTick(firstResistance.High), true);
-                EntryUpper = PriceStructureAnalyzer.RoundToTick(EntryLower + Math.Max(_priceStructure.Atr14 * 0.25m, PriceStructureAnalyzer.GetPriceTick(EntryLower) * 2m), true);
-                StopLoss = PriceStructureAnalyzer.RoundToTick(firstResistance.Low - GetZoneBuffer(firstResistance), false);
-                TargetOne = TargetBelowResistance(secondResistance);
-                TargetTwo = TargetBelowResistance(thirdResistance);
-                CancelCondition = "只在壓力區上緣有效突破後考慮；若突破後收盤回到壓力區內，視為假突破，取消或退出計畫。";
-            }
+            EntryLower = _proposal.EntryLower;
+            EntryUpper = _proposal.EntryUpper;
+            StopLoss = _proposal.StopLoss;
+            TargetOne = _proposal.TargetOne;
+            TargetTwo = _proposal.TargetTwo;
             _isApplyingDefaults = false;
-
+            CancelCondition = _proposal.CancelCondition;
+            StatusText = _proposal.Status;
+            OnPropertyChanged(nameof(PlanStructureText));
+            OnPropertyChanged(nameof(ReferencePriceText));
             RecalculateSizingAndValidation();
         }
 
@@ -228,18 +224,6 @@ namespace StockTracker.ViewModels
             CancelCondition = "尚未產生結構化條件；若自行輸入價格，請自行確認支撐區下緣與壓力區上緣。";
             StatusText = message;
             RecalculateSizingAndValidation();
-        }
-
-        private decimal GetZoneBuffer(PriceStructureZone zone)
-        {
-            var zoneWidth = zone == null ? 0m : Math.Max(0m, zone.High - zone.Low);
-            return Math.Max(PriceStructureAnalyzer.GetPriceTick(Math.Max(0.01m, LatestPrice)), Math.Max(_priceStructure?.Atr14 ?? 0m, zoneWidth) * 0.15m);
-        }
-
-        private decimal TargetBelowResistance(PriceStructureZone zone)
-        {
-            if (zone == null) return 0m;
-            return PriceStructureAnalyzer.RoundToTick(zone.Low - GetZoneBuffer(zone), false);
         }
 
         private void RecalculateTargetsAndSizing()
@@ -261,6 +245,12 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(SuggestedShares));
             OnPropertyChanged(nameof(SuggestedSharesText));
 
+            if ((_proposal == null || !_proposal.IsAvailable) && SelectedStrategy != TradePlanCalculator.Manual)
+            {
+                StatusText = _proposal?.Status ?? "尚未建立可用交易情境。";
+                return;
+            }
+
             if (EntryLower <= 0 || StopLoss <= 0 || StopLoss >= EntryLower)
             {
                 return;
@@ -280,7 +270,7 @@ namespace StockTracker.ViewModels
 
             if (TargetTwo <= TargetOne)
             {
-                StatusText = "尚未找到第二層壓力；可先以第一層壓力作為分段停利，剩餘部位等待後續結構確認。";
+                StatusText = "第二個壓力目標結構不足；可先以第一個壓力作為分段減碼，剩餘部位不預設價格。";
                 return;
             }
 
@@ -289,7 +279,7 @@ namespace StockTracker.ViewModels
 
         private void SavePlan()
         {
-            if (EntryLower <= 0 || EntryUpper < EntryLower || StopLoss <= 0 || StopLoss >= EntryLower || TargetOne <= EntryLower || TargetTwo <= TargetOne)
+            if (EntryLower <= 0 || EntryUpper < EntryLower || StopLoss <= 0 || StopLoss >= EntryLower || TargetOne <= EntryLower)
             {
                 StatusText = "請確認買入區、停損與兩個目標價的價格順序。";
                 return;
@@ -300,6 +290,7 @@ namespace StockTracker.ViewModels
                 Symbol = Symbol,
                 Name = Name,
                 Strategy = SelectedStrategy,
+                HoldingPeriod = SelectedHoldingPeriod,
                 EntryLower = EntryLower,
                 EntryUpper = EntryUpper,
                 StopLoss = StopLoss,
@@ -330,7 +321,7 @@ namespace StockTracker.ViewModels
 
         private string BuildMemo()
         {
-            return $"【手動交易計畫｜非下單】\n{Symbol} {Name}\n策略：{SelectedStrategy}（有效至 {ValidUntil:yyyy/MM/dd}）\n可買區：{EntryLower:F2} ～ {EntryUpper:F2}\n停損：{StopLoss:F2}\n目標一：{TargetOne:F2}（{RewardRiskOneText}）\n目標二：{TargetTwo:F2}（{RewardRiskTwoText}）\n{CancelCondition}\n建議股數：{SuggestedSharesText}\n備註：{Notes}";
+            return $"【手動交易計畫｜非下單】\n{Symbol} {Name}\n策略：{SelectedStrategy}／{SelectedHoldingPeriod}（有效至 {ValidUntil:yyyy/MM/dd}）\n結構：{PlanStructureText}\n可買區：{EntryLower:F2} ～ {EntryUpper:F2}\n結構失效價：{StopLoss:F2}\n目標一：{TargetOne:F2}（{RewardRiskOneText}）\n目標二：{(TargetTwo > 0m ? TargetTwo.ToString("F2") : "結構不足")}（{RewardRiskTwoText}）\n{CancelCondition}\n建議股數：{SuggestedSharesText}\n備註：{Notes}";
         }
 
         private string FormatRewardRisk(decimal target)
