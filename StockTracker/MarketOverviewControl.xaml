@@ -23,6 +23,19 @@
         <Border Padding="10" Background="#172437" CornerRadius="5">
             <StackPanel><TextBlock Text="今日摘要" FontWeight="Bold" Margin="0,0,0,5"/><TextBlock Text="{Binding MarketSummary, Mode=OneWay}" TextWrapping="Wrap" LineHeight="21"/></StackPanel>
         </Border>
+        <Border Padding="10" Background="#161b22" BorderBrush="#30363d" BorderThickness="1" CornerRadius="5" Margin="0,10,0,0">
+            <StackPanel>
+                <WrapPanel><TextBlock Text="市場傾向（非下單建議）" FontWeight="Bold" Margin="0,0,12,0"/><TextBlock Text="{Binding MarketRegime.Title}" FontSize="18" FontWeight="Bold" Foreground="{Binding MarketRegime.ToneBrush}"/><TextBlock Text="{Binding MarketRegime.SignalCountText}" Style="{StaticResource MetaText}" Margin="10,4,0,0"/></WrapPanel>
+                <TextBlock Text="{Binding MarketRegime.ActionHint}" TextWrapping="Wrap" Margin="0,7,0,4"/>
+                <UniformGrid Columns="4">
+                    <StackPanel Margin="0,5,8,0"><TextBlock Text="近五日指數趨勢" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding MarketRegime.IndexSignal}" TextWrapping="Wrap" FontSize="11"/></StackPanel>
+                    <StackPanel Margin="0,5,8,0"><TextBlock Text="市場廣度" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding MarketRegime.BreadthSignal}" TextWrapping="Wrap" FontSize="11"/></StackPanel>
+                    <StackPanel Margin="0,5,8,0"><TextBlock Text="三大法人" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding MarketRegime.InstitutionalSignal}" TextWrapping="Wrap" FontSize="11"/></StackPanel>
+                    <StackPanel Margin="0,5,0,0"><TextBlock Text="臺指 P/C 未平倉" Style="{StaticResource MetaText}"/><TextBlock Text="{Binding MarketRegime.PutCallSignal}" TextWrapping="Wrap" FontSize="11"/></StackPanel>
+                </UniformGrid>
+                <TextBlock Text="{Binding MarketRegime.MarginSignal, StringFormat=融資：{0}}" Style="{StaticResource MetaText}" Margin="0,7,0,0"/>
+            </StackPanel>
+        </Border>
         <TextBlock Text="指數與成交" Style="{StaticResource SectionTitle}"/>
         <TextBlock Text="{Binding MarketOverview.Trading.UpdatedText, Mode=OneWay}" Style="{StaticResource MetaText}"/>
         <ItemsControl ItemsSource="{Binding MarketOverview.Trading.Markets}">

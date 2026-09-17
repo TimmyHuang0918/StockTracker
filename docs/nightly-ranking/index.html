@@ -103,6 +103,7 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
 <style>
                 .market-overview{display:block;grid-template-columns:none;gap:0}.market-overview h3{margin:0 0 10px}.market-overview h4{margin:18px 0 10px}.market-overview .overview-meta{color:var(--muted,#8b949e);font-size:12px;line-height:1.6}
                 .market-overview .overview-lead{white-space:pre-line;line-height:1.85;padding:14px 16px;background:rgba(56,139,253,.07);border-left:3px solid #58a6ff;border-radius:6px;margin:12px 0}
+                .market-overview .market-stance{margin:12px 0;padding:14px 16px;border:1px solid var(--border,#30363d);border-radius:8px;background:rgba(139,148,158,.04)}.market-overview .market-stance-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}.market-overview .market-stance-title{font-size:21px;font-weight:700}.market-overview .market-stance-signals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}.market-overview .market-stance-signals span{font-size:11px;color:var(--muted,#8b949e)}.market-overview .market-stance-signals b{display:block;font-size:12px;color:inherit;margin-top:3px;line-height:1.45}
                 .market-overview .overview-markets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
                 .market-overview .overview-market{padding:16px;background:rgba(139,148,158,.04);border:1px solid var(--border,#30363d);border-radius:10px;min-width:0}
                 .market-overview .overview-index{font-size:24px;font-weight:700;margin:8px 0}.market-overview .overview-index small{font-size:16px;margin-left:10px}
@@ -112,20 +113,21 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
                 .market-overview .overview-quantity-tabs{display:flex;gap:6px;margin:8px 0}.market-overview .overview-quantity-tabs button{background:transparent;border:1px solid var(--border,#30363d);color:inherit;border-radius:6px;padding:7px 18px;cursor:pointer}.market-overview .overview-quantity-tabs button[aria-pressed=true]{background:#1f6feb;color:white}
                 .market-overview .rise{color:var(--rise,#ff453a)}.market-overview .fall{color:var(--fall,#32d74b)}.market-overview .flat{color:var(--muted,#8b949e)}
                 .market-overview details{margin-top:12px}.market-overview details p{overflow-wrap:anywhere}.market-overview a{color:#58a6ff}
-                @media(max-width:700px){.market-overview .overview-markets{grid-template-columns:1fr}.market-overview .overview-index{font-size:22px}}
+                @media(max-width:700px){.market-overview .overview-markets,.market-overview .market-stance-signals{grid-template-columns:1fr}.market-overview .overview-index{font-size:22px}}
                 </style>
 <h3>全市場總覽</h3><div class='overview-meta'>今日摘要 → 指數與成交、市場廣度 → 近五日量價與資金明細</div>
 <div class='overview-lead'>上市 &#183; 加權指數（09/17）：指數上漲，成交較前一交易日增加；低於前 20 日平均。
 上櫃 &#183; 櫃買指數（09/17）：指數下跌，成交較前一交易日增加；達到或高於前 20 日平均。
 資料日期：2026-09-17 &#183; 筆數：2339，上漲 1,391／下跌 698／平盤 250 檔。
 法人 09/11–09/17（5 日已公布）合計 -2927.5 億。</div>
-<h4>指數與成交</h4><div class='overview-meta'>成交資料擷取：2026/09/17 23:13（台北時間）</div><div class='overview-markets'>
+<section class='market-stance' aria-label='市場傾向'><div class='market-stance-head'><strong>市場傾向（非下單建議）</strong><span class='market-stance-title rise'>偏多觀察</span><span class='overview-meta'>偏多 3 項／偏空 1 項</span></div><p class='overview-meta'>可保留偏多計畫，但要等支撐止穩或突破確認。</p><div class='market-stance-signals'><span>近五日指數趨勢<b>上市 &#183; 加權指數近五日 +0.2%；上櫃 &#183; 櫃買指數近五日 +0.7%</b></span><span>市場廣度<b>上漲比 67%：漲勢擴散</b></span><span>三大法人<b>-2,927.5 億：賣超</b></span><span>臺指 P/C 未平倉<b>76.5%：買方相對積極</b></span></div><p class='overview-meta'>融資： +15.3 億：槓桿升溫（不單獨判定方向）</p></section>
+<h4>指數與成交</h4><div class='overview-meta'>成交資料擷取：2026/09/18 00:10（台北時間）</div><div class='overview-markets'>
 <article class='overview-market'><strong>上市 &#183; 加權指數</strong><div class='overview-meta'>2026/09/17 &#183; 盤後資料</div>
 <div class='overview-index'>46,288.00<small class='rise'>+1.0%</small></div><dl>
-<div><dt>成交金額</dt><dd class=''>8,666.2 億</dd></div><div><dt>成交量</dt><dd class=''>1,071.03 萬張</dd></div><div><dt>較前一交易日成交金額</dt><dd class='rise'>+28.2%</dd></div><div><dt>相對前 20 日平均成交金額</dt><dd class=''>1.00 倍</dd></div></dl><div class='overview-meta'>指數上漲，成交較前一交易日增加；低於前 20 日平均。<br>盤後資料</div></article>
+<div><dt>成交金額</dt><dd class=''>8,666.2 億</dd></div><div><dt>成交量</dt><dd class=''>1,071.03 萬張</dd></div><div><dt>較前一交易日成交金額</dt><dd class='rise'>+28.2%</dd></div><div><dt>相對前 20 日平均成交金額</dt><dd class=''>1.00 倍</dd></div></dl><div class='overview-meta'>指數上漲，成交較前一交易日增加；低於前 20 日平均。<br>最新可用資料：2026/09/17；當日資料尚未公布或非交易日。</div></article>
 <article class='overview-market'><strong>上櫃 &#183; 櫃買指數</strong><div class='overview-meta'>2026/09/17 &#183; 盤後資料</div>
 <div class='overview-index'>398.17<small class='fall'>-0.3%</small></div><dl>
-<div><dt>成交金額</dt><dd class=''>2,632.4 億</dd></div><div><dt>成交量</dt><dd class=''>101.83 萬張</dd></div><div><dt>較前一交易日成交金額</dt><dd class='rise'>+43.3%</dd></div><div><dt>相對前 20 日平均成交金額</dt><dd class=''>1.22 倍</dd></div></dl><div class='overview-meta'>指數下跌，成交較前一交易日增加；達到或高於前 20 日平均。<br>盤後資料</div></article>
+<div><dt>成交金額</dt><dd class=''>2,632.4 億</dd></div><div><dt>成交量</dt><dd class=''>101.83 萬張</dd></div><div><dt>較前一交易日成交金額</dt><dd class='rise'>+43.3%</dd></div><div><dt>相對前 20 日平均成交金額</dt><dd class=''>1.22 倍</dd></div></dl><div class='overview-meta'>指數下跌，成交較前一交易日增加；達到或高於前 20 日平均。<br>最新可用資料：2026/09/17；當日資料尚未公布或非交易日。</div></article>
 </div><h4>市場廣度</h4><div class='overview-meta'>資料日期：2026-09-17 &#183; 筆數：2339；本次成功載入 2,339 檔，上漲比例不含平盤。</div>
 <div class='overview-breadth'><span>上漲<b class='rise'>1,391</b></span><span>下跌<b class='fall'>698</b></span><span>平盤<b>250</b></span><span>上漲比例<b>66.6%</b></span><span>平均漲跌<b class='rise'>+0.6%</b></span></div>
 <h4>近五個交易日 · 量價明細</h4><div class='overview-meta'>逐日顯示含最新當日；20 日基準不含該日。當日累計尚未完整時，整日比較顯示 —。</div><div class='overview-quantity-tabs' aria-label='量價市場切換'>
@@ -156,6 +158,9 @@ th{background:#1f242c;color:#fff;font-weight:600;cursor:pointer;position:sticky;
 <p class='overview-meta'><a href='https://www.twse.com.tw/zh/trading/historical/fmtqik.html' target='_blank' rel='noopener noreferrer'>上市 &#183; 加權指數官方來源</a>：當日統計資訊含大盤、零股、盤後定價及鉅額交易，不含拍賣、標購。 外幣成交值係以本公司當日下午3時30分公告匯率換算後加入成交金額。公告匯率請參考本公司首頁&gt;產品與服務&gt;交易系統&gt;雙幣ETF專區&gt;代號對應及每日公告匯率。</p>
 <p class='overview-meta'><a href='https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_index/st41_result.php?l=zh-tw&amp;o=json' target='_blank' rel='noopener noreferrer'>上櫃 &#183; 櫃買指數官方來源</a>：上櫃股票：等價、零股、盤後定價交易；不含鉅額。</p>
 </details></section><script>(function(){const host=document.getElementById('fullMarketOverview');if(!host)return;host.querySelectorAll('[data-market-tab]').forEach(button=>button.addEventListener('click',()=>{host.querySelectorAll('[data-market-tab]').forEach(b=>b.setAttribute('aria-pressed',b===button?'true':'false'));host.querySelectorAll('[data-market-table]').forEach(t=>t.hidden=t.dataset.marketTable!==button.dataset.marketTab);}));})();</script>
+
+
+
 
 
 

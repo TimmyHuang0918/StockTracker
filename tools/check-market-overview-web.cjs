@@ -39,6 +39,7 @@ assert.ok(html.indexOf("id='marketGroupCards'") < html.indexOf("id='searchInput'
 assert.ok(!html.includes("<section class='panel breadth-card'"), 'breadth not duplicated');
 assert.ok(overview[0].includes('@media(max-width:700px)'), 'narrow layout rule');
 assert.ok(overview[0].includes('.market-overview{display:block'), 'new overview overrides legacy grid layout');
+assert.ok(overview[0].includes('市場傾向（非下單建議）'), 'market stance is present');
 assert.ok(overview[0].includes('overflow-x:auto'), 'tables scroll horizontally');
 assert.ok(!overview[1].includes('fetch('), 'overview does not fetch or wait at page load');
 for (const match of scripts.filter(m => /\bsrc=/.test(m[1]))) {

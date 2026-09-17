@@ -88,6 +88,9 @@ public static class MarketOverviewChecks
         Check(new MarketOverviewDay { ForeignNet = 100 }.HasInstitutional, "legacy cache availability");
         var f = Fixture();
         var html = MarketOverviewHtmlRenderer.Render(f.MarketOverview, f.MarketBreadth);
+        var regime = RankingViewModel.CreateMarketRegime(f.MarketBreadth, f.MarketOverview);
+        Check(regime.Title == "偏多觀察" && regime.IndexSignal.Contains("近五日"), "market stance combines index, breadth and funding signals");
+        Check(html.Contains("市場傾向（非下單建議）") && html.Contains(regime.ActionHint), "market stance rendered without order action");
         Check(Regex.Matches(html, "data-market-table='").Count == 2, "both market tables rendered");
         Check(html.Contains("（+1.0 億）") && html.Contains("（-100 張）"), "credit parentheses and signed changes retained");
         Check(html.Contains("—") && html.Contains("rise") && html.Contains("fall"), "missing values and sign colors");
@@ -145,6 +148,7 @@ public static class MarketOverviewChecks
         listener.Flush(); PresentationTraceSources.DataBindingSource.Listeners.Remove(listener);
         Check(errors.ToString().Length == 0, "WPF layout and binding " + filename + ": " + errors);
         Check(Descendants(root).OfType<DataGrid>().Count() >= 2, "desktop quantity and funding grids created");
+        Check(Descendants(root).OfType<TextBlock>().Any(x => x.Text == fixture.MarketRegime.Title), "desktop market stance is visible");
     }
     private static IEnumerable<DependencyObject> Descendants(DependencyObject parent)
     {
@@ -244,6 +248,7 @@ public sealed class OverviewFixture
     public MarketOverviewSnapshot MarketOverview { get; set; }
     public MarketBreadthSnapshot MarketBreadth { get; set; }
     public string MarketSummary => MarketOverviewHtmlRenderer.Summarize(MarketOverview,MarketBreadth);
+    public MarketRegimeSnapshot MarketRegime => RankingViewModel.CreateMarketRegime(MarketBreadth, MarketOverview);
     public string SelectedMarketGroup => "";
     public ICommand ClearMarketGroupFilterCommand => null;
     public ICommand FilterMarketGroupCommand => null;

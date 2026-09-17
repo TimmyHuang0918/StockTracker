@@ -30,6 +30,7 @@ namespace StockTracker.Services
             html.AppendLine(@"<style>
                 .market-overview{display:block;grid-template-columns:none;gap:0}.market-overview h3{margin:0 0 10px}.market-overview h4{margin:18px 0 10px}.market-overview .overview-meta{color:var(--muted,#8b949e);font-size:12px;line-height:1.6}
                 .market-overview .overview-lead{white-space:pre-line;line-height:1.85;padding:14px 16px;background:rgba(56,139,253,.07);border-left:3px solid #58a6ff;border-radius:6px;margin:12px 0}
+                .market-overview .market-stance{margin:12px 0;padding:14px 16px;border:1px solid var(--border,#30363d);border-radius:8px;background:rgba(139,148,158,.04)}.market-overview .market-stance-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}.market-overview .market-stance-title{font-size:21px;font-weight:700}.market-overview .market-stance-signals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}.market-overview .market-stance-signals span{font-size:11px;color:var(--muted,#8b949e)}.market-overview .market-stance-signals b{display:block;font-size:12px;color:inherit;margin-top:3px;line-height:1.45}
                 .market-overview .overview-markets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
                 .market-overview .overview-market{padding:16px;background:rgba(139,148,158,.04);border:1px solid var(--border,#30363d);border-radius:10px;min-width:0}
                 .market-overview .overview-index{font-size:24px;font-weight:700;margin:8px 0}.market-overview .overview-index small{font-size:16px;margin-left:10px}
@@ -39,10 +40,12 @@ namespace StockTracker.Services
                 .market-overview .overview-quantity-tabs{display:flex;gap:6px;margin:8px 0}.market-overview .overview-quantity-tabs button{background:transparent;border:1px solid var(--border,#30363d);color:inherit;border-radius:6px;padding:7px 18px;cursor:pointer}.market-overview .overview-quantity-tabs button[aria-pressed=true]{background:#1f6feb;color:white}
                 .market-overview .rise{color:var(--rise,#ff453a)}.market-overview .fall{color:var(--fall,#32d74b)}.market-overview .flat{color:var(--muted,#8b949e)}
                 .market-overview details{margin-top:12px}.market-overview details p{overflow-wrap:anywhere}.market-overview a{color:#58a6ff}
-                @media(max-width:700px){.market-overview .overview-markets{grid-template-columns:1fr}.market-overview .overview-index{font-size:22px}}
+                @media(max-width:700px){.market-overview .overview-markets,.market-overview .market-stance-signals{grid-template-columns:1fr}.market-overview .overview-index{font-size:22px}}
                 </style>");
             html.AppendLine("<h3>全市場總覽</h3><div class='overview-meta'>今日摘要 → 指數與成交、市場廣度 → 近五日量價與資金明細</div>");
             html.AppendLine("<div class='overview-lead'>" + E(Summarize(overview, breadth)) + "</div>");
+            var regime = RankingViewModel.CreateMarketRegime(breadth, overview);
+            html.AppendLine("<section class='market-stance' aria-label='市場傾向'><div class='market-stance-head'><strong>市場傾向（非下單建議）</strong><span class='market-stance-title " + Color(regime.PositiveSignals - regime.NegativeSignals) + "'>" + E(regime.Title) + "</span><span class='overview-meta'>" + E(regime.SignalCountText) + "</span></div><p class='overview-meta'>" + E(regime.ActionHint) + "</p><div class='market-stance-signals'><span>近五日指數趨勢<b>" + E(regime.IndexSignal) + "</b></span><span>市場廣度<b>" + E(regime.BreadthSignal) + "</b></span><span>三大法人<b>" + E(regime.InstitutionalSignal) + "</b></span><span>臺指 P/C 未平倉<b>" + E(regime.PutCallSignal) + "</b></span></div><p class='overview-meta'>融資： " + E(regime.MarginSignal) + "</p></section>");
             html.AppendLine("<h4>指數與成交</h4><div class='overview-meta'>" + E(overview.Trading?.UpdatedText ?? "成交資料待更新") + "</div><div class='overview-markets'>");
             var markets = overview.Trading?.Markets ?? new System.Collections.Generic.List<MarketTradingSeries>();
             foreach (var m in markets)

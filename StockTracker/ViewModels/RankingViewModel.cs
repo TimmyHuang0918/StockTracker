@@ -160,10 +160,12 @@ namespace StockTracker.ViewModels
         public string Summary { get; set; } = "完成全市場掃描後，會依市場廣度、法人、融資與 P/C 顯示判讀。";
         public int PositiveSignals { get; set; }
         public int NegativeSignals { get; set; }
+        public string IndexSignal { get; set; } = "指數趨勢尚無資料";
         public string BreadthSignal { get; set; } = "市場廣度尚無資料";
         public string InstitutionalSignal { get; set; } = "法人資料尚無資料";
         public string MarginSignal { get; set; } = "融資資料尚無資料";
         public string PutCallSignal { get; set; } = "P/C 未平倉尚無資料";
+        public string ActionHint { get; set; } = "資料不足時，不建立方向性判讀。";
 
         public System.Windows.Media.Brush ToneBrush =>
             PositiveSignals > NegativeSignals ? System.Windows.Media.Brushes.IndianRed :
@@ -3943,7 +3945,7 @@ namespace StockTracker.ViewModels
             };
         }
 
-        private static MarketRegimeSnapshot CreateMarketRegime(
+        public static MarketRegimeSnapshot CreateMarketRegime(
             MarketBreadthSnapshot breadth,
             MarketOverviewSnapshot overview)
         {
@@ -3954,6 +3956,26 @@ namespace StockTracker.ViewModels
 
             var result = new MarketRegimeSnapshot();
             var hasOverview = overview.TradeDate != DateTime.MinValue;
+            var indexMarkets = (overview.Trading?.Markets ?? new List<MarketTradingSeries>())
+                .Where(m => m.Days != null && m.Days.Count >= 2)
+                .Select(m => new
+                {
+                    m.Name,
+                    Change = (m.Days.First().IndexClose / m.Days.Last().IndexClose - 1m) * 100m
+                })
+                .ToList();
+            if (indexMarkets.Count > 0)
+            {
+                var rising = indexMarkets.Count(x => x.Change > 0m);
+                var falling = indexMarkets.Count(x => x.Change < 0m);
+                result.IndexSignal = string.Join("；", indexMarkets.Select(x => $"{x.Name}近五日 {x.Change:+0.0;-0.0;0.0}%"));
+                if (rising == indexMarkets.Count)
+                    result.PositiveSignals++;
+                else if (falling == indexMarkets.Count)
+                    result.NegativeSignals++;
+                else
+                    result.IndexSignal += "：漲跌分歧";
+            }
 
             if (breadth.TotalCount > 0)
             {
@@ -3992,13 +4014,11 @@ namespace StockTracker.ViewModels
 
                 if (overview.MarginAmountChange5DThousand > 0)
                 {
-                    result.PositiveSignals++;
-                    result.MarginSignal = $"{FormatRegimeCreditMoney(overview.MarginAmountChange5DThousand)}：槓桿升溫";
+                    result.MarginSignal = $"{FormatRegimeCreditMoney(overview.MarginAmountChange5DThousand)}：槓桿升溫（不單獨判定方向）";
                 }
                 else if (overview.MarginAmountChange5DThousand < 0)
                 {
-                    result.NegativeSignals++;
-                    result.MarginSignal = $"{FormatRegimeCreditMoney(overview.MarginAmountChange5DThousand)}：槓桿收斂";
+                    result.MarginSignal = $"{FormatRegimeCreditMoney(overview.MarginAmountChange5DThousand)}：槓桿收斂（不單獨判定方向）";
                 }
                 else
                 {
@@ -4028,12 +4048,17 @@ namespace StockTracker.ViewModels
             var balance = result.PositiveSignals - result.NegativeSignals;
             result.Title = !hasOverview && breadth.TotalCount == 0
                 ? "資料待更新"
-                : balance >= 2 ? "偏多延續"
-                : balance == 1 ? "偏多觀察"
-                : balance <= -2 ? "防守觀察"
-                : balance == -1 ? "轉弱留意"
-                : "盤整觀察";
-            result.Summary = "依市場廣度、近五日法人與融資、臺指 P/C 未平倉綜合判讀；不是加權指數預測。";
+                : balance >= 3 ? "看多"
+                : balance >= 1 ? "偏多觀察"
+                : balance <= -3 ? "看空／防守"
+                : balance <= -1 ? "偏空觀察"
+                : "中性觀望";
+            result.ActionHint = balance >= 3 ? "以順勢條件為主：只觀察拉回承接或突破確認，仍不追高。"
+                : balance >= 1 ? "可保留偏多計畫，但要等支撐止穩或突破確認。"
+                : balance <= -3 ? "優先防守：降低新開倉意願，等待結構與廣度轉強。"
+                : balance <= -1 ? "偏空環境：新計畫從嚴，只保留風險報酬足夠的個股。"
+                : "多空訊號互抵：降低部位或等待方向與量價確認。";
+            result.Summary = "依近五日指數趨勢、市場廣度、法人與臺指 P/C 綜合判讀；融資僅顯示槓桿狀態，非下單指示。";
             return result;
         }
 
