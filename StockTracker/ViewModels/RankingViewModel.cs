@@ -2987,6 +2987,48 @@ namespace StockTracker.ViewModels
                     }
                 }
 
+                ProgressText = "檢查官方盤後日行情是否需要補值...";
+                var officialDailySnapshot = await new DailyPriceFetcher().FetchLatestCompleteCandlesAsync(scanStartedDate);
+                var officialCandlesAdded = 0;
+                if (officialDailySnapshot.TradeDate != DateTime.MinValue && officialDailySnapshot.CandlesBySymbol.Count > 0)
+                {
+                    foreach (var entry in symbolDataMap)
+                    {
+                        CandleData officialCandle;
+                        if (!officialDailySnapshot.CandlesBySymbol.TryGetValue(entry.Key, out officialCandle) || officialCandle == null)
+                        {
+                            continue;
+                        }
+
+                        var candles = entry.Value.Candles;
+                        var latestSymbolDate = candles
+                            .Select(x => x.Time.Date)
+                            .DefaultIfEmpty(DateTime.MinValue)
+                            .Max();
+                        if (latestSymbolDate >= officialDailySnapshot.TradeDate)
+                        {
+                            continue;
+                        }
+
+                        candles.Add(new CandleData
+                        {
+                            Time = officialCandle.Time,
+                            Open = officialCandle.Open,
+                            High = officialCandle.High,
+                            Low = officialCandle.Low,
+                            Close = officialCandle.Close,
+                            Volume = officialCandle.Volume
+                        });
+                        officialCandlesAdded++;
+                    }
+                }
+
+                var officialCandleStatus = officialDailySnapshot.TradeDate == DateTime.MinValue
+                    ? officialDailySnapshot.Status
+                    : officialCandlesAdded > 0
+                        ? $"官方盤後日行情 {officialDailySnapshot.TradeDate:yyyy/MM/dd} 已補入 {officialCandlesAdded:N0} 檔（{officialDailySnapshot.Status}）"
+                        : $"群益日 K 已含官方最新交易日 {officialDailySnapshot.TradeDate:yyyy/MM/dd}（{officialDailySnapshot.Status}）";
+
                 var latestHistoricalDate = symbolDataMap.Values
                     .SelectMany(x => x.Candles ?? new List<CandleData>())
                     .Select(x => x.Time.Date)
@@ -3003,7 +3045,7 @@ namespace StockTracker.ViewModels
                 var effectiveScoreDate = ResolveScanDate(scanStartedDate, latestDataDate);
 
                 // 第二階段：多執行緒計算推薦指標
-                ProgressText = "分析K線資料計算分數中...";
+                ProgressText = "分析K線資料計算分數中... " + officialCandleStatus;
                 await System.Windows.Threading.Dispatcher.Yield();
 
                 int analyzeChecked = 0;
@@ -3214,7 +3256,7 @@ namespace StockTracker.ViewModels
                 SaveRankingToDb(results);
                 _mainViewModel?.UpdateLatestMarketScan(results);
 
-                ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票";
+                ProgressText = $"分析完成，找到 {RankedStocks.Count} 檔優質股票。{officialCandleStatus}";
             }
             catch (Exception ex)
             {
@@ -3229,28 +3271,11 @@ namespace StockTracker.ViewModels
 
         private static DateTime ResolveScanDate(DateTime scanStartedDate, DateTime latestHistoricalDate)
         {
-            if (scanStartedDate.TimeOfDay < TimeSpan.FromHours(9))
-            {
-                var previousWeekday = scanStartedDate.Date.AddDays(-1);
-                while (previousWeekday.DayOfWeek == DayOfWeek.Saturday ||
-                       previousWeekday.DayOfWeek == DayOfWeek.Sunday)
-                {
-                    previousWeekday = previousWeekday.AddDays(-1);
-                }
-
-                // 若日 K 顯示的日期只比前一平日早一天，視為資料延遲，
-                // 仍以最近平日作為手動凌晨掃描的有效交易日；較長落差則保留
-                // 日 K 日期，以涵蓋連續假日。
-                if (latestHistoricalDate == DateTime.MinValue ||
-                    latestHistoricalDate.Date >= previousWeekday.AddDays(-1))
-                {
-                    return previousWeekday;
-                }
-
-                return latestHistoricalDate.Date;
-            }
-
-            return scanStartedDate.Date;
+            // 分數日期必須對應實際用於運算的最後一根完整日 K；不可因跨過午夜
+            // 或盤中掃描而標記成尚未取得的交易日。
+            return latestHistoricalDate == DateTime.MinValue
+                ? scanStartedDate.Date
+                : latestHistoricalDate.Date;
         }
 
         private IReadOnlyDictionary<string, TdccLargeHolderMetric> SaveAndGetLargeHolderMetrics(TdccLargeHolderDataset dataset)
