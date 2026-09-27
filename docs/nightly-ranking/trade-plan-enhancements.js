@@ -4,6 +4,12 @@
   const storageKey = 'stockTrackerTradePlans.v1';
   const byId = id => document.getElementById(id);
   let activeStock = null;
+  const pressureActions = {
+    defensive: '保守：第一壓力減碼 50%',
+    balanced: '平衡：第一壓力減碼 1/3',
+    trend: '趨勢：不減碼，改用結構移動停損',
+    custom: '自訂：依備註手動處理'
+  };
 
   function readPlans() {
     try {
@@ -60,6 +66,53 @@
 
   function formatPrice(value) {
     return Number(value || 0).toFixed(2);
+  }
+
+  function pressureActionText(action) {
+    return pressureActions[action] || pressureActions.balanced;
+  }
+
+  function pressureActionGuidance(plan) {
+    if (!(plan.targetOne > 0)) return '尚未有有效第一壓力區；請先確認價格結構。';
+    switch (plan.firstPressureAction || 'balanced') {
+      case 'defensive': return '到第一壓力區 ' + formatPrice(plan.targetOne) + ' 時，手動減碼 50%；剩餘部位再依結構重新確認。';
+      case 'trend': return '第一壓力區 ' + formatPrice(plan.targetOne) + ' 不預設減碼；僅在有效站穩後，才以新的支撐區上移失效價。';
+      case 'custom': return '第一壓力區 ' + formatPrice(plan.targetOne) + ' 的處理由你的備註決定，不預設減碼。';
+      default: return '到第一壓力區 ' + formatPrice(plan.targetOne) + ' 時，手動減碼約 1/3，觀察是否能站穩後再決定剩餘部位。';
+    }
+  }
+
+  function planMetrics(plan) {
+    const maxEntry = Math.max(plan.entryLower || 0, plan.entryUpper || 0);
+    const risk = maxEntry - (plan.stop || 0);
+    const riskRate = maxEntry > 0 && risk > 0 ? risk / maxEntry : 0;
+    return {
+      maxEntry,
+      risk,
+      riskRate,
+      rewardOne: risk > 0 ? ((plan.targetOne || 0) - maxEntry) / risk : 0,
+      rewardTwo: risk > 0 ? ((plan.targetTwo || 0) - maxEntry) / risk : 0
+    };
+  }
+
+  function tomorrowDecision(plan) {
+    if (plan.strategy === 'manual') {
+      return { title: '明日自行規劃', detail: '此模式不代替你判斷；請自行填寫進場、失效與壓力區處理規則。', color: '#ffa657' };
+    }
+    const metrics = planMetrics(plan);
+    if (!(plan.entryLower > 0 && plan.entryUpper >= plan.entryLower && plan.stop > 0 && plan.stop < plan.entryLower)) {
+      return { title: '明日不做', detail: '買入區或結構失效價不完整，先不要建立隔日操作。', color: '#ff7b72' };
+    }
+    if (metrics.riskRate > 0.06) {
+      return { title: '明日不做', detail: '以買入區上緣估算的結構風險超過 6%，等待更好的位置。', color: '#ff7b72' };
+    }
+    if (!(plan.targetOne > metrics.maxEntry) || metrics.rewardOne < 1.5) {
+      return { title: '明日不做', detail: '第一壓力區空間不足 1.5R，風報比不佳。', color: '#ff7b72' };
+    }
+    if (plan.strategy === 'pullback') {
+      return { title: '明日可做：等待拉回確認', detail: '僅在價格回到 ' + formatPrice(plan.entryLower) + ' ～ ' + formatPrice(plan.entryUpper) + '、未跌破 ' + formatPrice(plan.stop) + ' 後出現止穩時，才手動評估；高於買入區上緣不追價。', color: '#7ee787' };
+    }
+    return { title: '明日可做：等待突破確認', detail: '僅在價格突破壓力後進入 ' + formatPrice(plan.entryLower) + ' ～ ' + formatPrice(plan.entryUpper) + ' 時，才手動評估；高於買入區上緣不追價。', color: '#7ee787' };
   }
 
   function getZones(structure, name) {
@@ -123,8 +176,8 @@
     }
     plan.available = true;
     plan.initialStatus = plan.targetTwo > plan.targetOne
-      ? '可觀察：價格、失效價與目標皆由有效結構區推導，仍須由你確認盤中條件。'
-      : '可觀察：第一個壓力區可作分段減碼；第二個目標結構不足，不預設價格。';
+      ? '明日可做：條件成立才手動執行；價格、失效價與壓力區皆由有效結構推導。'
+      : '明日可做：條件成立才手動執行；第一壓力區的處理方式可自行選擇，第二個目標結構不足。';
     plan.structureText = buildStructureText(plan);
     return plan;
   }
@@ -169,7 +222,7 @@
       plan.stop = roundTick(zoneLow(support) - buffer, false);
       plan.targetOne = roundTick(zoneLow(resistance) - buffer, false);
       plan.targetTwo = plan.targetTwoResistance ? roundTick(zoneLow(plan.targetTwoResistance) - buffer, false) : 0;
-      plan.cancellation = '價格進入支撐區後，須止穩並重新站回區間中線或短線反彈高點；若跌破結構失效價，不承接。';
+      plan.cancellation = '明日僅在價格回到買入區、未跌破結構失效價後，出現止穩再手動評估；若開盤直接高過買入區上緣，不追價；若跌破失效價，取消計畫。';
     } else {
       const breakout = levels.resistances[0];
       if (!breakout) return emptyPlan(stock, strategy, quality, '找不到現價上方有效壓力區，突破計畫不成立。');
@@ -184,7 +237,7 @@
       plan.targetTwoResistance = targets[1];
       plan.targetOne = plan.targetOneResistance ? roundTick(zoneLow(plan.targetOneResistance) - buffer, false) : 0;
       plan.targetTwo = plan.targetTwoResistance ? roundTick(zoneLow(plan.targetTwoResistance) - buffer, false) : 0;
-      plan.cancellation = '僅在突破壓力區上緣後進入可進區時觀察；若收盤回到壓力區內或跳空過遠，取消計畫。';
+      plan.cancellation = '明日僅在價格突破壓力區上緣後、進入買入區時手動評估；若突破後收盤回到壓力區內，或開盤跳空高過買入區上緣，不追價並取消計畫。';
     }
     return validateStructurePlan(plan);
   }
@@ -196,13 +249,14 @@
     overlay.style.display = 'none';
     overlay.style.zIndex = '1100';
     overlay.innerHTML = `
-      <div class="modal-box" style="max-width:680px" role="dialog" aria-modal="true" aria-label="建立隔日交易計畫">
-        <div class="modal-header"><div><div style="font-size:20px;font-weight:700;color:#f0f6fc">建立隔日交易計畫</div><div id="tpStockTitle" class="muted" style="margin-top:4px"></div></div><button class="modal-close" type="button" id="tpClose" aria-label="關閉">✕</button></div>
+      <div class="modal-box" style="max-width:680px" role="dialog" aria-modal="true" aria-label="明日交易計畫">
+        <div class="modal-header"><div><div style="font-size:20px;font-weight:700;color:#f0f6fc">明日交易計畫</div><div id="tpStockTitle" class="muted" style="margin-top:4px"></div></div><button class="modal-close" type="button" id="tpClose" aria-label="關閉">✕</button></div>
         <div class="modal-body">
           <div style="border:1px solid #ffa657;background:rgba(255,166,87,.1);border-radius:7px;padding:10px 12px;color:#f0f6fc;font-size:12px;line-height:1.55;margin-bottom:14px">只會計算、儲存與複製交易備忘；不會連接券商、建立委託或自動下單。</div>
           <div class="detail-section"><div class="detail-section-title">策略與期限</div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">進場情境</div><select id="tpStrategy"><option value="pullback">拉回承接</option><option value="breakout">突破確認</option><option value="manual">手動規劃</option></select></div><div class="detail-item"><div class="detail-item-label">預計持有</div><select id="tpHoldingPeriod"><option value="短線：1～5 個交易日">短線：1～5 個交易日</option><option value="波段：1～4 週">波段：1～4 週</option></select></div><div class="detail-item"><div class="detail-item-label">有效期限</div><div class="detail-item-value" id="tpValidUntil"></div></div></div><div id="tpQuality" class="muted" style="font-size:12px;margin-top:9px;line-height:1.5"></div><div id="tpReference" class="muted" style="font-size:12px;margin-top:4px;line-height:1.5"></div><div id="tpStructure" class="reason-box" style="margin-top:9px;white-space:pre-line;font-size:12px"></div></div>
-          <div class="detail-section"><div class="detail-section-title">可調整價格計畫</div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">買入區下緣</div><input id="tpEntryLower" type="number" min="0" step="0.01"></div><div class="detail-item"><div class="detail-item-label">買入區上緣</div><input id="tpEntryUpper" type="number" min="0" step="0.01"></div><div class="detail-item"><div class="detail-item-label">結構失效價（非保證成交）</div><input id="tpStop" type="number" min="0" step="0.01"></div><div class="detail-item"><div class="detail-item-label">單股風險</div><div class="detail-item-value" id="tpRisk"></div></div><div class="detail-item"><div class="detail-item-label">目標一（第一壓力區前減碼）</div><input id="tpTargetOne" type="number" min="0" step="0.01"></div><div class="detail-item"><div class="detail-item-label">目標二（下一壓力區；不足可留空）</div><input id="tpTargetTwo" type="number" min="0" step="0.01"></div></div><div class="muted" style="font-size:12px;margin-top:9px">失效幅度 <strong id="tpRiskPercent"></strong>　目標一 <strong id="tpR1"></strong>　目標二 <strong id="tpR2"></strong></div><div id="tpDecision" style="font-size:12px;line-height:1.5;margin-top:8px"></div></div>
-          <div class="detail-section"><div class="detail-section-title">部位與放棄條件</div><label class="detail-item-label" for="tpRiskBudget">本次最多可承受損失（元）</label><input id="tpRiskBudget" type="number" min="0" step="1" placeholder="自行填寫" style="max-width:180px;display:block;margin:5px 0 7px"><div id="tpShares" style="font-weight:600;margin-bottom:10px"></div><div class="detail-item-label">放棄買進條件</div><div id="tpCancellation" class="reason-box" style="margin-top:5px"></div></div>
+          <div class="detail-section"><div class="detail-section-title">可調整價格計畫</div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">買入區下緣</div><input id="tpEntryLower" type="number" min="0" step="0.01"></div><div class="detail-item"><div class="detail-item-label">買入區上緣</div><input id="tpEntryUpper" type="number" min="0" step="0.01"></div><div class="detail-item"><div class="detail-item-label">結構失效價（非保證成交）</div><input id="tpStop" type="number" min="0" step="0.01"></div><div class="detail-item"><div class="detail-item-label">每股最大風險（以買入區上緣）</div><div class="detail-item-value" id="tpRisk"></div></div><div class="detail-item"><div class="detail-item-label">第一壓力區</div><input id="tpTargetOne" type="number" min="0" step="0.01"></div><div class="detail-item"><div class="detail-item-label">下一壓力區（不足可留空）</div><input id="tpTargetTwo" type="number" min="0" step="0.01"></div></div><div class="muted" style="font-size:12px;margin-top:9px">失效幅度 <strong id="tpRiskPercent"></strong>　第一壓力 <strong id="tpR1"></strong>　下一壓力 <strong id="tpR2"></strong></div><div id="tpDecision" style="font-size:12px;line-height:1.5;margin-top:8px"></div><div class="detail-item" style="margin-top:12px"><div class="detail-item-label">到第一壓力區的處理方式</div><select id="tpPressureAction" style="max-width:300px"><option value="defensive">保守：第一壓力減碼 50%</option><option value="balanced">平衡：第一壓力減碼 1/3</option><option value="trend">趨勢：不減碼，改用結構移動停損</option><option value="custom">自訂：依備註手動處理</option></select><div id="tpPressureGuidance" class="muted" style="font-size:12px;line-height:1.5;margin-top:6px"></div></div></div>
+          <div class="detail-section" style="border-color:#388bfd"><div class="detail-section-title">明日判斷</div><div id="tpTomorrow" style="font-size:15px;font-weight:700"></div><div id="tpTomorrowDetail" class="muted" style="font-size:12px;line-height:1.5;margin-top:5px"></div></div>
+          <div class="detail-section"><div class="detail-section-title">部位、明日觸發與放棄條件</div><label class="detail-item-label" for="tpRiskBudget">本次最多可承受損失（元）</label><input id="tpRiskBudget" type="number" min="0" step="1" placeholder="自行填寫" style="max-width:180px;display:block;margin:5px 0 7px"><div id="tpShares" style="font-weight:600;margin-bottom:10px"></div><div class="detail-item-label">明日觸發／放棄條件</div><div id="tpCancellation" class="reason-box" style="margin-top:5px"></div></div>
           <div class="detail-section"><label class="detail-section-title" for="tpNotes">自己的備註（選填）</label><textarea id="tpNotes" rows="3" style="width:100%;box-sizing:border-box;margin-top:6px"></textarea></div>
           <div id="tpStatus" class="muted" style="font-size:12px;margin:12px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn-csv" type="button" id="tpCopy">複製交易備忘</button><button class="btn-csv" type="button" id="tpSave">儲存交易計畫</button></div>
         </div>
@@ -216,12 +270,13 @@
       populatePlan(plan);
     });
     ['tpEntryLower', 'tpEntryUpper', 'tpStop', 'tpTargetOne', 'tpTargetTwo', 'tpRiskBudget'].forEach(id => byId(id).addEventListener('input', updateSummary));
+    byId('tpPressureAction').addEventListener('change', updateSummary);
     byId('tpSave').addEventListener('click', savePlan);
     byId('tpCopy').addEventListener('click', copyPlan);
   }
 
   function currentPlan() {
-    return { symbol: activeStock.symbol, name: activeStock.name, strategy: byId('tpStrategy').value, holdingPeriod: byId('tpHoldingPeriod').value, entryLower: toNumber(byId('tpEntryLower').value), entryUpper: toNumber(byId('tpEntryUpper').value), stop: toNumber(byId('tpStop').value), targetOne: toNumber(byId('tpTargetOne').value), targetTwo: toNumber(byId('tpTargetTwo').value), riskBudget: toNumber(byId('tpRiskBudget').value), cancellation: byId('tpCancellation').textContent, quality: byId('tpQuality').textContent, structureText: byId('tpStructure').textContent, validUntil: byId('tpValidUntil').textContent, notes: byId('tpNotes').value.trim(), savedAt: new Date().toISOString() };
+    return { symbol: activeStock.symbol, name: activeStock.name, strategy: byId('tpStrategy').value, holdingPeriod: byId('tpHoldingPeriod').value, entryLower: toNumber(byId('tpEntryLower').value), entryUpper: toNumber(byId('tpEntryUpper').value), stop: toNumber(byId('tpStop').value), targetOne: toNumber(byId('tpTargetOne').value), targetTwo: toNumber(byId('tpTargetTwo').value), firstPressureAction: byId('tpPressureAction').value || 'balanced', riskBudget: toNumber(byId('tpRiskBudget').value), cancellation: byId('tpCancellation').textContent, quality: byId('tpQuality').textContent, referenceText: byId('tpReference').textContent, structureText: byId('tpStructure').textContent, validUntil: byId('tpValidUntil').textContent, notes: byId('tpNotes').value.trim(), savedAt: new Date().toISOString() };
   }
 
   function setPrice(id, value) { byId(id).value = value > 0 ? formatPrice(value) : ''; }
@@ -238,6 +293,7 @@
     setPrice('tpStop', plan.stop);
     setPrice('tpTargetOne', plan.targetOne);
     setPrice('tpTargetTwo', plan.targetTwo);
+    byId('tpPressureAction').value = pressureActions[plan.firstPressureAction] ? plan.firstPressureAction : 'balanced';
     byId('tpRiskBudget').value = plan.riskBudget || '';
     byId('tpCancellation').textContent = plan.cancellation || '';
     byId('tpNotes').value = plan.notes || '';
@@ -247,29 +303,35 @@
 
   function updateSummary() {
     const plan = currentPlan();
-    const risk = plan.entryLower - plan.stop;
-    const riskRate = plan.entryLower > 0 && risk > 0 ? risk / plan.entryLower : 0;
-    const rewardOne = risk > 0 ? (plan.targetOne - plan.entryLower) / risk : 0;
-    const rewardTwo = risk > 0 ? (plan.targetTwo - plan.entryLower) / risk : 0;
+    const metrics = planMetrics(plan);
+    const risk = metrics.risk;
+    const riskRate = metrics.riskRate;
+    const rewardOne = metrics.rewardOne;
+    const rewardTwo = metrics.rewardTwo;
     const shares = risk > 0 && plan.riskBudget > 0 ? Math.floor(plan.riskBudget / risk) : 0;
     byId('tpRisk').textContent = risk > 0 ? formatPrice(risk) : '—';
     byId('tpRiskPercent').textContent = riskRate > 0 ? (riskRate * 100).toFixed(2) + '%' : '—';
     byId('tpR1').textContent = risk > 0 ? rewardOne.toFixed(2) + 'R' : '—';
     byId('tpR2').textContent = risk > 0 ? rewardTwo.toFixed(2) + 'R' : '—';
-    byId('tpShares').textContent = plan.riskBudget <= 0 ? '請輸入單筆最大可承受損失，再計算建議股數。' : shares > 0 ? '建議上限：' + shares.toLocaleString('zh-TW') + ' 股（約 ' + (shares / 1000).toFixed(2) + ' 張）' : '風險金額不足以買進一股。';
+    byId('tpShares').textContent = plan.riskBudget <= 0 ? '請輸入單筆最大可承受損失，再計算建議股數。' : shares > 0 ? '建議上限：' + shares.toLocaleString('zh-TW') + ' 股（約 ' + (shares / 1000).toFixed(2) + ' 張；以買入區上緣估算）' : '風險金額不足以買進一股。';
     let decision = '';
     let color = '#8b949e';
     if (!(plan.entryLower > 0 && plan.stop > 0 && plan.stop < plan.entryLower)) decision = '請先確認買入區與結構停損價。';
     else if (riskRate > 0.06) { decision = '不建議進場：結構停損距離超過 6%，等待更好的買點，不要硬縮停損。'; color = '#ff7b72'; }
-    else if (!(plan.targetOne > plan.entryLower) || rewardOne < 1.5) { decision = '不建議進場：第一層壓力空間不足 1.5R，風報比不佳。'; color = '#ff7b72'; }
-    else if (!(plan.targetTwo > plan.targetOne)) { decision = '第二個壓力目標結構不足：可只將第一層作為分段減碼，剩餘部位不預設價格。'; color = '#ffa657'; }
+    else if (!(plan.targetOne > metrics.maxEntry) || rewardOne < 1.5) { decision = '明日不做：第一壓力區空間不足 1.5R，風報比不佳。'; color = '#ff7b72'; }
+    else if (!(plan.targetTwo > plan.targetOne)) { decision = '明日可做：第二個壓力區結構不足；第一壓力區處理方式可自行選擇。'; color = '#ffa657'; }
     else { decision = '結構條件與風報比可供參考；仍請自行確認當日量價與大盤環境。'; color = '#7ee787'; }
     byId('tpDecision').textContent = decision;
     byId('tpDecision').style.color = color;
+    byId('tpPressureGuidance').textContent = pressureActionGuidance(plan);
+    const tomorrow = tomorrowDecision(plan);
+    byId('tpTomorrow').textContent = tomorrow.title;
+    byId('tpTomorrow').style.color = tomorrow.color;
+    byId('tpTomorrowDetail').textContent = tomorrow.detail;
   }
 
   function validatePlan(plan) {
-    return plan.entryLower > 0 && plan.entryUpper >= plan.entryLower && plan.stop > 0 && plan.stop < plan.entryLower && plan.targetOne > plan.entryLower;
+    return plan.entryLower > 0 && plan.entryUpper >= plan.entryLower && plan.stop > 0 && plan.stop < plan.entryLower && plan.targetOne > Math.max(plan.entryLower, plan.entryUpper);
   }
 
   function savePlan() {
@@ -282,10 +344,12 @@
   }
 
   function memo(plan) {
-    const risk = plan.entryLower - plan.stop;
+    const metrics = planMetrics(plan);
+    const risk = metrics.risk;
     const shares = risk > 0 && plan.riskBudget > 0 ? Math.floor(plan.riskBudget / risk) : 0;
     const strategyText = plan.strategy === 'pullback' ? '拉回承接' : plan.strategy === 'breakout' ? '突破確認' : '手動規劃';
-    return '【手動交易計畫｜非下單】\n' + plan.symbol + ' ' + plan.name + '\n策略：' + strategyText + '／' + plan.holdingPeriod + '（有效至 ' + plan.validUntil + '）\n結構：' + plan.structureText + '\n可買區：' + formatPrice(plan.entryLower) + ' ～ ' + formatPrice(plan.entryUpper) + '\n結構失效價：' + formatPrice(plan.stop) + '\n目標一：' + formatPrice(plan.targetOne) + '\n目標二：' + (plan.targetTwo > 0 ? formatPrice(plan.targetTwo) : '結構不足') + '\n放棄條件：' + plan.cancellation + '\n建議上限：' + (shares ? shares.toLocaleString('zh-TW') + ' 股' : '請先填入最大可承受損失') + '\n備註：' + plan.notes;
+    const tomorrow = tomorrowDecision(plan);
+    return '【明日手動交易計畫｜非下單】\n' + plan.symbol + ' ' + plan.name + '\n明日判斷：' + tomorrow.title + '\n' + tomorrow.detail + '\n策略：' + strategyText + '／' + plan.holdingPeriod + '（有效至 ' + plan.validUntil + '）\n資料：' + (plan.referenceText || '請自行確認最新價格') + '\n結構：' + plan.structureText + '\n可買區：' + formatPrice(plan.entryLower) + ' ～ ' + formatPrice(plan.entryUpper) + '\n結構失效價：' + formatPrice(plan.stop) + '\n第一壓力區：' + formatPrice(plan.targetOne) + '\n處理方式：' + pressureActionText(plan.firstPressureAction) + '\n' + pressureActionGuidance(plan) + '\n下一壓力區：' + (plan.targetTwo > 0 ? formatPrice(plan.targetTwo) : '結構不足') + '\n放棄條件：' + plan.cancellation + '\n建議上限：' + (shares ? shares.toLocaleString('zh-TW') + ' 股（以買入區上緣估算）' : '請先填入最大可承受損失') + '\n備註：' + plan.notes;
   }
 
   function copyPlan() {
@@ -319,7 +383,12 @@
     if (!activeStock) return;
     ensurePlanModal();
     byId('tpStockTitle').textContent = activeStock.symbol + ' ' + activeStock.name;
-    populatePlan(readPlans()[activeStock.symbol] || buildDefaultPlan(activeStock, 'pullback'));
+    const saved = readPlans()[activeStock.symbol];
+    const plan = saved && saved.validUntil === dateText(nextWeekday())
+      ? saved
+      : buildDefaultPlan(activeStock, 'pullback');
+    if (saved && plan !== saved) plan.initialStatus = '前一份計畫已過期；已依目前掃描資料重新建立明日計畫。';
+    populatePlan(plan);
     byId('tradePlanModal').style.display = 'flex';
   }
 

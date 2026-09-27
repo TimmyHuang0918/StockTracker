@@ -34,7 +34,7 @@ namespace StockTracker.Models
             var result = new TradePlanProposal { Strategy = strategy ?? Pullback };
             if (result.Strategy == Manual)
             {
-                result.Status = "手動規劃：不自動填入價格，請依自己的交易條件輸入。";
+                result.Status = "明日自行規劃：不自動填入價格，請依自己的交易條件輸入。";
                 result.CancelCondition = "尚未設定情境條件；請自行確認支撐、壓力與可承受風險。";
                 return result;
             }
@@ -90,7 +90,7 @@ namespace StockTracker.Models
             result.StopLoss = Services.PriceStructureAnalyzer.RoundToTick(support.Low - buffer, false);
             result.TargetOne = BeforeZone(firstTarget, buffer);
             result.TargetTwo = BeforeZone(result.TargetTwoResistance, buffer);
-            result.CancelCondition = "價格進入支撐區後，須止穩並重新站回區間中線或短線反彈高點；若跌破結構失效價，不承接。";
+            result.CancelCondition = "明日僅在價格回到買入區、未跌破結構失效價後，出現止穩再手動評估；若開盤直接高過買入區上緣，不追價；若跌破失效價，取消計畫。";
             return Validate(result);
         }
 
@@ -120,7 +120,7 @@ namespace StockTracker.Models
             result.TargetTwoResistance = targets.ElementAtOrDefault(1);
             result.TargetOne = BeforeZone(result.TargetOneResistance, buffer);
             result.TargetTwo = BeforeZone(result.TargetTwoResistance, buffer);
-            result.CancelCondition = "僅在突破壓力區上緣後進入可進區時觀察；若收盤回到壓力區內或跳空過遠，取消計畫。";
+            result.CancelCondition = "明日僅在價格突破壓力區上緣後、進入買入區時手動評估；若突破後收盤回到壓力區內，或開盤跳空高過買入區上緣，不追價並取消計畫。";
             return Validate(result);
         }
 
@@ -145,9 +145,9 @@ namespace StockTracker.Models
 
             result.IsAvailable = true;
             if (result.TargetTwo <= result.TargetOne)
-                result.Status = "可觀察：第一個壓力區可作分段減碼；第二個目標結構不足，剩餘部位不預設價格。";
+                result.Status = "明日可做：條件成立才手動執行；第一壓力區的處理方式可自行選擇，第二個目標結構不足。";
             else
-                result.Status = "可觀察：價格、失效價與目標皆由有效結構區推導，仍須由你確認盤中條件。";
+                result.Status = "明日可做：條件成立才手動執行；價格、失效價與壓力區皆由有效結構推導。";
             result.StructureText = BuildStructureText(result);
             return result;
         }

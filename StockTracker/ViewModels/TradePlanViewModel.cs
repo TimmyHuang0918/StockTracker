@@ -15,11 +15,17 @@ namespace StockTracker.ViewModels
     /// </summary>
     public class TradePlanViewModel : ViewModelBase
     {
+        public const string ConservativePressureAction = "保守：第一壓力減碼 50%";
+        public const string BalancedPressureAction = "平衡：第一壓力減碼 1/3";
+        public const string TrendPressureAction = "趨勢：不減碼，改用結構移動停損";
+        public const string CustomPressureAction = "自訂：依備註手動處理";
+
         private readonly StockViewModel _stock;
         private readonly List<CandleData> _candles;
         private readonly PriceStructureAnalysis _priceStructure;
         private string _selectedStrategy;
         private string _selectedHoldingPeriod;
+        private string _selectedFirstPressureAction;
         private decimal _entryLower;
         private decimal _entryUpper;
         private decimal _stopLoss;
@@ -43,12 +49,20 @@ namespace StockTracker.ViewModels
 
             StrategyOptions = new ObservableCollection<string> { TradePlanCalculator.Pullback, TradePlanCalculator.Breakout, TradePlanCalculator.Manual };
             HoldingPeriodOptions = new ObservableCollection<string> { "短線：1～5 個交易日", "波段：1～4 週" };
+            FirstPressureActionOptions = new ObservableCollection<string>
+            {
+                ConservativePressureAction,
+                BalancedPressureAction,
+                TrendPressureAction,
+                CustomPressureAction
+            };
             ApplyStrategyCommand = new RelayCommand(_ => ApplyStrategy());
             SavePlanCommand = new RelayCommand(_ => SavePlan());
             CopyPlanCommand = new RelayCommand(_ => CopyPlan());
 
             _selectedStrategy = TradePlanCalculator.Pullback;
             _selectedHoldingPeriod = HoldingPeriodOptions[0];
+            _selectedFirstPressureAction = BalancedPressureAction;
             ApplyStrategy();
         }
 
@@ -64,9 +78,12 @@ namespace StockTracker.ViewModels
         public double MA20 => _stock.MA20;
         public string StructureSummary => _priceStructure?.Message ?? "尚無結構資料。";
         public string PlanStructureText => !string.IsNullOrWhiteSpace(_proposal?.StructureText) ? _proposal.StructureText : "尚未形成可用交易情境；請參考下方支撐與壓力區，或選擇手動規劃。";
+        private string LatestCandleDateText => _candles.Count == 0
+            ? "資料待更新"
+            : _candles[_candles.Count - 1].Time.ToString("yyyy/MM/dd");
         public string ReferencePriceText => _priceStructure == null || _priceStructure.LatestPrice <= 0m
             ? "日 K 參考價待更新"
-            : $"日 K 參考價 {_priceStructure.LatestPrice:F2}／目前價格 {LatestPrice:F2}";
+            : $"日 K {LatestCandleDateText} 參考價 {_priceStructure.LatestPrice:F2}／目前價格 {LatestPrice:F2}";
         public string SupportOneText => FormatZone(_priceStructure?.Supports?.ElementAtOrDefault(0));
         public string SupportTwoText => FormatZone(_priceStructure?.Supports?.ElementAtOrDefault(1));
         public string ResistanceOneText => FormatZone(_priceStructure?.Resistances?.ElementAtOrDefault(0));
@@ -76,6 +93,55 @@ namespace StockTracker.ViewModels
         public string ValidUntilText => ValidUntil.ToString("yyyy/MM/dd（ddd）");
         public ObservableCollection<string> StrategyOptions { get; }
         public ObservableCollection<string> HoldingPeriodOptions { get; }
+        public ObservableCollection<string> FirstPressureActionOptions { get; }
+
+        public string TomorrowDecisionTitle
+        {
+            get
+            {
+                if (SelectedStrategy == TradePlanCalculator.Manual)
+                    return "明日自行規劃";
+                if (_proposal == null || !_proposal.IsAvailable)
+                    return "明日不做";
+                return SelectedStrategy == TradePlanCalculator.Pullback
+                    ? "明日可做：等待拉回確認"
+                    : "明日可做：等待突破確認";
+            }
+        }
+
+        public string TomorrowDecisionDetail
+        {
+            get
+            {
+                if (SelectedStrategy == TradePlanCalculator.Manual)
+                    return "此模式不代替你判斷；請自行填寫進場、失效與壓力區處理規則。";
+                if (_proposal == null || !_proposal.IsAvailable)
+                    return _proposal?.Status ?? "尚未建立可用的隔日情境。";
+                if (SelectedStrategy == TradePlanCalculator.Pullback)
+                    return $"僅在價格回到 {EntryLower:F2} ～ {EntryUpper:F2}、未跌破 {StopLoss:F2} 後出現止穩時，才手動評估；高於買入區上緣不追價。";
+                return $"僅在價格突破壓力後進入 {EntryLower:F2} ～ {EntryUpper:F2} 時，才手動評估；高於買入區上緣不追價。";
+            }
+        }
+
+        public string FirstPressureActionText
+        {
+            get
+            {
+                if (TargetOne <= 0m)
+                    return "尚未有有效第一壓力區；請先確認價格結構。";
+                switch (SelectedFirstPressureAction)
+                {
+                    case ConservativePressureAction:
+                        return $"到第一壓力區 {TargetOne:F2} 時，手動減碼 50%；剩餘部位再依結構重新確認。";
+                    case TrendPressureAction:
+                        return $"第一壓力區 {TargetOne:F2} 不預設減碼；僅在有效站穩後，才以新的支撐區上移失效價。";
+                    case CustomPressureAction:
+                        return $"第一壓力區 {TargetOne:F2} 的處理由你的備註決定，不預設減碼。";
+                    default:
+                        return $"到第一壓力區 {TargetOne:F2} 時，手動減碼約 1/3，觀察是否能站穩後再決定剩餘部位。";
+                }
+            }
+        }
 
         public string SelectedStrategy
         {
@@ -102,6 +168,19 @@ namespace StockTracker.ViewModels
             }
         }
 
+        public string SelectedFirstPressureAction
+        {
+            get => _selectedFirstPressureAction;
+            set
+            {
+                var normalized = string.IsNullOrWhiteSpace(value) ? BalancedPressureAction : value;
+                if (_selectedFirstPressureAction == normalized) return;
+                _selectedFirstPressureAction = normalized;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(FirstPressureActionText));
+            }
+        }
+
         public decimal EntryLower
         {
             get => _entryLower;
@@ -116,7 +195,12 @@ namespace StockTracker.ViewModels
         public decimal EntryUpper
         {
             get => _entryUpper;
-            set { _entryUpper = value; OnPropertyChanged(); }
+            set
+            {
+                _entryUpper = value;
+                OnPropertyChanged();
+                if (!_isApplyingDefaults) RecalculateTargetsAndSizing();
+            }
         }
 
         public decimal StopLoss
@@ -178,10 +262,11 @@ namespace StockTracker.ViewModels
             private set { _statusText = value ?? string.Empty; OnPropertyChanged(); }
         }
 
-        public decimal RiskPerShare => Math.Max(0m, EntryLower - StopLoss);
-        public string RiskPercentText => EntryLower <= 0 || StopLoss <= 0
+        public decimal MaxEntryPrice => Math.Max(EntryLower, EntryUpper);
+        public decimal RiskPerShare => Math.Max(0m, MaxEntryPrice - StopLoss);
+        public string RiskPercentText => MaxEntryPrice <= 0 || StopLoss <= 0
             ? "—"
-            : ((EntryLower - StopLoss) / EntryLower * 100m).ToString("0.00") + "%";
+            : ((MaxEntryPrice - StopLoss) / MaxEntryPrice * 100m).ToString("0.00") + "%";
         public string RewardRiskOneText => FormatRewardRisk(TargetOne);
         public string RewardRiskTwoText => FormatRewardRisk(TargetTwo);
         public int SuggestedShares => RiskBudget <= 0 || RiskPerShare <= 0 ? 0 : (int)Math.Floor(RiskBudget / RiskPerShare);
@@ -189,7 +274,7 @@ namespace StockTracker.ViewModels
             ? "請輸入單筆最大可承受損失"
             : SuggestedShares <= 0
                 ? "風險金額不足以買進一股"
-                : $"{SuggestedShares:N0} 股（約 {SuggestedShares / 1000d:F2} 張；未含交易成本與跳空風險）";
+                : $"{SuggestedShares:N0} 股（約 {SuggestedShares / 1000d:F2} 張；以買入區上緣估算，未含交易成本與跳空風險）";
         public string QualitySummary => $"分數 {Score}／風險 {RiskScore}；{InstitutionalLeadership}，外資 {ForeignSensitivity}／投信 {TrustSensitivity}";
         public ICommand ApplyStrategyCommand { get; }
         public ICommand SavePlanCommand { get; }
@@ -244,6 +329,9 @@ namespace StockTracker.ViewModels
             OnPropertyChanged(nameof(RewardRiskTwoText));
             OnPropertyChanged(nameof(SuggestedShares));
             OnPropertyChanged(nameof(SuggestedSharesText));
+            OnPropertyChanged(nameof(TomorrowDecisionTitle));
+            OnPropertyChanged(nameof(TomorrowDecisionDetail));
+            OnPropertyChanged(nameof(FirstPressureActionText));
 
             if ((_proposal == null || !_proposal.IsAvailable) && SelectedStrategy != TradePlanCalculator.Manual)
             {
@@ -262,19 +350,19 @@ namespace StockTracker.ViewModels
                 return;
             }
 
-            if (TargetOne <= EntryLower || (TargetOne - EntryLower) / RiskPerShare < 1.5m)
+            if (TargetOne <= MaxEntryPrice || (TargetOne - MaxEntryPrice) / RiskPerShare < 1.5m)
             {
-                StatusText = "第一層壓力距離不足 1.5R，風報比不佳，標示為不建議進場。";
+                StatusText = "第一壓力區距離不足 1.5R，風報比不佳，標示為明日不做。";
                 return;
             }
 
             if (TargetTwo <= TargetOne)
             {
-                StatusText = "第二個壓力目標結構不足；可先以第一個壓力作為分段減碼，剩餘部位不預設價格。";
+                StatusText = "明日可做：條件成立才手動執行；第一壓力區處理方式可自行選擇，第二個目標結構不足。";
                 return;
             }
 
-            StatusText = "計畫已依支撐／壓力區預填；僅供你手動判斷、儲存與複製備忘，不會送出委託。";
+            StatusText = "明日可做：條件成立才手動執行；僅供你手動判斷、儲存與複製備忘，不會送出委託。";
         }
 
         private void SavePlan()
@@ -296,6 +384,7 @@ namespace StockTracker.ViewModels
                 StopLoss = StopLoss,
                 TargetOne = TargetOne,
                 TargetTwo = TargetTwo,
+                FirstPressureAction = SelectedFirstPressureAction,
                 RiskBudget = RiskBudget,
                 SuggestedShares = SuggestedShares,
                 ValidUntil = ValidUntil,
@@ -321,12 +410,12 @@ namespace StockTracker.ViewModels
 
         private string BuildMemo()
         {
-            return $"【手動交易計畫｜非下單】\n{Symbol} {Name}\n策略：{SelectedStrategy}／{SelectedHoldingPeriod}（有效至 {ValidUntil:yyyy/MM/dd}）\n結構：{PlanStructureText}\n可買區：{EntryLower:F2} ～ {EntryUpper:F2}\n結構失效價：{StopLoss:F2}\n目標一：{TargetOne:F2}（{RewardRiskOneText}）\n目標二：{(TargetTwo > 0m ? TargetTwo.ToString("F2") : "結構不足")}（{RewardRiskTwoText}）\n{CancelCondition}\n建議股數：{SuggestedSharesText}\n備註：{Notes}";
+            return $"【明日手動交易計畫｜非下單】\n{Symbol} {Name}\n明日判斷：{TomorrowDecisionTitle}\n{TomorrowDecisionDetail}\n策略：{SelectedStrategy}／{SelectedHoldingPeriod}（有效至 {ValidUntil:yyyy/MM/dd}）\n資料：{ReferencePriceText}\n結構：{PlanStructureText}\n可買區：{EntryLower:F2} ～ {EntryUpper:F2}\n結構失效價：{StopLoss:F2}\n第一壓力區：{TargetOne:F2}（{RewardRiskOneText}）\n處理方式：{SelectedFirstPressureAction}\n{FirstPressureActionText}\n下一壓力區：{(TargetTwo > 0m ? TargetTwo.ToString("F2") : "結構不足")}（{RewardRiskTwoText}）\n放棄條件：{CancelCondition}\n建議股數：{SuggestedSharesText}\n備註：{Notes}";
         }
 
         private string FormatRewardRisk(decimal target)
         {
-            return RiskPerShare <= 0 ? "—" : ((target - EntryLower) / RiskPerShare).ToString("0.00") + "R";
+            return RiskPerShare <= 0 ? "—" : ((target - MaxEntryPrice) / RiskPerShare).ToString("0.00") + "R";
         }
 
         private static DateTime GetNextWeekday(DateTime date)

@@ -17,6 +17,7 @@ namespace StockTracker.Models
         public decimal StopLoss { get; set; }
         public decimal TargetOne { get; set; }
         public decimal TargetTwo { get; set; }
+        public string FirstPressureAction { get; set; }
         public decimal RiskBudget { get; set; }
         public int SuggestedShares { get; set; }
         public DateTime ValidUntil { get; set; }
