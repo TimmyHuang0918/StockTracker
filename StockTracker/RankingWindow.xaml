@@ -222,7 +222,7 @@
                                     </WrapPanel>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
-                                    <TextBlock Text="三大法人買賣超" Margin="0,0,0,4" />
+                            <TextBlock Text="三大法人買賣超（張）" Margin="0,0,0,4" />
                                     <WrapPanel>
                                         <TextBox Text="{Binding MinThreeMajorNetFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
                                         <TextBlock Text="~" VerticalAlignment="Center" Margin="8,0" />
@@ -341,7 +341,7 @@
                 <DataGridTextColumn Header="{Binding DataContext.ScoreDay4Header, RelativeSource={RelativeSource AncestorType=DataGrid}}" Binding="{Binding ScoreDay4}" Width="55" />
                 <DataGridTextColumn Header="近5日均分" Binding="{Binding AverageRecentScore, StringFormat=F1}" Width="80" />
                 <DataGridTextColumn Header="趨勢" Binding="{Binding ScoreTrend}" Width="60" />
-                <DataGridTextColumn Header="三大法人買賣超" Binding="{Binding NetDisplay}" SortMemberPath="ThreeMajorNet" Width="110">
+                <DataGridTextColumn Header="三大法人買賣超（張）" Binding="{Binding NetDisplay}" SortMemberPath="ThreeMajorNet" Width="110">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{Binding NetDisplayBrush}"/>

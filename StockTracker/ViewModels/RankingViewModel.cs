@@ -311,7 +311,7 @@ namespace StockTracker.ViewModels
             get
             {
                 var lots = ThreeMajorNet / 1000m;
-                return lots > 0 ? $"+{lots:N0}" : lots.ToString("N0", CultureInfo.InvariantCulture);
+                return lots > 0 ? $"+{lots:#,0.###}" : lots.ToString("#,0.###", CultureInfo.InvariantCulture);
             }
         }
         public System.Windows.Media.Brush ChangePercentBrush => ChangePercent > 0 ? System.Windows.Media.Brushes.IndianRed :
@@ -343,7 +343,7 @@ namespace StockTracker.ViewModels
             get
             {
                 var lots = ForeignNet / 1000m;
-                return lots > 0 ? $"+{lots:N0}" : lots.ToString("N0", CultureInfo.InvariantCulture);
+                return lots > 0 ? $"+{lots:#,0.###}" : lots.ToString("#,0.###", CultureInfo.InvariantCulture);
             }
         }
         public System.Windows.Media.Brush ForeignNetBrush => ForeignNet > 0 ? System.Windows.Media.Brushes.IndianRed :
@@ -354,7 +354,7 @@ namespace StockTracker.ViewModels
             get
             {
                 var lots = DealerNet / 1000m;
-                return lots > 0 ? $"+{lots:N0}" : lots.ToString("N0", CultureInfo.InvariantCulture);
+                return lots > 0 ? $"+{lots:#,0.###}" : lots.ToString("#,0.###", CultureInfo.InvariantCulture);
             }
         }
         public System.Windows.Media.Brush DealerNetBrush => DealerNet > 0 ? System.Windows.Media.Brushes.IndianRed :
@@ -365,7 +365,7 @@ namespace StockTracker.ViewModels
             get
             {
                 var lots = InvestmentTrustNet / 1000m;
-                return lots > 0 ? $"+{lots:N0}" : lots.ToString("N0", CultureInfo.InvariantCulture);
+                return lots > 0 ? $"+{lots:#,0.###}" : lots.ToString("#,0.###", CultureInfo.InvariantCulture);
             }
         }
         public System.Windows.Media.Brush TrustNetBrush => InvestmentTrustNet > 0 ? System.Windows.Media.Brushes.IndianRed :
@@ -435,8 +435,8 @@ namespace StockTracker.ViewModels
         private decimal? _maxPrice;
         private decimal? _minChangePercentFilter;
         private decimal? _maxChangePercentFilter;
-        private long? _minThreeMajorNetFilter;
-        private long? _maxThreeMajorNetFilter;
+        private decimal? _minThreeMajorNetFilter;
+        private decimal? _maxThreeMajorNetFilter;
         private int? _minLatestScoreFilter;
         private int? _minCrashRiskScoreFilter;
         private int? _minPatternTagCountFilter;
@@ -552,13 +552,13 @@ namespace StockTracker.ViewModels
             set { _maxChangePercentFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
         }
 
-        public long? MinThreeMajorNetFilter
+        public decimal? MinThreeMajorNetFilter
         {
             get => _minThreeMajorNetFilter;
             set { _minThreeMajorNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
         }
 
-        public long? MaxThreeMajorNetFilter
+        public decimal? MaxThreeMajorNetFilter
         {
             get => _maxThreeMajorNetFilter;
             set { _maxThreeMajorNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
@@ -880,8 +880,9 @@ namespace StockTracker.ViewModels
                 if (MaxPrice.HasValue && stock.LatestPrice > MaxPrice.Value) return false;
                 if (MinChangePercentFilter.HasValue && stock.ChangePercent < MinChangePercentFilter.Value) return false;
                 if (MaxChangePercentFilter.HasValue && stock.ChangePercent > MaxChangePercentFilter.Value) return false;
-                if (MinThreeMajorNetFilter.HasValue && stock.ThreeMajorNet < MinThreeMajorNetFilter.Value) return false;
-                if (MaxThreeMajorNetFilter.HasValue && stock.ThreeMajorNet > MaxThreeMajorNetFilter.Value) return false;
+                var threeMajorNetLots = stock.ThreeMajorNet / 1000m;
+                if (MinThreeMajorNetFilter.HasValue && threeMajorNetLots < MinThreeMajorNetFilter.Value) return false;
+                if (MaxThreeMajorNetFilter.HasValue && threeMajorNetLots > MaxThreeMajorNetFilter.Value) return false;
                 if (MinLatestScoreFilter.HasValue && stock.Score < MinLatestScoreFilter.Value) return false;
                 if (MinCrashRiskScoreFilter.HasValue && stock.CrashRiskScore > MinCrashRiskScoreFilter.Value) return false;
                 if (MinPatternTagCountFilter.HasValue && stock.PatternTagCount < MinPatternTagCountFilter.Value) return false;
@@ -1726,12 +1727,13 @@ namespace StockTracker.ViewModels
             return filePath;
         }
 
-        // 輔助方法：格式化法人買賣超張數（加入正負號與千分位）
-        private static string FormatNetShares(double value)
+        // 原始法人資料的單位為「股」；網站一律以「張」顯示（1 張 = 1,000 股）。
+        private static string FormatNetLots(double shares)
         {
-            if (value == 0) return "0";
-            string sign = value > 0 ? "+" : "";
-            return $"{sign}{value:N0}"; // N0 會格式化為 +1,234 或 -567
+            if (shares == 0) return "0";
+            var lots = shares / 1000d;
+            string sign = lots > 0 ? "+" : "";
+            return $"{sign}{lots:#,0.###}";
         }
 
         // 輔助方法：格式化買賣金額（轉為億、萬單位，並加上正負號）
@@ -1873,7 +1875,8 @@ namespace StockTracker.ViewModels
                     avg = Math.Round((double)stock0050.AverageRecentScore, 1),
                     trend = stock0050.ScoreTrend,
                     net = (double)stock0050.ThreeMajorNet,
-                    netStr = FormatNetShares((double)stock0050.ThreeMajorNet),
+                    netLots = Math.Round((double)stock0050.ThreeMajorNet / 1000d, 3),
+                    netStr = FormatNetLots((double)stock0050.ThreeMajorNet),
                     netAmount = (double)stock0050.ThreeMajorNetAmount,
                     netAmountStr = FormatMoney((double)stock0050.ThreeMajorNetAmount),
                     action = HtmlEncode(stock0050.StrategyActionText),
@@ -1906,7 +1909,8 @@ namespace StockTracker.ViewModels
                 avg = Math.Round((double)s.AverageRecentScore, 1),
                 trend = s.ScoreTrend,
                 net = (double)s.ThreeMajorNet,
-                netStr = FormatNetShares((double)s.ThreeMajorNet),
+                netLots = Math.Round((double)s.ThreeMajorNet / 1000d, 3),
+                netStr = FormatNetLots((double)s.ThreeMajorNet),
                 netClass = ResolveValueColorClass((double)s.ThreeMajorNet),
                 netAmount = (double)s.ThreeMajorNetAmount,
                 netAmountStr = FormatMoney((double)s.ThreeMajorNetAmount),
@@ -1921,13 +1925,13 @@ namespace StockTracker.ViewModels
                     ? ResolveValueColorClass((double)s.LargeHolder400PlusWeeklyChange.Value)
                     : "flat",
                 foreignNet = (double)s.ForeignNet,
-                foreignNetStr = FormatNetShares((double)s.ForeignNet),
+                foreignNetStr = FormatNetLots((double)s.ForeignNet),
                 foreignNetClass = ResolveValueColorClass((double)s.ForeignNet),
                 dealerNet = (double)s.DealerNet,
-                dealerNetStr = FormatNetShares((double)s.DealerNet),
+                dealerNetStr = FormatNetLots((double)s.DealerNet),
                 dealerNetClass = ResolveValueColorClass((double)s.DealerNet),
                 trustNet = (double)s.InvestmentTrustNet,
-                trustNetStr = FormatNetShares((double)s.InvestmentTrustNet),
+                trustNetStr = FormatNetLots((double)s.InvestmentTrustNet),
                 trustNetClass = ResolveValueColorClass((double)s.InvestmentTrustNet),
                 foreignSensitivity = s.ForeignSensitivity,
                 trustSensitivity = s.TrustSensitivity,
@@ -2093,7 +2097,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("<div class='filter-group'><label>Top 數量</label><input id='topCount' type='number' min='1' placeholder='100' /></div>");
             html.AppendLine("<div class='filter-group'><label>價格區間</label><div class='row-inputs'><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>漲跌幅%</label><div class='row-inputs'><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div></div>");
-            html.AppendLine("<div class='filter-group'><label>法人買賣超(張)</label><div class='row-inputs'><input id='minNet' type='number' step='1' placeholder='Min' /><input id='maxNet' type='number' step='1' placeholder='Max' /></div></div>");
+            html.AppendLine("<div class='filter-group'><label>法人買賣超(張)</label><div class='row-inputs'><input id='minNet' type='number' step='0.001' placeholder='最小張數' /><input id='maxNet' type='number' step='0.001' placeholder='最大張數' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>買賣超金額</label><div class='row-inputs'><input id='minNetAmount' type='number' step='1' placeholder='Min' /><input id='maxNetAmount' type='number' step='1' placeholder='Max' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>最新分數 ≥</label><input id='minScore' type='number' step='1' placeholder='0' /></div>");
             html.AppendLine("<div class='filter-group'><label>風險分數 ≦</label><input id='minCrash' type='number' step='1' placeholder='0' /></div>");
@@ -2787,7 +2791,7 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
             html.AppendLine("    if(kw&&!item.searchKey.includes(kw)) return false;");
             html.AppendLine("    if(!passRange(item.price,minPrice,maxPrice)) return false;");
             html.AppendLine("    if(!passRange(item.chg,minChange,maxChange)) return false;");
-            html.AppendLine("    if(!passRange(item.net,minNet,maxNet)) return false;");
+            html.AppendLine("    if(!passRange(item.netLots,minNet,maxNet)) return false;");
             html.AppendLine("    if(!passRange(item.netAmount,minNetAmount,maxNetAmount)) return false;");
             html.AppendLine("    if(minScore!==null&&item.score<minScore) return false;");
             html.AppendLine("    if(minCrash!==null&&item.crash>minCrash) return false;");
@@ -2827,7 +2831,7 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
 
             // 排序機制
             html.AppendLine("let sortState={idx:0,asc:true};");
-            html.AppendLine("const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','net','netAmount','largeHolder400','largeHolder1000','largeHolderWeekly','action','stage','suggestion','price','chg'];");
+            html.AppendLine("const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','netLots','netAmount','largeHolder400','largeHolder1000','largeHolderWeekly','action','stage','suggestion','tomorrowPlan','price','chg'];");
             html.AppendLine("[...table.tHead.rows[0].cells].forEach((th,idx)=>{");
             html.AppendLine("  th.addEventListener('click',()=>{");
             html.AppendLine("    sortState.asc=(sortState.idx===idx)?!sortState.asc:true;");
