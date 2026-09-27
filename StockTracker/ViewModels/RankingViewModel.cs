@@ -2102,6 +2102,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("<div class='filter-group'><label>策略動作</label><select id='actionFilter'><option value=''>全部</option></select></div>");
             html.AppendLine("<div class='filter-group'><label>建議倉位</label><select id='holdingFilter'><option value=''>全部</option></select></div>");
             html.AppendLine("<div class='filter-group'><label>綜合建議</label><select id='suggestionFilter'><option value=''>全部</option></select></div>");
+            html.AppendLine("<div class='filter-group'><label>明日交易條件</label><select id='tomorrowFilter'><option value=''>全部</option><option value='pullback'>可做：等拉回</option><option value='breakout'>可做：等突破</option><option value='noTrade'>暫不做</option><option value='structureMissing'>結構不足</option></select></div>");
             html.AppendLine("<div class='filter-group'><label>5日均分 ≥</label><input id='minAvg' type='number' step='0.1' placeholder='0' /></div>");
             html.AppendLine("<div class='filter-group'><label>外資敏感度 ≥</label><input id='minForeignSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>");
             html.AppendLine("<div class='filter-group'><label>投信敏感度 ≥</label><input id='minTrustSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>");
@@ -2268,7 +2269,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  <div class='portfolio-summary' id='portfolioSummary'></div><div class='portfolio-table-wrap'><table class='portfolio-table'><thead><tr><th>&#25345;&#32929;</th><th>&#29694;&#20729;</th><th>&#20170;&#26085;&#28466;&#36300;</th><th>&#25613;&#30410;&#29575;</th><th>&#29694;&#26377;&#27402;&#37325;</th><th>&#30446;&#27161;&#27402;&#37325;</th><th>&#24314;&#35696;</th><th></th></tr></thead><tbody id='portfolioBody'></tbody></table></div>");
             html.AppendLine("</div>");
             html.AppendLine("<div class=\"table-container\" id=\"tableContainer\"><table id=\"rankingTable\"><thead><tr>");
-            html.AppendLine($"<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='num'>大戶400+<br><span class='muted'>{largeHolderDataDateText}</span></th><th data-type='num'>超大戶1000+</th><th data-type='num'>大戶週變</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
+            html.AppendLine($"<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='num'>大戶400+<br><span class='muted'>{largeHolderDataDateText}</span></th><th data-type='num'>超大戶1000+</th><th data-type='num'>大戶週變</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='text' class='text-left'>明日條件</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
             html.AppendLine("</tr></thead><tbody id=\"tbody\"></tbody></table></div>");
 
             // 將原生 Stock JSON 埋在 JS 變數中
@@ -2330,7 +2331,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  $('hero-suggestion').textContent = stock0050Data.suggestion || '無特別建議';");
             html.AppendLine("  $('hero-reason').textContent = decodeHtmlEntities(stock0050Data.scoreReason) || '評分理由尚未載入';");
             html.AppendLine("}");
-            html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),minAvg:$('minAvg'),minForeignSensitivity:$('minForeignSensitivity'),minTrustSensitivity:$('minTrustSensitivity'),minSensitivityConfidence:$('minSensitivityConfidence'),leadership:$('leadershipFilter'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
+            html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),tomorrow:$('tomorrowFilter'),minAvg:$('minAvg'),minForeignSensitivity:$('minForeignSensitivity'),minTrustSensitivity:$('minTrustSensitivity'),minSensitivityConfidence:$('minSensitivityConfidence'),leadership:$('leadershipFilter'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
 
             html.AppendLine("let filteredData = [...rawData];");
             html.AppendLine("let renderedCount = 0;");
@@ -2726,6 +2727,11 @@ namespace StockTracker.ViewModels
             html.AppendLine("function parseNum(v){if(v===null||v==='')return null;const n=parseFloat(v);return Number.isFinite(n)?n:null;}");
             html.AppendLine("function passRange(v,min,max){if(min!==null&&v<min)return false;if(max!==null&&v>max)return false;return true;}");
             html.AppendLine("function getConsecutive(scores,minScore){let c=0;for(const s of scores){if(s<minScore)break;c++;}return c;}");
+            html.AppendLine("function tradeTick(price){return price<10?.01:price<50?.05:price<100?.1:price<500?.5:price<1000?1:5;}");
+            html.AppendLine("function tradeRound(price,up){if(!(price>0))return 0;const tick=tradeTick(price);return(up?Math.ceil(price/tick):Math.floor(price/tick))*tick;}");
+            html.AppendLine("function structureValue(object,camel,pascal){return object&&object[camel]!==undefined?object[camel]:object&&object[pascal];}");
+html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.priceStructure||stock.PriceStructure;const price=Number(stock.price||0),atr=Number(structureValue(structure,'atr14','Atr14')||0),hasEnough=structureValue(structure,'hasSufficientData','HasSufficientData');const missing=(summary)=>({key:'structureMissing',label:'結構不足',summary,className:'flat'});const noTrade=(summary)=>({key:'noTrade',label:'暫不做',summary,className:'fall'});if(!structure||hasEnough===false||!(price>0)||!(atr>0))return missing('日 K 或結構資料不足。');const deadBand=Math.max(tradeTick(price)*2,atr*.15),buffer=Math.max(tradeTick(price)*2,atr*.2),low=zone=>Number(structureValue(zone,'low','Low')||0),high=zone=>Number(structureValue(zone,'high','High')||0);const supports=(structureValue(structure,'supports','Supports')||[]).filter(zone=>high(zone)<price-deadBand).sort((a,b)=>high(b)-high(a));const resistances=(structureValue(structure,'resistances','Resistances')||[]).filter(zone=>low(zone)>price+deadBand).sort((a,b)=>low(a)-low(b));const valid=(entryLower,entryUpper,stop,target)=>entryLower>0&&entryUpper>=entryLower&&stop>0&&stop<entryLower&&((entryLower-stop)/entryLower)<=.06&&target>entryUpper&&((target-entryLower)/(entryLower-stop))>=1.5;let noTradeReason='結構停損或第一目標的風報比未達 1.5R。';if(supports[0]&&resistances[0]){const support=supports[0],resistance=resistances[0],entryLower=tradeRound(low(support)+buffer,true),entryUpper=tradeRound(high(support),false),stop=tradeRound(low(support)-buffer,false),target=tradeRound(low(resistance)-buffer,false);if(price-high(support)>atr*2)noTradeReason='距離有效支撐超過 2 ATR，等待拉回。';else if(valid(entryLower,entryUpper,stop,target))return {key:'pullback',label:'可做・等拉回',summary:'回到 '+entryLower.toFixed(2)+'～'+entryUpper.toFixed(2)+' 並止穩後再評估。',className:'rise'};}const breakout=resistances[0];if(breakout){const entryLower=tradeRound(high(breakout)+Math.max(tradeTick(high(breakout)),atr*.1),true),entryUpper=tradeRound(entryLower+Math.max(atr*.25,tradeTick(entryLower)*2),true),stop=tradeRound(low(breakout)-buffer,false),targets=resistances.filter(zone=>low(zone)>entryUpper+buffer),target=targets[0]?tradeRound(low(targets[0])-buffer,false):0;if(price>entryUpper+atr*.25)return noTrade('現價已跳過突破可進區，不追價。');if(valid(entryLower,entryUpper,stop,target))return {key:'breakout',label:'可做・等突破',summary:'突破後進入 '+entryLower.toFixed(2)+'～'+entryUpper.toFixed(2)+' 才評估。',className:'rise'};}if(!supports[0]||!resistances[0])return missing('找不到現價兩側的有效支撐／壓力。');return noTrade(noTradeReason);}");
+            html.AppendLine("rawData.forEach(stock=>{stock.tomorrowPlan=buildTomorrowStatus(stock);});");
 
             // 高效 DOM 節點生成
             html.AppendLine("function renderBatch(){");
@@ -2756,6 +2762,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("      `<td>${s.action}</td>`+");
             html.AppendLine("      `<td>${s.stage}</td>`+");
             html.AppendLine("      `<td class='text-left'>${s.suggestion}</td>`+");
+            html.AppendLine("      `<td class='text-left ${s.tomorrowPlan.className}' title='${s.tomorrowPlan.summary}'>${s.tomorrowPlan.label}</td>`+");
             html.AppendLine("      `<td class='font-mono'>${s.price.toFixed(2)}</td>`+");
             html.AppendLine("      `<td class='font-mono ${s.chgClass}'>${s.chg.toFixed(2)}%</td>`;");
             html.AppendLine("    frag.appendChild(tr);");
@@ -2772,7 +2779,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const minScore=parseNum(f.minScore.value),minCrash=parseNum(f.minCrash.value),minPatternCount=parseNum(f.minPatternCount.value);");
             html.AppendLine("  const minAvg=parseNum(f.minAvg.value),minConDays=Math.max(0,parseNum(f.minConDays.value)||0),minConScore=parseNum(f.minConScore.value)??60;");
             html.AppendLine("  const minForeignSensitivity=parseNum(f.minForeignSensitivity.value),minTrustSensitivity=parseNum(f.minTrustSensitivity.value),minSensitivityConfidence=parseNum(f.minSensitivityConfidence.value);");
-            html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,leadership=f.leadership.value,trendUp=f.trendUp.checked;");
+            html.AppendLine("  const pattern=f.pattern.value.toLowerCase(),action=f.action.value,holding=f.holding.value,suggestion=f.suggestion.value,tomorrow=f.tomorrow.value,leadership=f.leadership.value,trendUp=f.trendUp.checked;");
 
             html.AppendLine("  filteredData = rawData.filter(item => {");
             html.AppendLine("    if(selectedMarketGroup){const mapping=groupMappingBySymbol.get(String(item.symbol));const groups=mapping?[...(mapping.CoreThemes??mapping.coreThemes??[])].map(normalizeCoreThemeName):[];if(!groups.includes(selectedMarketGroup))return false;}");
@@ -2789,6 +2796,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("    if(action&&item.action!==action) return false;");
             html.AppendLine("    if(holding&&item.stage!==holding) return false;");
             html.AppendLine("    if(suggestion&&item.suggestion!==suggestion) return false;");
+            html.AppendLine("    if(tomorrow&&item.tomorrowPlan.key!==tomorrow) return false;");
             html.AppendLine("    if(minAvg!==null&&item.avg<minAvg) return false;");
             html.AppendLine("    if(minForeignSensitivity!==null&&(item.foreignSensitivity??0)<minForeignSensitivity) return false;");
             html.AppendLine("    if(minTrustSensitivity!==null&&(item.trustSensitivity??0)<minTrustSensitivity) return false;");
@@ -2842,7 +2850,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  const headers = [...table.tHead.rows[0].cells].map(th => `\"${(th.textContent||'').trim().replace(/\"/g, '\"\"')}\"`);");
             html.AppendLine("  csvRows.push(headers.join(','));");
             html.AppendLine("  filteredData.forEach(s => {");
-            html.AppendLine("    const row = [s.rank, s.symbol, s.name, s.score, s.crash, s.pcount, s.pattern, s.d0, s.d1, s.d2, s.d3, s.d4, s.avg, s.trend, s.netStr, s.netAmountStr, s.largeHolder400Str, s.largeHolder1000Str, s.largeHolderWeeklyStr, s.action, s.stage, s.suggestion, s.price, s.chg];");
+            html.AppendLine("    const row = [s.rank, s.symbol, s.name, s.score, s.crash, s.pcount, s.pattern, s.d0, s.d1, s.d2, s.d3, s.d4, s.avg, s.trend, s.netStr, s.netAmountStr, s.largeHolder400Str, s.largeHolder1000Str, s.largeHolderWeeklyStr, s.action, s.stage, s.suggestion, s.tomorrowPlan.label, s.price, s.chg];");
             html.AppendLine("    csvRows.push(row.map(v => `\"${String(v).replace(/\"/g, '\"\"')}\"`).join(','));");
             html.AppendLine("  });");
             html.AppendLine("  const csvString = csvRows.join('\\r\\n');");
