@@ -182,6 +182,30 @@
     return plan;
   }
 
+  function emptyPlan(stock, strategy, quality, message) {
+    return {
+      symbol: stock.symbol,
+      name: stock.name,
+      strategy,
+      holdingPeriod: '短線：1～5 個交易日',
+      entryLower: 0,
+      entryUpper: 0,
+      stop: 0,
+      targetOne: 0,
+      targetTwo: 0,
+      firstPressureAction: 'balanced',
+      riskBudget: 0,
+      available: false,
+      cancellation: '尚未產生結構化條件；若自行輸入價格，請自行確認支撐區下緣與壓力區上緣。',
+      quality,
+      referenceText: '',
+      structureText: message,
+      initialStatus: message,
+      validUntil: dateText(nextWeekday()),
+      savedAt: ''
+    };
+  }
+
   function buildDefaultPlan(stock, strategy) {
     const isPullback = strategy === 'pullback';
     const isManual = strategy === 'manual';
