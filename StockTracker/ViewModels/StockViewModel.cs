@@ -429,7 +429,7 @@ namespace StockTracker.ViewModels
         public long LatestMarginBalance => _marginByDate.Count == 0 ? 0 : _marginByDate.OrderBy(x => x.Key).Last().Value.MarginBalance;
         public double LatestMarginMaintenanceRatio => _marginMetricByDate.Count == 0 ? 0 : _marginMetricByDate.OrderBy(x => x.Key).Last().Value.MarginMaintenanceRatio;
         public string InstitutionalLeadershipLabel => _institutionalSensitivity?.LeadershipLabel ?? "資料不足";
-        public string InstitutionalSensitivitySummary => _institutionalSensitivity?.Summary ?? "需至少 12 個法人有效訊號日，才能判讀價格敏感度。";
+        public string InstitutionalSensitivitySummary => _institutionalSensitivity?.Summary ?? "需至少 20 個法人有效訊號日，才能判讀價格敏感度。";
         public int ForeignSensitivity => _institutionalSensitivity?.Foreign?.Score ?? 0;
         public int TrustSensitivity => _institutionalSensitivity?.InvestmentTrust?.Score ?? 0;
         public int ForeignSensitivityConfidence => _institutionalSensitivity?.Foreign?.Confidence ?? 0;
@@ -928,6 +928,8 @@ namespace StockTracker.ViewModels
         private static string FormatSensitivity(InstitutionalSensitivityMetric metric)
         {
             if (metric == null || !metric.HasSufficientData) return "資料不足";
+            if (!metric.IsDirectionallyConsistent)
+                return $"{metric.Score}／100　未達雙向驗證（信心 {metric.Confidence}）";
             var level = metric.Score >= 75 ? "高度" : metric.Score >= 60 ? "明顯" : metric.Score >= 40 ? "輕度" : "低度";
             return $"{metric.Score}／100　{level}（信心 {metric.Confidence}）";
         }

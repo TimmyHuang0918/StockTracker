@@ -500,7 +500,7 @@ namespace StockTracker.ViewModels
             SuggestionOptions = new ObservableCollection<string> { "全部" };
             InstitutionalLeadershipOptions = new ObservableCollection<string>
             {
-                "全部", "外資敏感型", "投信敏感型", "法人共振", "法人敏感度不明顯", "資料不足"
+                "全部", "外資敏感型", "投信敏感型", "法人共振", "法人敏感度不明顯", "流動性不足", "資料不足"
             };
 
             _rankedStocksView = System.Windows.Data.CollectionViewSource.GetDefaultView(RankedStocks);
@@ -2111,7 +2111,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("<div class='filter-group'><label>外資敏感度 ≥</label><input id='minForeignSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>");
             html.AppendLine("<div class='filter-group'><label>投信敏感度 ≥</label><input id='minTrustSensitivity' type='number' min='0' max='100' step='1' placeholder='0' /></div>");
             html.AppendLine("<div class='filter-group'><label>資料信心 ≥</label><input id='minSensitivityConfidence' type='number' min='0' max='100' step='1' placeholder='0' /></div>");
-            html.AppendLine("<div class='filter-group'><label>法人主導型態</label><select id='leadershipFilter'><option value=''>全部</option><option value='外資敏感型'>外資敏感型</option><option value='投信敏感型'>投信敏感型</option><option value='法人共振'>法人共振</option><option value='法人敏感度不明顯'>法人敏感度不明顯</option><option value='資料不足'>資料不足</option></select></div>");
+            html.AppendLine("<div class='filter-group'><label>法人主導型態</label><select id='leadershipFilter'><option value=''>全部</option><option value='外資敏感型'>外資敏感型</option><option value='投信敏感型'>投信敏感型</option><option value='法人共振'>法人共振</option><option value='法人敏感度不明顯'>法人敏感度不明顯</option><option value='流動性不足'>流動性不足</option><option value='資料不足'>資料不足</option></select></div>");
             html.AppendLine("<div class='filter-group'><label>連續天數條件</label><div class='row-inputs'><input id='minConDays' type='number' step='1' placeholder='天數' /><input id='minConScore' type='number' step='1' placeholder='分數' value='60' /></div></div>");
             html.AppendLine("<div class='filter-group checkbox-group'><label><input id='trendUp' type='checkbox' /> 5日分數趨勢上升</label></div>");
             html.AppendLine("</div>");
@@ -2708,7 +2708,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  $('md-foreign-sensitivity').textContent = (s.foreignSensitivity || 0) + '／100';");
             html.AppendLine("  $('md-trust-sensitivity').textContent = (s.trustSensitivity || 0) + '／100';");
             html.AppendLine("  $('md-sensitivity-confidence').textContent = (s.sensitivityConfidence || 0) + '／100';");
-            html.AppendLine("  $('md-sensitivity-summary').textContent = decodeHtmlEntities(s.sensitivitySummary || '需至少 12 個法人有效訊號日，才能判讀價格敏感度。');");
+            html.AppendLine("  $('md-sensitivity-summary').textContent = decodeHtmlEntities(s.sensitivitySummary || '需至少 20 個法人有效訊號日，才能判讀價格敏感度。');");
             html.AppendLine("  $('md-action').textContent = s.action || '—';");
             html.AppendLine("  $('md-stage').textContent = s.stage || '—';");
             html.AppendLine("  $('md-suggestion').textContent = s.suggestion || '無特別建議';");

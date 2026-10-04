@@ -322,6 +322,7 @@ namespace StockTracker.Models
         public decimal BuyFollowThroughPercent { get; set; }
         public decimal SellFollowThroughPercent { get; set; }
         public decimal SpreadPercent { get; set; }
+        public bool IsDirectionallyConsistent { get; set; }
         public bool HasSufficientData { get; set; }
     }
 
@@ -330,7 +331,9 @@ namespace StockTracker.Models
         public InstitutionalSensitivityMetric Foreign { get; set; } = new InstitutionalSensitivityMetric();
         public InstitutionalSensitivityMetric InvestmentTrust { get; set; } = new InstitutionalSensitivityMetric();
         public string LeadershipLabel { get; set; } = "資料不足";
-        public string Summary { get; set; } = "需至少 12 個法人有效訊號日，才能判讀價格敏感度。";
+        public string Summary { get; set; } = "需至少 20 個法人有效訊號日，才能判讀價格敏感度。";
+        public decimal AverageVolumeLots { get; set; }
+        public decimal AverageTurnoverAmount { get; set; }
     }
 
     public class PutCallRatioRecord
