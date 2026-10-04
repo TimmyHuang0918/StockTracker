@@ -8,7 +8,7 @@
     "AdvanceRatioPercent": 100.0,
     "AverageChange1D": 6.893023442905058883996206066,
     "AverageChange5D": 4.546482273528265497079809266,
-    "AverageVolumeRatio20D": 1.8291823232528038,
+    "AverageVolumeRatio20D": 2.1079355086053242,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -31,7 +31,7 @@
     "AdvanceRatioPercent": 100.0,
     "AverageChange1D": 6.0461762138655180071997810125,
     "AverageChange5D": 16.914961980670855963128760408,
-    "AverageVolumeRatio20D": 1.404857458764867,
+    "AverageVolumeRatio20D": 1.42343482334712325,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -54,7 +54,7 @@
     "AdvanceRatioPercent": 100.0,
     "AverageChange1D": 5.381619215305592945566076770,
     "AverageChange5D": 13.497815387728704355595620707,
-    "AverageVolumeRatio20D": 1.35190108156741,
+    "AverageVolumeRatio20D": 1.40307675581648,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -77,7 +77,7 @@
     "AdvanceRatioPercent": 100.0,
     "AverageChange1D": 4.1683114326922494456439759175,
     "AverageChange5D": 11.676791629197459735221276260,
-    "AverageVolumeRatio20D": 1.2755902232100215,
+    "AverageVolumeRatio20D": 1.285016608509472,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -100,7 +100,7 @@
     "AdvanceRatioPercent": 96.42857142857142857142857143,
     "AverageChange1D": 3.4201058800545605415611373657,
     "AverageChange5D": 7.8538452022940867805786938189,
-    "AverageVolumeRatio20D": 1.4278615484053131785714285714,
+    "AverageVolumeRatio20D": 1.6383347704834792142857142857,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -123,7 +123,7 @@
     "AdvanceRatioPercent": 100.0,
     "AverageChange1D": 3.309831834650137500545637085,
     "AverageChange5D": 8.043149420994503927956306800,
-    "AverageVolumeRatio20D": 0.93095119473164825,
+    "AverageVolumeRatio20D": 0.82795698924731225,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -146,7 +146,7 @@
     "AdvanceRatioPercent": 66.666666666666666666666666667,
     "AverageChange1D": 2.6159448513636977395553434633,
     "AverageChange5D": 4.626522734864513063496846780,
-    "AverageVolumeRatio20D": 1.3267744406236993333333333333,
+    "AverageVolumeRatio20D": 1.3337532392182693333333333333,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -169,7 +169,7 @@
     "AdvanceRatioPercent": 100.0,
     "AverageChange1D": 2.450607298171829974376494870,
     "AverageChange5D": 6.5839227404732280390812392183,
-    "AverageVolumeRatio20D": 0.7764735386887008333333333333,
+    "AverageVolumeRatio20D": 0.3224776500638576666666666667,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -192,7 +192,7 @@
     "AdvanceRatioPercent": 83.33333333333333333333333333,
     "AverageChange1D": 2.3374907004045355628485554983,
     "AverageChange5D": 6.493929500622774681216990925,
-    "AverageVolumeRatio20D": 2.0628904838731325,
+    "AverageVolumeRatio20D": 4.4486073565592438333333333333,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -215,7 +215,7 @@
     "AdvanceRatioPercent": 80.0,
     "AverageChange1D": 1.949832415073179783287393604,
     "AverageChange5D": 6.874596489100935401861348008,
-    "AverageVolumeRatio20D": 1.1083672096361966,
+    "AverageVolumeRatio20D": 1.109511241144895,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -238,7 +238,7 @@
     "AdvanceRatioPercent": 75.0,
     "AverageChange1D": 1.7730118992920966063553896762,
     "AverageChange5D": 7.719547655653581453207213725,
-    "AverageVolumeRatio20D": 1.9278241602835075,
+    "AverageVolumeRatio20D": 2.20000460019464875,
     "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -261,7 +261,7 @@
     "AdvanceRatioPercent": 100.0,
     "AverageChange1D": 1.5113567476346237165198027943,
     "AverageChange5D": 1.4673630975096977353002055114,
-    "AverageVolumeRatio20D": 0.6784989857187262857142857143,
+    "AverageVolumeRatio20D": 0.5694563665432655714285714286,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -284,7 +284,7 @@
     "AdvanceRatioPercent": 81.81818181818181818181818182,
     "AverageChange1D": 0.9847325473544228422611700327,
     "AverageChange5D": 1.3903951450428871959780884964,
-    "AverageVolumeRatio20D": 0.7259532191422877272727272727,
+    "AverageVolumeRatio20D": 0.5780923989271994545454545455,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -307,7 +307,7 @@
     "AdvanceRatioPercent": 100.0,
     "AverageChange1D": 0.9239900618214902759763791700,
     "AverageChange5D": 9.500441979492888409548072914,
-    "AverageVolumeRatio20D": 0.7247464444399682,
+    "AverageVolumeRatio20D": 0.743178789138503,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -330,7 +330,7 @@
     "AdvanceRatioPercent": 66.666666666666666666666666667,
     "AverageChange1D": 0.9102927335056927670268707825,
     "AverageChange5D": 3.420287084957655598870815970,
-    "AverageVolumeRatio20D": 0.88599200210102825,
+    "AverageVolumeRatio20D": 0.87554204836904825,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -353,7 +353,7 @@
     "AdvanceRatioPercent": 80.0,
     "AverageChange1D": 0.6772481171322510992291662680,
     "AverageChange5D": 0.9237587231114308123761239520,
-    "AverageVolumeRatio20D": 1.0190663599363612,
+    "AverageVolumeRatio20D": 0.7627257799671588,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -376,7 +376,7 @@
     "AdvanceRatioPercent": 20.0,
     "AverageChange1D": 0.2452686375340937805682292067,
     "AverageChange5D": -0.2374581603836811807270944717,
-    "AverageVolumeRatio20D": 1.2206994554006366666666666667,
+    "AverageVolumeRatio20D": 0.6524666902025393333333333333,
     "MarketStatus": "降溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -399,7 +399,7 @@
     "AdvanceRatioPercent": 50.0,
     "AverageChange1D": 0.2241094416585300450307740200,
     "AverageChange5D": 0.7555460602290012515288482025,
-    "AverageVolumeRatio20D": 0.77249144375606525,
+    "AverageVolumeRatio20D": 0.6185703185703185,
     "MarketStatus": "整理",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -422,7 +422,7 @@
     "AdvanceRatioPercent": 40.0,
     "AverageChange1D": 0.1799321533334122351644042600,
     "AverageChange5D": 1.767593087334996105957392272,
-    "AverageVolumeRatio20D": 0.7881803510865536,
+    "AverageVolumeRatio20D": 0.400791034937376,
     "MarketStatus": "降溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -445,7 +445,7 @@
     "AdvanceRatioPercent": 60.0,
     "AverageChange1D": 0.0914399910045512187885796580,
     "AverageChange5D": 0.1671564858381158775445591760,
-    "AverageVolumeRatio20D": 0.6203133865899368,
+    "AverageVolumeRatio20D": 0.1962481962481962,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -468,7 +468,7 @@
     "AdvanceRatioPercent": 66.666666666666666666666666667,
     "AverageChange1D": -0.0468135144215629097495936767,
     "AverageChange5D": 1.0324383765166879201529192700,
-    "AverageVolumeRatio20D": 0.794266559990234,
+    "AverageVolumeRatio20D": 0.3380746237889091666666666667,
     "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -491,7 +491,7 @@
     "AdvanceRatioPercent": 33.333333333333333333333333333,
     "AverageChange1D": -0.0482633607177684389962039933,
     "AverageChange5D": 0.0299834181413128781549834200,
-    "AverageVolumeRatio20D": 0.672866678507820,
+    "AverageVolumeRatio20D": 0.6687989225399763333333333333,
     "MarketStatus": "降溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -514,7 +514,7 @@
     "AdvanceRatioPercent": 40.0,
     "AverageChange1D": -0.0832808589018143789149341480,
     "AverageChange5D": -1.3068038362929044027512055420,
-    "AverageVolumeRatio20D": 0.9978885359324356,
+    "AverageVolumeRatio20D": 0.7176979882862234,
     "MarketStatus": "轉弱",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -537,7 +537,7 @@
     "AdvanceRatioPercent": 40.0,
     "AverageChange1D": -0.1852506543606830622697416083,
     "AverageChange5D": -0.9561888587410937918500853100,
-    "AverageVolumeRatio20D": 0.6511490023216946666666666667,
+    "AverageVolumeRatio20D": 0.5730426887081358333333333333,
     "MarketStatus": "轉弱",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -560,7 +560,7 @@
     "AdvanceRatioPercent": 50.0,
     "AverageChange1D": -0.2732532613692015382221299860,
     "AverageChange5D": 1.3825304188844757864778939600,
-    "AverageVolumeRatio20D": 1.0178208986894076,
+    "AverageVolumeRatio20D": 0.553061224489796,
     "MarketStatus": "整理",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -583,7 +583,7 @@
     "AdvanceRatioPercent": 20.0,
     "AverageChange1D": -0.3778249730020585677912762080,
     "AverageChange5D": -0.4268351217541953129992476280,
-    "AverageVolumeRatio20D": 0.214811270434531,
+    "AverageVolumeRatio20D": 0.0,
     "MarketStatus": "轉弱",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -606,7 +606,7 @@
     "AdvanceRatioPercent": 12.5,
     "AverageChange1D": -0.7449562363584808954767005289,
     "AverageChange5D": -0.6834271548673091002220994056,
-    "AverageVolumeRatio20D": 0.7359994622777706666666666667,
+    "AverageVolumeRatio20D": 0.4717606735250285555555555556,
     "MarketStatus": "轉弱",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -629,7 +629,7 @@
     "AdvanceRatioPercent": 25.0,
     "AverageChange1D": -0.7942935749812998913358769400,
     "AverageChange5D": 0.3543869060799097014219595800,
-    "AverageVolumeRatio20D": 0.8879572640746665,
+    "AverageVolumeRatio20D": 1.1174783948549605,
     "MarketStatus": "降溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -652,7 +652,7 @@
     "AdvanceRatioPercent": 0.0,
     "AverageChange1D": -1.2019045273249839682465443167,
     "AverageChange5D": -0.3195919128084117967065130833,
-    "AverageVolumeRatio20D": 0.7757333462165996666666666667,
+    "AverageVolumeRatio20D": 0.7846470094821181666666666667,
     "MarketStatus": "轉弱",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
@@ -675,7 +675,7 @@
     "AdvanceRatioPercent": 0.0,
     "AverageChange1D": -1.653188730243105872461818330,
     "AverageChange5D": 3.468562841606610719637893274,
-    "AverageVolumeRatio20D": 0.7618991731685362,
+    "AverageVolumeRatio20D": 0.7583172006900824,
     "MarketStatus": "降溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
