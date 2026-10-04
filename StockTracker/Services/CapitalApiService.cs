@@ -284,9 +284,8 @@ namespace StockTracker.Services
                 High = high,
                 Low = low,
                 Close = close,
-                // 群益日 K 回傳成交股數；系統內 CandleData.Volume 統一以張保存，
-                // 才能和官方盤後補值及三大法人的買賣超股數正確比對。
-                Volume = ToLots(volume)
+                // 群益日 K 的成交量已是張，與官方盤後補值的 CandleData.Volume 一致。
+                Volume = volume
             };
 
             return true;
@@ -332,15 +331,10 @@ namespace StockTracker.Services
                 High = high,
                 Low = low,
                 Close = close,
-                Volume = ToLots((long)skStock.nYQty)
+                Volume = skStock.nYQty
             };
 
             return true;
-        }
-
-        private static long ToLots(long shares)
-        {
-            return shares <= 0 ? 0 : shares / 1000L;
         }
 
         private static decimal NormalizePrice(int rawPrice)
