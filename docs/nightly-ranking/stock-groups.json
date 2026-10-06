@@ -15489,6 +15489,15 @@
     "Source": "needs_review"
   },
   {
+    "Symbol": "6660",
+    "Name": "厚美德",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "6661",
     "Name": "威健生技",
     "Industry": "生技醫療業",
@@ -19886,6 +19895,15 @@
   {
     "Symbol": "7950",
     "Name": "盛大資訊",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7951",
+    "Name": "大易橙",
     "Industry": "待分類",
     "Themes": [],
     "CoreThemes": [],
