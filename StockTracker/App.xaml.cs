@@ -9,12 +9,14 @@ namespace StockTracker
         public static SKAPI Api { get; } = SKAPI.Instance;
 
         public static bool IsNightlyAutomationRestart { get; private set; }
+        public static bool IsManualScanPublish { get; private set; }
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
             IsNightlyAutomationRestart = e.Args.Contains("--nightly-automation");
+            IsManualScanPublish = e.Args.Contains("--scan-and-publish");
 
             var loginWindow = new LoginWindow();
             loginWindow.Show();

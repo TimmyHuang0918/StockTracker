@@ -366,6 +366,12 @@ namespace StockTracker.ViewModels
                     await Task.Delay(2000);
                     _ = RunNightlyAutomationAfterRestartAsync();
                 }
+                else if (App.IsManualScanPublish)
+                {
+                    SystemMessage = "手動全市場掃描：程式重啟完成，準備更新網站...";
+                    await Task.Delay(2000);
+                    _ = RunManualScanPublishAsync();
+                }
                 else
                 {
                     EnsureNightlyAutomationTimer();
@@ -467,7 +473,25 @@ namespace StockTracker.ViewModels
             }
         }
 
-        private async Task RunNightlyAutomationAsync()
+        private async Task RunManualScanPublishAsync()
+        {
+            _isNightlyAutomationRunning = true;
+            try
+            {
+                await RunNightlyAutomationAsync(sendNotificationEmail: false);
+                SystemMessage = "手動全市場掃描與網站更新完成。";
+            }
+            catch (Exception ex)
+            {
+                SystemMessage = "手動全市場掃描失敗: " + ex.Message;
+            }
+            finally
+            {
+                _isNightlyAutomationRunning = false;
+            }
+        }
+
+        private async Task RunNightlyAutomationAsync(bool sendNotificationEmail = true)
         {
             IsInitializingMainPage = true;
             MainPageProgressValue = 0;
@@ -499,10 +523,13 @@ namespace StockTracker.ViewModels
             SystemMessage = "夜間排程：發佈網站中...";
             var websiteUrl = PublishRankingWebsiteToGitHub(htmlPath);
 
-            MainPageProgressValue = 95;
-            SystemMessage = "夜間排程：寄送通知中...";
-            var recipients = _nightlyRankingViewModel.GetNotificationEmailRecipients();
-            SendRankingReportEmail(xmlPath, websiteUrl, recipients);
+            if (sendNotificationEmail)
+            {
+                MainPageProgressValue = 95;
+                SystemMessage = "夜間排程：寄送通知中...";
+                var recipients = _nightlyRankingViewModel.GetNotificationEmailRecipients();
+                SendRankingReportEmail(xmlPath, websiteUrl, recipients);
+            }
             MainPageProgressValue = 100;
             SystemMessage = "夜間排程完成。";
             IsInitializingMainPage = false;
