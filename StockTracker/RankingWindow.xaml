@@ -148,7 +148,8 @@
                                 <Button Content="強勢連高分" Width="96" Height="30" Command="{Binding ApplyStrongMomentumFilterCommand}" Margin="0,0,8,0"/>
                                 <Button Content="低價高分" Width="86" Height="30" Command="{Binding ApplyLowPriceHighScoreFilterCommand}" Margin="0,0,8,0"/>
                                 <Button Content="法人同步買超" Width="110" Height="30" Command="{Binding ApplyInstitutionalMomentumFilterCommand}" Margin="0,0,8,0"/>
-                                <Button Content="分數翻揚" Width="86" Height="30" Command="{Binding ApplyScoreReboundFilterCommand}" />
+                                <Button Content="分數翻揚" Width="86" Height="30" Command="{Binding ApplyScoreReboundFilterCommand}" Margin="0,0,8,0"/>
+                                <Button Content="收盤異常放量" Width="100" Height="30" Command="{Binding ApplyVolumeSurgeFilterCommand}" />
                             </WrapPanel>
                         </StackPanel>
                     </Border>
@@ -228,6 +229,14 @@
                                         <TextBlock Text="~" VerticalAlignment="Center" Margin="8,0" />
                                         <TextBox Text="{Binding MaxThreeMajorNetFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
                                     </WrapPanel>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="收盤量增倍數 ≥" Margin="0,0,0,4" />
+                                    <TextBox Text="{Binding MinVolumeRatio20DFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="收盤量能" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding VolumeSurgeOptions}" SelectedItem="{Binding SelectedVolumeSurge, Mode=TwoWay}" Width="150" Height="28" />
                                 </StackPanel>
                             </WrapPanel>
                         </StackPanel>
@@ -326,6 +335,17 @@
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{Binding ChangePercentBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="今日量(張)" Binding="{Binding LatestVolumeLotsDisplay}" SortMemberPath="LatestVolumeLots" Width="95" />
+                <DataGridTextColumn Header="20日均量(張)" Binding="{Binding AverageVolumeLots20DDisplay}" SortMemberPath="AverageVolumeLots20D" Width="105" />
+                <DataGridTextColumn Header="量增倍數" Binding="{Binding VolumeRatio20DDisplay}" SortMemberPath="VolumeRatio20D" Width="85" />
+                <DataGridTextColumn Header="收盤量能" Binding="{Binding VolumeSurgeDisplay}" SortMemberPath="VolumeSurgeLabel" Width="105">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding VolumeSurgeBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
