@@ -2964,17 +2964,19 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
             html.AppendLine("Object.values(f).forEach(el=>{if(!el)return;const isSel=el.type==='checkbox'||el.tagName==='SELECT';el.addEventListener(isSel?'change':'input',isSel?applyFilter:debouncedFilter);});");
 
             // 排序機制
-            html.AppendLine("let sortState={idx:0,asc:true};");
-            html.AppendLine("const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','netLots','netAmount','largeHolder400','largeHolder1000','largeHolderWeekly','action','stage','suggestion','tomorrowPlan','price','chg'];");
+            html.AppendLine("let sortState={idx:-1,asc:true};");
+            html.AppendLine("const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','volumeLots','averageVolumeLots','volumeRatio','volumeSurge','netLots','netAmount','largeHolder400','largeHolder1000','largeHolderWeekly','action','stage','suggestion','tomorrowPlan','price','chg'];");
             html.AppendLine("[...table.tHead.rows[0].cells].forEach((th,idx)=>{");
             html.AppendLine("  th.addEventListener('click',()=>{");
             html.AppendLine("    sortState.asc=(sortState.idx===idx)?!sortState.asc:true;");
             html.AppendLine("    sortState.idx=idx;");
             html.AppendLine("    const key=propMap[idx];");
             html.AppendLine("    filteredData.sort((a,b)=>{");
-            html.AppendLine("      let va=a[key], vb=b[key];");
-            html.AppendLine("      if(typeof va === 'string') return sortState.asc? va.localeCompare(vb,'zh-Hant') : vb.localeCompare(va,'zh-Hant');");
-            html.AppendLine("      return sortState.asc ? va - vb : vb - va;");
+            html.AppendLine("      let va=key==='tomorrowPlan'?(a.tomorrowPlan?.label||''):a[key],vb=key==='tomorrowPlan'?(b.tomorrowPlan?.label||''):b[key];");
+            html.AppendLine("      const aMissing=va===null||va===undefined||va==='',bMissing=vb===null||vb===undefined||vb==='';");
+            html.AppendLine("      if(aMissing||bMissing){if(aMissing&&bMissing)return a.rank-b.rank;return aMissing?1:-1;}");
+            html.AppendLine("      if(typeof va === 'string') return sortState.asc? va.localeCompare(String(vb),'zh-Hant') : String(vb).localeCompare(va,'zh-Hant');");
+            html.AppendLine("      const diff=Number(va)-Number(vb);return Number.isFinite(diff)?(sortState.asc?diff:-diff):a.rank-b.rank;");
             html.AppendLine("    });");
             html.AppendLine("    tbody.innerHTML = '';");
             html.AppendLine("    renderedCount = 0;");

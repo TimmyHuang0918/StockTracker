@@ -887,17 +887,19 @@ container.addEventListener('scroll', ()=>{
 function debounce(fn,d=300){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),d);};}
 const debouncedFilter=debounce(applyFilter,300);
 Object.values(f).forEach(el=>{if(!el)return;const isSel=el.type==='checkbox'||el.tagName==='SELECT';el.addEventListener(isSel?'change':'input',isSel?applyFilter:debouncedFilter);});
-let sortState={idx:0,asc:true};
-const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','netLots','netAmount','largeHolder400','largeHolder1000','largeHolderWeekly','action','stage','suggestion','tomorrowPlan','price','chg'];
+let sortState={idx:-1,asc:true};
+const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','volumeLots','averageVolumeLots','volumeRatio','volumeSurge','netLots','netAmount','largeHolder400','largeHolder1000','largeHolderWeekly','action','stage','suggestion','tomorrowPlan','price','chg'];
 [...table.tHead.rows[0].cells].forEach((th,idx)=>{
   th.addEventListener('click',()=>{
     sortState.asc=(sortState.idx===idx)?!sortState.asc:true;
     sortState.idx=idx;
     const key=propMap[idx];
     filteredData.sort((a,b)=>{
-      let va=a[key], vb=b[key];
-      if(typeof va === 'string') return sortState.asc? va.localeCompare(vb,'zh-Hant') : vb.localeCompare(va,'zh-Hant');
-      return sortState.asc ? va - vb : vb - va;
+      let va=key==='tomorrowPlan'?(a.tomorrowPlan?.label||''):a[key],vb=key==='tomorrowPlan'?(b.tomorrowPlan?.label||''):b[key];
+      const aMissing=va===null||va===undefined||va==='',bMissing=vb===null||vb===undefined||vb==='';
+      if(aMissing||bMissing){if(aMissing&&bMissing)return a.rank-b.rank;return aMissing?1:-1;}
+      if(typeof va === 'string') return sortState.asc? va.localeCompare(String(vb),'zh-Hant') : String(vb).localeCompare(va,'zh-Hant');
+      const diff=Number(va)-Number(vb);return Number.isFinite(diff)?(sortState.asc?diff:-diff):a.rank-b.rank;
     });
     tbody.innerHTML = '';
     renderedCount = 0;
