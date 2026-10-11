@@ -23,7 +23,7 @@ namespace StockTracker
             DataContext = vm;
             LoadSavedCredentials();
 
-            if (App.IsNightlyAutomationRestart || App.IsManualScanPublish)
+            if (App.IsNightlyAutomationRestart || App.IsManualScanPublish || App.IsSchedulerAutoLogin)
             {
                 Loaded += async (s, e) => await TryAutoLoginForNightlyAutomation();
             }
