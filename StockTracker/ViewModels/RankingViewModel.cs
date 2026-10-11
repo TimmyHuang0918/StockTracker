@@ -2400,7 +2400,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  <div class='portfolio-summary' id='portfolioSummary'></div><div class='portfolio-table-wrap'><table class='portfolio-table'><thead><tr><th>&#25345;&#32929;</th><th>&#29694;&#20729;</th><th>&#20170;&#26085;&#28466;&#36300;</th><th>&#25613;&#30410;&#29575;</th><th>&#29694;&#26377;&#27402;&#37325;</th><th>&#30446;&#27161;&#27402;&#37325;</th><th>&#24314;&#35696;</th><th></th></tr></thead><tbody id='portfolioBody'></tbody></table></div>");
             html.AppendLine("</div>");
             html.AppendLine("<div class=\"table-container\" id=\"tableContainer\"><table id=\"rankingTable\"><thead><tr>");
-            html.AppendLine($"<th data-type='num' class='sticky-col'>排名</th><th data-type='text' class='sticky-col'>代號</th><th data-type='text' class='sticky-col'>名稱</th><th data-type='num'>分數</th><th data-type='num'>風險</th><th data-type='num'>型態數</th><th data-type='text' class='text-left'>型態標籤</th><th data-type='num'>D0</th><th data-type='num'>D1</th><th data-type='num'>D2</th><th data-type='num'>D3</th><th data-type='num'>D4</th><th data-type='num'>5日均分</th><th data-type='num'>趨勢</th><th data-type='num'>今日量(張)</th><th data-type='num'>20日均量(張)</th><th data-type='num'>量增倍數</th><th data-type='text'>收盤量能</th><th data-type='num'>法人買賣(張)</th><th data-type='num'>買賣金額</th><th data-type='num'>大戶400+<br><span class='muted'>{largeHolderDataDateText}</span></th><th data-type='num'>超大戶1000+</th><th data-type='num'>大戶週變</th><th data-type='text'>策略</th><th data-type='text'>倉位</th><th data-type='text' class='text-left'>建議說明</th><th data-type='text' class='text-left'>明日條件</th><th data-type='num'>最新價</th><th data-type='num'>漲跌幅</th>");
+            html.AppendLine($"<th data-type='num' data-sort-key='rank' class='sticky-col'>排名</th><th data-type='text' data-sort-key='symbol' class='sticky-col'>代號</th><th data-type='text' data-sort-key='name' class='sticky-col'>名稱</th><th data-type='num' data-sort-key='score'>分數</th><th data-type='num' data-sort-key='crash'>風險</th><th data-type='num' data-sort-key='pcount'>型態數</th><th data-type='text' data-sort-key='pattern' class='text-left'>型態標籤</th><th data-type='num' data-sort-key='d0'>D0</th><th data-type='num' data-sort-key='d1'>D1</th><th data-type='num' data-sort-key='d2'>D2</th><th data-type='num' data-sort-key='d3'>D3</th><th data-type='num' data-sort-key='d4'>D4</th><th data-type='num' data-sort-key='avg'>5日均分</th><th data-type='num' data-sort-key='trend'>趨勢</th><th data-type='num' data-sort-key='volumeLots'>今日量(張)</th><th data-type='num' data-sort-key='averageVolumeLots'>20日均量(張)</th><th data-type='num' data-sort-key='volumeRatio'>量增倍數</th><th data-type='text' data-sort-key='volumeSurge'>收盤量能</th><th data-type='num' data-sort-key='netLots'>法人買賣(張)</th><th data-type='num' data-sort-key='netAmount'>買賣金額</th><th data-type='num' data-sort-key='largeHolder400'>大戶400+<br><span class='muted'>{largeHolderDataDateText}</span></th><th data-type='num' data-sort-key='largeHolder1000'>超大戶1000+</th><th data-type='num' data-sort-key='largeHolderWeekly'>大戶週變</th><th data-type='text' data-sort-key='action'>策略</th><th data-type='text' data-sort-key='stage'>倉位</th><th data-type='text' data-sort-key='suggestion' class='text-left'>建議說明</th><th data-type='text' data-sort-key='tomorrowPlan' class='text-left'>明日條件</th><th data-type='num' data-sort-key='price'>最新價</th><th data-type='num' data-sort-key='chg'>漲跌幅</th>");
             html.AppendLine("</tr></thead><tbody id=\"tbody\"></tbody></table></div>");
 
             // 將原生 Stock JSON 埋在 JS 變數中
@@ -2964,13 +2964,12 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
             html.AppendLine("Object.values(f).forEach(el=>{if(!el)return;const isSel=el.type==='checkbox'||el.tagName==='SELECT';el.addEventListener(isSel?'change':'input',isSel?applyFilter:debouncedFilter);});");
 
             // 排序機制
-            html.AppendLine("let sortState={idx:-1,asc:true};");
-            html.AppendLine("const propMap=['rank','symbol','name','score','crash','pcount','pattern','d0','d1','d2','d3','d4','avg','trend','volumeLots','averageVolumeLots','volumeRatio','volumeSurge','netLots','netAmount','largeHolder400','largeHolder1000','largeHolderWeekly','action','stage','suggestion','tomorrowPlan','price','chg'];");
+            html.AppendLine("let sortState={key:'',asc:true};");
             html.AppendLine("[...table.tHead.rows[0].cells].forEach((th,idx)=>{");
             html.AppendLine("  th.addEventListener('click',()=>{");
-            html.AppendLine("    sortState.asc=(sortState.idx===idx)?!sortState.asc:true;");
-            html.AppendLine("    sortState.idx=idx;");
-            html.AppendLine("    const key=propMap[idx];");
+            html.AppendLine("    const key=th.dataset.sortKey;if(!key)return;");
+            html.AppendLine("    sortState.asc=(sortState.key===key)?!sortState.asc:true;");
+            html.AppendLine("    sortState.key=key;");
             html.AppendLine("    filteredData.sort((a,b)=>{");
             html.AppendLine("      let va=key==='tomorrowPlan'?(a.tomorrowPlan?.label||''):a[key],vb=key==='tomorrowPlan'?(b.tomorrowPlan?.label||''):b[key];");
             html.AppendLine("      const aMissing=va===null||va===undefined||va==='',bMissing=vb===null||vb===undefined||vb==='';");
