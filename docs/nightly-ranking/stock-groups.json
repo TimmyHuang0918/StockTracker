@@ -19911,6 +19911,24 @@
     "Source": "needs_review"
   },
   {
+    "Symbol": "7955",
+    "Name": "車麗屋",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7956",
+    "Name": "啟賦",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "8011",
     "Name": "台通",
     "Industry": "通信網路業",
@@ -20681,6 +20699,15 @@
     "CoreThemes": [],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
+  },
+  {
+    "Symbol": "8244",
+    "Name": "DIGITIMES",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
   },
   {
     "Symbol": "8249",
