@@ -19866,6 +19866,15 @@
     "Source": "needs_review"
   },
   {
+    "Symbol": "7946",
+    "Name": "廣騰",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "7947",
     "Name": "補丁科",
     "Industry": "待分類",
@@ -19922,6 +19931,15 @@
   {
     "Symbol": "7956",
     "Name": "啟賦",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7957",
+    "Name": "第一傳動",
     "Industry": "待分類",
     "Themes": [],
     "CoreThemes": [],
