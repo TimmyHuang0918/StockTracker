@@ -19227,6 +19227,15 @@
     "Source": "needs_review"
   },
   {
+    "Symbol": "7859",
+    "Name": "翰可能源",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "7860",
     "Name": "得生製藥",
     "Industry": "待分類",
@@ -19949,6 +19958,24 @@
   {
     "Symbol": "7958",
     "Name": "六俊",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7960",
+    "Name": "亞昕科技",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7962",
+    "Name": "宇田控制",
     "Industry": "待分類",
     "Themes": [],
     "CoreThemes": [],
