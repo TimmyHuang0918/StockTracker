@@ -11274,6 +11274,15 @@
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
+    "Symbol": "5235",
+    "Name": "金運",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "5236",
     "Name": "凌陽創新",
     "Industry": "半導體業",
@@ -17324,6 +17333,15 @@
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
+    "Symbol": "6930",
+    "Name": "盛新",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "6931",
     "Name": "青松健康",
     "Industry": "生技醫療業",
@@ -19236,6 +19254,15 @@
     "Source": "needs_review"
   },
   {
+    "Symbol": "7859",
+    "Name": "翰可能源",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "7860",
     "Name": "得生製藥",
     "Industry": "待分類",
@@ -19875,6 +19902,15 @@
     "Source": "needs_review"
   },
   {
+    "Symbol": "7946",
+    "Name": "廣騰",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "7947",
     "Name": "補丁科",
     "Industry": "待分類",
@@ -19911,6 +19947,15 @@
     "Source": "needs_review"
   },
   {
+    "Symbol": "7954",
+    "Name": "鑫詮科技",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "7955",
     "Name": "車麗屋",
     "Industry": "待分類",
@@ -19922,6 +19967,60 @@
   {
     "Symbol": "7956",
     "Name": "啟賦",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7957",
+    "Name": "第一傳動",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7958",
+    "Name": "六俊",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7960",
+    "Name": "亞昕科技",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7962",
+    "Name": "宇田控制",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7963",
+    "Name": "安達康",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
+    "Symbol": "7965",
+    "Name": "昆桐",
     "Industry": "待分類",
     "Themes": [],
     "CoreThemes": [],
