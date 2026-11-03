@@ -231,6 +231,14 @@
                                     </WrapPanel>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="今日成交量（張）" Margin="0,0,0,4" />
+                                    <WrapPanel>
+                                        <TextBox Text="{Binding MinLatestVolumeLotsFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                        <TextBlock Text="~" VerticalAlignment="Center" Margin="8,0" />
+                                        <TextBox Text="{Binding MaxLatestVolumeLotsFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                    </WrapPanel>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
                                     <TextBlock Text="收盤量增倍數 ≥" Margin="0,0,0,4" />
                                     <TextBox Text="{Binding MinVolumeRatio20DFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
                                 </StackPanel>
