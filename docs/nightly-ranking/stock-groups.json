@@ -9846,6 +9846,15 @@
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
+    "Symbol": "4548",
+    "Name": "名超",
+    "Industry": "待分類",
+    "Themes": [],
+    "CoreThemes": [],
+    "Enabled": true,
+    "Source": "needs_review"
+  },
+  {
     "Symbol": "4549",
     "Name": "桓達",
     "Industry": "電機機械",
