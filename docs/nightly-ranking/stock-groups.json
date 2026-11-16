@@ -30,7 +30,7 @@
   },
   {
     "Symbol": "0053",
-    "Name": "元大電子",
+    "Name": "元大科技市值",
     "Industry": "待分類",
     "Themes": [],
     "CoreThemes": [],
@@ -5145,15 +5145,6 @@
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
-    "Symbol": "2733",
-    "Name": "維格餅家",
-    "Industry": "待分類",
-    "Themes": [],
-    "CoreThemes": [],
-    "Enabled": true,
-    "Source": "needs_review"
-  },
-  {
     "Symbol": "2734",
     "Name": "易飛網",
     "Industry": "觀光餐旅",
@@ -8492,15 +8483,6 @@
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
-  },
-  {
-    "Symbol": "3659",
-    "Name": "百辰",
-    "Industry": "待分類",
-    "Themes": [],
-    "CoreThemes": [],
-    "Enabled": true,
-    "Source": "needs_review"
   },
   {
     "Symbol": "3661",
@@ -15278,15 +15260,6 @@
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
   {
-    "Symbol": "6618",
-    "Name": "永虹先進",
-    "Industry": "待分類",
-    "Themes": [],
-    "CoreThemes": [],
-    "Enabled": true,
-    "Source": "needs_review"
-  },
-  {
     "Symbol": "6620",
     "Name": "漢達",
     "Industry": "生技醫療業",
@@ -18904,7 +18877,7 @@
   },
   {
     "Symbol": "7812",
-    "Name": "稜研科技*",
+    "Name": "稜研科技*-創",
     "Industry": "待分類",
     "Themes": [],
     "CoreThemes": [],
