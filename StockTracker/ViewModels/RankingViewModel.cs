@@ -25,6 +25,18 @@ namespace StockTracker.ViewModels
     }
 
     /// <summary>
+    /// A scan-time projection of the application's calculated financing metrics.
+    /// It deliberately contains no externally estimated maintenance ratio.
+    /// </summary>
+    internal sealed class ScanMarginMetric
+    {
+        public long MarginBalanceLots { get; set; }
+        public long MarginChangeLots { get; set; }
+        public double? MarginMaintenanceRatio { get; set; }
+        public DateTime TradeDate { get; set; }
+    }
+
+    /// <summary>
     /// Breadth of the currently scanned universe.  It is intentionally not
     /// labelled as an official market index because it only reflects symbols
     /// that were successfully loaded by this application.
@@ -266,6 +278,11 @@ namespace StockTracker.ViewModels
         public decimal VolumeRatio20D { get; set; }
         public decimal VolumeTurnoverAmount { get; set; }
         public string VolumeSurgeLabel { get; set; }
+        // 融資資料沿用 MarginMetricCalculator 的計算結果。原始融資欄位單位為張。
+        public long? MarginBalanceLots { get; set; }
+        public long? MarginChangeLots { get; set; }
+        public double? MarginMaintenanceRatio { get; set; }
+        public DateTime MarginDataDate { get; set; }
         public int Score { get; set; }
         public DateTime ScoreDate { get; set; }
         public int CrashRiskScore { get; set; }
@@ -330,6 +347,28 @@ namespace StockTracker.ViewModels
         public string VolumeSurgeDisplay => string.IsNullOrWhiteSpace(VolumeSurgeLabel) || VolumeSurgeLabel == "正常"
             ? "—"
             : VolumeSurgeLabel;
+        public string MarginBalanceLotsDisplay => MarginBalanceLots.HasValue
+            ? MarginBalanceLots.Value.ToString("N0", CultureInfo.InvariantCulture)
+            : "—";
+        public string MarginChangeLotsDisplay => MarginChangeLots.HasValue
+            ? (MarginChangeLots.Value > 0 ? "+" : string.Empty) + MarginChangeLots.Value.ToString("N0", CultureInfo.InvariantCulture)
+            : "—";
+        public string MarginMaintenanceRatioDisplay => MarginMaintenanceRatio.HasValue && MarginMaintenanceRatio.Value > 0d
+            ? MarginMaintenanceRatio.Value.ToString("F1", CultureInfo.InvariantCulture) + "%"
+            : "—";
+        public string MarginDataDateText => MarginDataDate == DateTime.MinValue
+            ? ""
+            : MarginDataDate.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture);
+        public System.Windows.Media.Brush MarginChangeBrush => !MarginChangeLots.HasValue
+            ? System.Windows.Media.Brushes.Gray
+            : MarginChangeLots.Value > 0 ? System.Windows.Media.Brushes.IndianRed
+            : MarginChangeLots.Value < 0 ? System.Windows.Media.Brushes.MediumSeaGreen
+            : System.Windows.Media.Brushes.Gray;
+        public System.Windows.Media.Brush MarginMaintenanceRatioBrush => !MarginMaintenanceRatio.HasValue || MarginMaintenanceRatio.Value <= 0d
+            ? System.Windows.Media.Brushes.Gray
+            : MarginMaintenanceRatio.Value < 130d ? System.Windows.Media.Brushes.IndianRed
+            : MarginMaintenanceRatio.Value < 150d ? System.Windows.Media.Brushes.Goldenrod
+            : System.Windows.Media.Brushes.MediumSeaGreen;
         public System.Windows.Media.Brush VolumeSurgeBrush =>
             string.Equals(VolumeSurgeLabel, "爆量", StringComparison.Ordinal) ? System.Windows.Media.Brushes.IndianRed :
             string.Equals(VolumeSurgeLabel, "明顯放量", StringComparison.Ordinal) ? System.Windows.Media.Brushes.OrangeRed :
@@ -458,6 +497,14 @@ namespace StockTracker.ViewModels
         private decimal? _maxChangePercentFilter;
         private decimal? _minThreeMajorNetFilter;
         private decimal? _maxThreeMajorNetFilter;
+        private decimal? _minForeignNetFilter;
+        private decimal? _maxForeignNetFilter;
+        private decimal? _minInvestmentTrustNetFilter;
+        private decimal? _maxInvestmentTrustNetFilter;
+        private decimal? _minDealerNetFilter;
+        private decimal? _maxDealerNetFilter;
+        private double? _minMarginMaintenanceRatioFilter;
+        private double? _maxMarginMaintenanceRatioFilter;
         private long? _minLatestVolumeLotsFilter;
         private long? _maxLatestVolumeLotsFilter;
         private decimal? _minVolumeRatio20DFilter;
@@ -494,6 +541,9 @@ namespace StockTracker.ViewModels
         private string _groupEditorSymbol;
         private string _groupEditorStockName;
         private readonly ObservableCollection<StockGroupEntry> _groupEditorStocks = new ObservableCollection<StockGroupEntry>();
+        private readonly TwseMarginRepository _twseMarginRepository;
+        private readonly DailyPriceRepository _dailyPriceRepository;
+        private readonly MarginMetricCalculator _marginMetricCalculator;
 
         public RankingViewModel(CapitalApiService apiService, MainWindowViewModel mainViewModel)
         {
@@ -503,6 +553,9 @@ namespace StockTracker.ViewModels
             var historyDirectory = AppDataPathService.GetT86HistoryDirectory();
             _dbPath = System.IO.Path.Combine(historyDirectory, "Ranking.db");
             _notificationEmailListPath = System.IO.Path.Combine(historyDirectory, "RankingEmailList.txt");
+            _twseMarginRepository = new TwseMarginRepository(System.IO.Path.Combine(historyDirectory, "twse_margin.db"));
+            _dailyPriceRepository = new DailyPriceRepository(System.IO.Path.Combine(historyDirectory, "daily_price.db"));
+            _marginMetricCalculator = new MarginMetricCalculator();
             EnsureDatabase();
             StartScanningCommand = new RelayCommand(async _ => await ScanAllStocksAsync(), _ => !_isScanning);
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
@@ -592,6 +645,54 @@ namespace StockTracker.ViewModels
         {
             get => _maxThreeMajorNetFilter;
             set { _maxThreeMajorNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MinForeignNetFilter
+        {
+            get => _minForeignNetFilter;
+            set { _minForeignNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MaxForeignNetFilter
+        {
+            get => _maxForeignNetFilter;
+            set { _maxForeignNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MinInvestmentTrustNetFilter
+        {
+            get => _minInvestmentTrustNetFilter;
+            set { _minInvestmentTrustNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MaxInvestmentTrustNetFilter
+        {
+            get => _maxInvestmentTrustNetFilter;
+            set { _maxInvestmentTrustNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MinDealerNetFilter
+        {
+            get => _minDealerNetFilter;
+            set { _minDealerNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public decimal? MaxDealerNetFilter
+        {
+            get => _maxDealerNetFilter;
+            set { _maxDealerNetFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public double? MinMarginMaintenanceRatioFilter
+        {
+            get => _minMarginMaintenanceRatioFilter;
+            set { _minMarginMaintenanceRatioFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
+        }
+
+        public double? MaxMarginMaintenanceRatioFilter
+        {
+            get => _maxMarginMaintenanceRatioFilter;
+            set { _maxMarginMaintenanceRatioFilter = value; OnPropertyChanged(); _rankedStocksView.Refresh(); }
         }
 
         public long? MinLatestVolumeLotsFilter
@@ -945,6 +1046,25 @@ namespace StockTracker.ViewModels
                 var threeMajorNetLots = stock.ThreeMajorNet / 1000m;
                 if (MinThreeMajorNetFilter.HasValue && threeMajorNetLots < MinThreeMajorNetFilter.Value) return false;
                 if (MaxThreeMajorNetFilter.HasValue && threeMajorNetLots > MaxThreeMajorNetFilter.Value) return false;
+                var foreignNetLots = stock.ForeignNet / 1000m;
+                if (MinForeignNetFilter.HasValue && foreignNetLots < MinForeignNetFilter.Value) return false;
+                if (MaxForeignNetFilter.HasValue && foreignNetLots > MaxForeignNetFilter.Value) return false;
+                var investmentTrustNetLots = stock.InvestmentTrustNet / 1000m;
+                if (MinInvestmentTrustNetFilter.HasValue && investmentTrustNetLots < MinInvestmentTrustNetFilter.Value) return false;
+                if (MaxInvestmentTrustNetFilter.HasValue && investmentTrustNetLots > MaxInvestmentTrustNetFilter.Value) return false;
+                var dealerNetLots = stock.DealerNet / 1000m;
+                if (MinDealerNetFilter.HasValue && dealerNetLots < MinDealerNetFilter.Value) return false;
+                if (MaxDealerNetFilter.HasValue && dealerNetLots > MaxDealerNetFilter.Value) return false;
+                if (MinMarginMaintenanceRatioFilter.HasValue || MaxMarginMaintenanceRatioFilter.HasValue)
+                {
+                    if (!stock.MarginMaintenanceRatio.HasValue || stock.MarginMaintenanceRatio.Value <= 0d)
+                    {
+                        return false;
+                    }
+
+                    if (MinMarginMaintenanceRatioFilter.HasValue && stock.MarginMaintenanceRatio.Value < MinMarginMaintenanceRatioFilter.Value) return false;
+                    if (MaxMarginMaintenanceRatioFilter.HasValue && stock.MarginMaintenanceRatio.Value > MaxMarginMaintenanceRatioFilter.Value) return false;
+                }
                 if (MinLatestVolumeLotsFilter.HasValue && stock.LatestVolumeLots < MinLatestVolumeLotsFilter.Value) return false;
                 if (MaxLatestVolumeLotsFilter.HasValue && stock.LatestVolumeLots > MaxLatestVolumeLotsFilter.Value) return false;
                 if (MinVolumeRatio20DFilter.HasValue && stock.VolumeRatio20D < MinVolumeRatio20DFilter.Value) return false;
@@ -1163,6 +1283,10 @@ namespace StockTracker.ViewModels
                             VolumeRatio20D REAL NOT NULL DEFAULT 0,
                             VolumeTurnoverAmount REAL NOT NULL DEFAULT 0,
                             VolumeSurgeLabel TEXT NOT NULL DEFAULT '',
+                            MarginBalanceLots INTEGER NULL,
+                            MarginChangeLots INTEGER NULL,
+                            MarginMaintenanceRatio REAL NULL,
+                            MarginDataDate TEXT NOT NULL DEFAULT '',
                             PriceStructureJson TEXT NOT NULL DEFAULT ''
                         );";
                     cmd.ExecuteNonQuery();
@@ -1182,6 +1306,10 @@ namespace StockTracker.ViewModels
                 AddRankingColumnIfMissing(conn, "VolumeRatio20D REAL NOT NULL DEFAULT 0");
                 AddRankingColumnIfMissing(conn, "VolumeTurnoverAmount REAL NOT NULL DEFAULT 0");
                 AddRankingColumnIfMissing(conn, "VolumeSurgeLabel TEXT NOT NULL DEFAULT ''");
+                AddRankingColumnIfMissing(conn, "MarginBalanceLots INTEGER NULL");
+                AddRankingColumnIfMissing(conn, "MarginChangeLots INTEGER NULL");
+                AddRankingColumnIfMissing(conn, "MarginMaintenanceRatio REAL NULL");
+                AddRankingColumnIfMissing(conn, "MarginDataDate TEXT NOT NULL DEFAULT ''");
                 AddRankingColumnIfMissing(conn, "PriceStructureJson TEXT NOT NULL DEFAULT ''");
 
                 using (var cmd = conn.CreateCommand())
@@ -1471,7 +1599,7 @@ namespace StockTracker.ViewModels
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary, PriceStructureJson, LatestVolumeLots, AverageVolumeLots20D, VolumeRatio20D, VolumeTurnoverAmount, VolumeSurgeLabel FROM LatestRanking ORDER BY Rank ASC";
+                        cmd.CommandText = "SELECT Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary, PriceStructureJson, LatestVolumeLots, AverageVolumeLots20D, VolumeRatio20D, VolumeTurnoverAmount, VolumeSurgeLabel, MarginBalanceLots, MarginChangeLots, MarginMaintenanceRatio, MarginDataDate FROM LatestRanking ORDER BY Rank ASC";
                         using (var reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
@@ -1524,7 +1652,11 @@ namespace StockTracker.ViewModels
                                     AverageVolumeLots20D = reader.IsDBNull(35) ? 0m : Convert.ToDecimal(reader.GetValue(35), CultureInfo.InvariantCulture),
                                     VolumeRatio20D = reader.IsDBNull(36) ? 0m : Convert.ToDecimal(reader.GetValue(36), CultureInfo.InvariantCulture),
                                     VolumeTurnoverAmount = reader.IsDBNull(37) ? 0m : Convert.ToDecimal(reader.GetValue(37), CultureInfo.InvariantCulture),
-                                    VolumeSurgeLabel = reader.IsDBNull(38) ? string.Empty : reader.GetString(38)
+                                    VolumeSurgeLabel = reader.IsDBNull(38) ? string.Empty : reader.GetString(38),
+                                    MarginBalanceLots = reader.IsDBNull(39) ? (long?)null : reader.GetInt64(39),
+                                    MarginChangeLots = reader.IsDBNull(40) ? (long?)null : reader.GetInt64(40),
+                                    MarginMaintenanceRatio = reader.IsDBNull(41) ? (double?)null : Convert.ToDouble(reader.GetValue(41), CultureInfo.InvariantCulture),
+                                    MarginDataDate = reader.IsDBNull(42) || !DateTime.TryParse(reader.GetString(42), out var marginDataDate) ? DateTime.MinValue : marginDataDate.Date
                                 });
                             }
                         }
@@ -1653,8 +1785,8 @@ namespace StockTracker.ViewModels
                             cmd.ExecuteNonQuery();
 
                             cmd.CommandText = @"
-                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary, PriceStructureJson, LatestVolumeLots, AverageVolumeLots20D, VolumeRatio20D, VolumeTurnoverAmount, VolumeSurgeLabel)
-                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText, @largeHolder400, @largeHolder1000, @largeHolderWeeklyChange, @largeHolderDate, @foreignSensitivity, @trustSensitivity, @sensitivityConfidence, @leadershipLabel, @sensitivitySummary, @priceStructureJson, @latestVolumeLots, @averageVolumeLots20D, @volumeRatio20D, @volumeTurnoverAmount, @volumeSurgeLabel)";
+                                INSERT INTO LatestRanking (Rank, Symbol, Name, LatestPrice, ChangePercent, Score, ScoreDate, CrashRiskScore, PatternTagCount, PatternTags, Suggestion, StrategyDecision, StrategyActionText, StrategyStageLabel, ThreeMajorNet, ThreeMajorNetAmount, RecentScores, ScoreReason, ForeignNet, DealerNet, InvestmentTrustNet, DecisionSummary, PositionPlanText, KeyReasonsText, LargeHolder400PlusRatio, LargeHolder1000PlusRatio, LargeHolder400PlusWeeklyChange, LargeHolderDataDate, ForeignSensitivity, TrustSensitivity, InstitutionalSensitivityConfidence, InstitutionalLeadershipLabel, InstitutionalSensitivitySummary, PriceStructureJson, LatestVolumeLots, AverageVolumeLots20D, VolumeRatio20D, VolumeTurnoverAmount, VolumeSurgeLabel, MarginBalanceLots, MarginChangeLots, MarginMaintenanceRatio, MarginDataDate)
+                                VALUES (@rank, @sym, @name, @price, @change, @score, @scoreDate, @crashRiskScore, @patternTagCount, @patternTags, @sugg, @strategyDecision, @strategyActionText, @strategyStageLabel, @net, @netAmount, @recentScores, @scoreReason, @foreignNet, @dealerNet, @trustNet, @decisionSummary, @positionPlanText, @keyReasonsText, @largeHolder400, @largeHolder1000, @largeHolderWeeklyChange, @largeHolderDate, @foreignSensitivity, @trustSensitivity, @sensitivityConfidence, @leadershipLabel, @sensitivitySummary, @priceStructureJson, @latestVolumeLots, @averageVolumeLots20D, @volumeRatio20D, @volumeTurnoverAmount, @volumeSurgeLabel, @marginBalanceLots, @marginChangeLots, @marginMaintenanceRatio, @marginDataDate)";
                             foreach (var s in rankingResults ?? Enumerable.Empty<RankedStock>())
                             {
                                 cmd.Parameters.Clear();
@@ -1697,6 +1829,10 @@ namespace StockTracker.ViewModels
                                 cmd.Parameters.AddWithValue("@volumeRatio20D", s.VolumeRatio20D);
                                 cmd.Parameters.AddWithValue("@volumeTurnoverAmount", s.VolumeTurnoverAmount);
                                 cmd.Parameters.AddWithValue("@volumeSurgeLabel", s.VolumeSurgeLabel ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@marginBalanceLots", s.MarginBalanceLots.HasValue ? (object)s.MarginBalanceLots.Value : DBNull.Value);
+                                cmd.Parameters.AddWithValue("@marginChangeLots", s.MarginChangeLots.HasValue ? (object)s.MarginChangeLots.Value : DBNull.Value);
+                                cmd.Parameters.AddWithValue("@marginMaintenanceRatio", s.MarginMaintenanceRatio.HasValue ? (object)s.MarginMaintenanceRatio.Value : DBNull.Value);
+                                cmd.Parameters.AddWithValue("@marginDataDate", s.MarginDataDate == DateTime.MinValue ? string.Empty : s.MarginDataDate.ToString("yyyy-MM-dd"));
                                 cmd.ExecuteNonQuery();
                             }
                         }
@@ -2049,6 +2185,21 @@ namespace StockTracker.ViewModels
                 volumeRatio = Math.Round((double)s.VolumeRatio20D, 2),
                 volumeTurnover = (double)s.VolumeTurnoverAmount,
                 volumeSurge = HtmlEncode(s.VolumeSurgeLabel ?? string.Empty),
+                marginBalanceLots = s.MarginBalanceLots,
+                marginBalanceStr = s.MarginBalanceLotsDisplay,
+                marginChangeLots = s.MarginChangeLots,
+                marginChangeStr = s.MarginChangeLotsDisplay,
+                marginChangeClass = s.MarginChangeLots.HasValue
+                    ? ResolveValueColorClass(s.MarginChangeLots.Value)
+                    : "flat",
+                marginMaintenance = s.MarginMaintenanceRatio,
+                marginMaintenanceStr = s.MarginMaintenanceRatioDisplay,
+                marginMaintenanceClass = !s.MarginMaintenanceRatio.HasValue || s.MarginMaintenanceRatio.Value <= 0d
+                    ? "flat"
+                    : s.MarginMaintenanceRatio.Value < 130d ? "rise"
+                    : s.MarginMaintenanceRatio.Value < 150d ? "flat"
+                    : "fall",
+                marginDataDate = s.MarginDataDate == DateTime.MinValue ? string.Empty : s.MarginDataDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 net = (double)s.ThreeMajorNet,
                 netLots = Math.Round((double)s.ThreeMajorNet / 1000d, 3),
                 netStr = FormatNetLots((double)s.ThreeMajorNet),
@@ -2239,9 +2390,13 @@ namespace StockTracker.ViewModels
             html.AppendLine("<div class='filter-group'><label>價格區間</label><div class='row-inputs'><input id='minPrice' type='number' step='0.01' placeholder='Min' /><input id='maxPrice' type='number' step='0.01' placeholder='Max' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>漲跌幅%</label><div class='row-inputs'><input id='minChange' type='number' step='0.01' placeholder='Min' /><input id='maxChange' type='number' step='0.01' placeholder='Max' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>法人買賣超(張)</label><div class='row-inputs'><input id='minNet' type='number' step='0.001' placeholder='最小張數' /><input id='maxNet' type='number' step='0.001' placeholder='最大張數' /></div></div>");
+            html.AppendLine("<div class='filter-group'><label>外資買賣超(張)</label><div class='row-inputs'><input id='minForeignNet' type='number' step='0.001' placeholder='最小張數' /><input id='maxForeignNet' type='number' step='0.001' placeholder='最大張數' /></div></div>");
+            html.AppendLine("<div class='filter-group'><label>投信買賣超(張)</label><div class='row-inputs'><input id='minTrustNet' type='number' step='0.001' placeholder='最小張數' /><input id='maxTrustNet' type='number' step='0.001' placeholder='最大張數' /></div></div>");
+            html.AppendLine("<div class='filter-group'><label>自營商買賣超(張)</label><div class='row-inputs'><input id='minDealerNet' type='number' step='0.001' placeholder='最小張數' /><input id='maxDealerNet' type='number' step='0.001' placeholder='最大張數' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>買賣超金額</label><div class='row-inputs'><input id='minNetAmount' type='number' step='1' placeholder='Min' /><input id='maxNetAmount' type='number' step='1' placeholder='Max' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>今日成交量(張)</label><div class='row-inputs'><input id='minVolumeLots' type='number' min='0' step='1' placeholder='最小張數' /><input id='maxVolumeLots' type='number' min='0' step='1' placeholder='最大張數' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>收盤量增倍數 ≥</label><input id='minVolumeRatio' type='number' min='0' step='0.1' placeholder='1.8' /></div>");
+            html.AppendLine("<div class='filter-group'><label>融資維持率(%)</label><div class='row-inputs'><input id='minMarginMaintenance' type='number' min='0' step='0.1' placeholder='最小%' /><input id='maxMarginMaintenance' type='number' min='0' step='0.1' placeholder='最大%' /></div></div>");
             html.AppendLine("<div class='filter-group'><label>收盤量能</label><select id='volumeSurgeFilter'><option value=''>全部</option><option value='溫和放量'>溫和放量</option><option value='明顯放量'>明顯放量</option><option value='爆量'>爆量</option><option value='低基期放量'>低基期放量</option><option value='低成交額放量'>低成交額放量</option><option value='資料不足'>資料不足</option></select></div>");
             html.AppendLine("<div class='filter-group'><label>最新分數 ≥</label><input id='minScore' type='number' step='1' placeholder='0' /></div>");
             html.AppendLine("<div class='filter-group'><label>風險分數 ≦</label><input id='minCrash' type='number' step='1' placeholder='0' /></div>");
@@ -2417,7 +2572,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  <div class='portfolio-summary' id='portfolioSummary'></div><div class='portfolio-table-wrap'><table class='portfolio-table'><thead><tr><th>&#25345;&#32929;</th><th>&#29694;&#20729;</th><th>&#20170;&#26085;&#28466;&#36300;</th><th>&#25613;&#30410;&#29575;</th><th>&#29694;&#26377;&#27402;&#37325;</th><th>&#30446;&#27161;&#27402;&#37325;</th><th>&#24314;&#35696;</th><th></th></tr></thead><tbody id='portfolioBody'></tbody></table></div>");
             html.AppendLine("</div>");
             html.AppendLine("<div class=\"table-container\" id=\"tableContainer\"><table id=\"rankingTable\"><thead><tr>");
-            html.AppendLine($"<th data-type='num' data-sort-key='rank' class='sticky-col'>排名</th><th data-type='text' data-sort-key='symbol' class='sticky-col'>代號</th><th data-type='text' data-sort-key='name' class='sticky-col'>名稱</th><th data-type='num' data-sort-key='price'>最新價</th><th data-type='num' data-sort-key='chg'>漲跌幅</th><th data-type='num' data-sort-key='score'>分數</th><th data-type='num' data-sort-key='crash'>風險</th><th data-type='num' data-sort-key='pcount'>型態數</th><th data-type='text' data-sort-key='pattern' class='text-left'>型態標籤</th><th data-type='num' data-sort-key='d0'>D0</th><th data-type='num' data-sort-key='d1'>D1</th><th data-type='num' data-sort-key='d2'>D2</th><th data-type='num' data-sort-key='d3'>D3</th><th data-type='num' data-sort-key='d4'>D4</th><th data-type='num' data-sort-key='avg'>5日均分</th><th data-type='num' data-sort-key='trend'>趨勢</th><th data-type='num' data-sort-key='volumeLots'>今日量(張)</th><th data-type='num' data-sort-key='averageVolumeLots'>20日均量(張)</th><th data-type='num' data-sort-key='volumeRatio'>量增倍數</th><th data-type='text' data-sort-key='volumeSurge'>收盤量能</th><th data-type='num' data-sort-key='netLots'>法人買賣(張)</th><th data-type='num' data-sort-key='netAmount'>買賣金額</th><th data-type='num' data-sort-key='largeHolder400'>大戶400+<br><span class='muted'>{largeHolderDataDateText}</span></th><th data-type='num' data-sort-key='largeHolder1000'>超大戶1000+</th><th data-type='num' data-sort-key='largeHolderWeekly'>大戶週變</th><th data-type='text' data-sort-key='action'>策略</th><th data-type='text' data-sort-key='stage'>倉位</th><th data-type='text' data-sort-key='suggestion' class='text-left'>建議說明</th><th data-type='text' data-sort-key='tomorrowPlan' class='text-left'>明日條件</th>");
+            html.AppendLine($"<th data-type='num' data-sort-key='rank' class='sticky-col'>排名</th><th data-type='text' data-sort-key='symbol' class='sticky-col'>代號</th><th data-type='text' data-sort-key='name' class='sticky-col'>名稱</th><th data-type='num' data-sort-key='price'>最新價</th><th data-type='num' data-sort-key='chg'>漲跌幅</th><th data-type='num' data-sort-key='score'>分數</th><th data-type='num' data-sort-key='crash'>風險</th><th data-type='num' data-sort-key='pcount'>型態數</th><th data-type='text' data-sort-key='pattern' class='text-left'>型態標籤</th><th data-type='num' data-sort-key='d0'>D0</th><th data-type='num' data-sort-key='d1'>D1</th><th data-type='num' data-sort-key='d2'>D2</th><th data-type='num' data-sort-key='d3'>D3</th><th data-type='num' data-sort-key='d4'>D4</th><th data-type='num' data-sort-key='avg'>5日均分</th><th data-type='num' data-sort-key='trend'>趨勢</th><th data-type='num' data-sort-key='volumeLots'>今日量(張)</th><th data-type='num' data-sort-key='averageVolumeLots'>20日均量(張)</th><th data-type='num' data-sort-key='volumeRatio'>量增倍數</th><th data-type='text' data-sort-key='volumeSurge'>收盤量能</th><th data-type='num' data-sort-key='marginBalanceLots'>融資餘額(張)</th><th data-type='num' data-sort-key='marginChangeLots'>融資增減(張)</th><th data-type='num' data-sort-key='marginMaintenance'>融資維持率</th><th data-type='num' data-sort-key='netLots'>法人合計(張)</th><th data-type='num' data-sort-key='foreignNet'>外資(張)</th><th data-type='num' data-sort-key='trustNet'>投信(張)</th><th data-type='num' data-sort-key='dealerNet'>自營商(張)</th><th data-type='num' data-sort-key='netAmount'>買賣金額</th><th data-type='num' data-sort-key='largeHolder400'>大戶400+<br><span class='muted'>{largeHolderDataDateText}</span></th><th data-type='num' data-sort-key='largeHolder1000'>超大戶1000+</th><th data-type='num' data-sort-key='largeHolderWeekly'>大戶週變</th><th data-type='text' data-sort-key='action'>策略</th><th data-type='text' data-sort-key='stage'>倉位</th><th data-type='text' data-sort-key='suggestion' class='text-left'>建議說明</th><th data-type='text' data-sort-key='tomorrowPlan' class='text-left'>明日條件</th>");
             html.AppendLine("</tr></thead><tbody id=\"tbody\"></tbody></table></div>");
 
             // 將原生 Stock JSON 埋在 JS 變數中
@@ -2479,7 +2634,7 @@ namespace StockTracker.ViewModels
             html.AppendLine("  $('hero-suggestion').textContent = stock0050Data.suggestion || '無特別建議';");
             html.AppendLine("  $('hero-reason').textContent = decodeHtmlEntities(stock0050Data.scoreReason) || '評分理由尚未載入';");
             html.AppendLine("}");
-            html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minVolumeLots:$('minVolumeLots'),maxVolumeLots:$('maxVolumeLots'),minVolumeRatio:$('minVolumeRatio'),volumeSurge:$('volumeSurgeFilter'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),tomorrow:$('tomorrowFilter'),minAvg:$('minAvg'),minForeignSensitivity:$('minForeignSensitivity'),minTrustSensitivity:$('minTrustSensitivity'),minSensitivityConfidence:$('minSensitivityConfidence'),leadership:$('leadershipFilter'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
+            html.AppendLine("const f={search:$('searchInput'),top:$('topCount'),minPrice:$('minPrice'),maxPrice:$('maxPrice'),minChange:$('minChange'),maxChange:$('maxChange'),minNet:$('minNet'),maxNet:$('maxNet'),minForeignNet:$('minForeignNet'),maxForeignNet:$('maxForeignNet'),minTrustNet:$('minTrustNet'),maxTrustNet:$('maxTrustNet'),minDealerNet:$('minDealerNet'),maxDealerNet:$('maxDealerNet'),minNetAmount:$('minNetAmount'),maxNetAmount:$('maxNetAmount'),minVolumeLots:$('minVolumeLots'),maxVolumeLots:$('maxVolumeLots'),minVolumeRatio:$('minVolumeRatio'),minMarginMaintenance:$('minMarginMaintenance'),maxMarginMaintenance:$('maxMarginMaintenance'),volumeSurge:$('volumeSurgeFilter'),minScore:$('minScore'),minCrash:$('minCrash'),minPatternCount:$('minPatternCount'),pattern:$('patternFilter'),action:$('actionFilter'),holding:$('holdingFilter'),suggestion:$('suggestionFilter'),tomorrow:$('tomorrowFilter'),minAvg:$('minAvg'),minForeignSensitivity:$('minForeignSensitivity'),minTrustSensitivity:$('minTrustSensitivity'),minSensitivityConfidence:$('minSensitivityConfidence'),leadership:$('leadershipFilter'),trendUp:$('trendUp'),minConDays:$('minConDays'),minConScore:$('minConScore')};");
 
             html.AppendLine("let filteredData = [...rawData];");
             html.AppendLine("let renderedCount = 0;");
@@ -2908,7 +3063,13 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
             html.AppendLine("      `<td>${Number(s.averageVolumeLots||0).toLocaleString()}</td>`+");
             html.AppendLine("      `<td>${s.volumeRatio>0?s.volumeRatio.toFixed(2)+'x':'—'}</td>`+");
             html.AppendLine("      `<td class='${s.volumeSurge==='爆量'||s.volumeSurge==='明顯放量'?'rise':s.volumeSurge==='溫和放量'?'flat':'flat'}'>${s.volumeSurge||'—'}</td>`+");
+            html.AppendLine("      `<td>${s.marginBalanceStr||'—'}</td>`+");
+            html.AppendLine("      `<td class='${s.marginChangeClass||'flat'}'>${s.marginChangeStr||'—'}</td>`+");
+            html.AppendLine("      `<td class='${s.marginMaintenanceClass||'flat'}' title='融資資料日：${s.marginDataDate||'—'}'>${s.marginMaintenanceStr||'—'}</td>`+");
             html.AppendLine("      `<td class='${s.netClass}'>${s.netStr}</td>`+");
+            html.AppendLine("      `<td class='${s.foreignNetClass}'>${s.foreignNetStr}</td>`+");
+            html.AppendLine("      `<td class='${s.trustNetClass}'>${s.trustNetStr}</td>`+");
+            html.AppendLine("      `<td class='${s.dealerNetClass}'>${s.dealerNetStr}</td>`+");
             html.AppendLine("      `<td class='${s.netAmountClass}'>${s.netAmountStr}</td>`+");
             html.AppendLine("      `<td>${s.largeHolder400Str}</td>`+");
             html.AppendLine("      `<td>${s.largeHolder1000Str}</td>`+");
@@ -2928,8 +3089,10 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
             html.AppendLine("  const kw=(f.search.value||'').trim().toLowerCase();const top=parseNum(f.top.value);");
             html.AppendLine("  const minPrice=parseNum(f.minPrice.value),maxPrice=parseNum(f.maxPrice.value),minChange=parseNum(f.minChange.value),maxChange=parseNum(f.maxChange.value);");
             html.AppendLine("  const minNet=parseNum(f.minNet.value),maxNet=parseNum(f.maxNet.value),minNetAmount=parseNum(f.minNetAmount.value),maxNetAmount=parseNum(f.maxNetAmount.value);");
+            html.AppendLine("  const minForeignNet=parseNum(f.minForeignNet.value),maxForeignNet=parseNum(f.maxForeignNet.value),minTrustNet=parseNum(f.minTrustNet.value),maxTrustNet=parseNum(f.maxTrustNet.value),minDealerNet=parseNum(f.minDealerNet.value),maxDealerNet=parseNum(f.maxDealerNet.value);");
             html.AppendLine("  const minVolumeLots=parseNum(f.minVolumeLots.value),maxVolumeLots=parseNum(f.maxVolumeLots.value);");
             html.AppendLine("  const minVolumeRatio=parseNum(f.minVolumeRatio.value);");
+            html.AppendLine("  const minMarginMaintenance=parseNum(f.minMarginMaintenance.value),maxMarginMaintenance=parseNum(f.maxMarginMaintenance.value);");
             html.AppendLine("  const minScore=parseNum(f.minScore.value),minCrash=parseNum(f.minCrash.value),minPatternCount=parseNum(f.minPatternCount.value);");
             html.AppendLine("  const minAvg=parseNum(f.minAvg.value),minConDays=Math.max(0,parseNum(f.minConDays.value)||0),minConScore=parseNum(f.minConScore.value)??60;");
             html.AppendLine("  const minForeignSensitivity=parseNum(f.minForeignSensitivity.value),minTrustSensitivity=parseNum(f.minTrustSensitivity.value),minSensitivityConfidence=parseNum(f.minSensitivityConfidence.value);");
@@ -2942,9 +3105,13 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
             html.AppendLine("    if(!passRange(item.price,minPrice,maxPrice)) return false;");
             html.AppendLine("    if(!passRange(item.chg,minChange,maxChange)) return false;");
             html.AppendLine("    if(!passRange(item.netLots,minNet,maxNet)) return false;");
+            html.AppendLine("    if(!passRange((item.foreignNet??0)/1000,minForeignNet,maxForeignNet)) return false;");
+            html.AppendLine("    if(!passRange((item.trustNet??0)/1000,minTrustNet,maxTrustNet)) return false;");
+            html.AppendLine("    if(!passRange((item.dealerNet??0)/1000,minDealerNet,maxDealerNet)) return false;");
             html.AppendLine("    if(!passRange(item.netAmount,minNetAmount,maxNetAmount)) return false;");
             html.AppendLine("    if(!passRange(item.volumeLots??0,minVolumeLots,maxVolumeLots)) return false;");
             html.AppendLine("    if(minVolumeRatio!==null&&(item.volumeRatio??0)<minVolumeRatio) return false;");
+            html.AppendLine("    if(minMarginMaintenance!==null||maxMarginMaintenance!==null){if(item.marginMaintenance===null||item.marginMaintenance===undefined||!Number.isFinite(Number(item.marginMaintenance))||!passRange(Number(item.marginMaintenance),minMarginMaintenance,maxMarginMaintenance))return false;}");
             html.AppendLine("    if(volumeSurge&&decodeHtmlEntities(item.volumeSurge||'資料不足')!==volumeSurge) return false;");
             html.AppendLine("    if(minScore!==null&&item.score<minScore) return false;");
             html.AppendLine("    if(minCrash!==null&&item.crash>minCrash) return false;");
@@ -3008,7 +3175,7 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
             html.AppendLine("  const headers = [...table.tHead.rows[0].cells].map(th => `\"${(th.textContent||'').trim().replace(/\"/g, '\"\"')}\"`);");
             html.AppendLine("  csvRows.push(headers.join(','));");
             html.AppendLine("  filteredData.forEach(s => {");
-            html.AppendLine("    const row = [s.rank, s.symbol, s.name, s.score, s.crash, s.pcount, s.pattern, s.d0, s.d1, s.d2, s.d3, s.d4, s.avg, s.trend, s.netStr, s.netAmountStr, s.largeHolder400Str, s.largeHolder1000Str, s.largeHolderWeeklyStr, s.action, s.stage, s.suggestion, s.tomorrowPlan.label, s.price, s.chg];");
+            html.AppendLine("    const row = [s.rank, s.symbol, s.name, s.price, s.chg, s.score, s.crash, s.pcount, s.pattern, s.d0, s.d1, s.d2, s.d3, s.d4, s.avg, s.trend, s.volumeLots, s.averageVolumeLots, s.volumeRatio>0?s.volumeRatio+'x':'—', s.volumeSurge||'—', s.marginBalanceStr||'—', s.marginChangeStr||'—', s.marginMaintenanceStr||'—', s.netStr, s.foreignNetStr, s.trustNetStr, s.dealerNetStr, s.netAmountStr, s.largeHolder400Str, s.largeHolder1000Str, s.largeHolderWeeklyStr, s.action, s.stage, s.suggestion, s.tomorrowPlan.label];");
             html.AppendLine("    csvRows.push(row.map(v => `\"${String(v).replace(/\"/g, '\"\"')}\"`).join(','));");
             html.AppendLine("  });");
             html.AppendLine("  const csvString = csvRows.join('\\r\\n');");
@@ -3039,6 +3206,68 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
                 .Where(x => x.Contains("@"))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+        }
+
+        private async Task<IReadOnlyDictionary<string, ScanMarginMetric>> LoadMarginMetricsForScanAsync()
+        {
+            // Daily price and margin history are persisted by the application's existing
+            // "更新三大法人" workflow. Re-running the same calculator here keeps the
+            // all-market list consistent with the Local stock-detail maintenance ratio.
+            var marginHistoriesTask = _twseMarginRepository.LoadAllHistoriesAsync();
+            var dailyCloseHistoriesTask = _dailyPriceRepository.LoadAllHistoriesAsync();
+            await Task.WhenAll(marginHistoriesTask, dailyCloseHistoriesTask);
+
+            var closeBySymbol = dailyCloseHistoriesTask.Result
+                .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol))
+                .ToDictionary(x => x.Symbol, x => x, StringComparer.OrdinalIgnoreCase);
+            var result = new Dictionary<string, ScanMarginMetric>(StringComparer.OrdinalIgnoreCase);
+
+            await Task.Run(() =>
+            {
+                foreach (var marginHistory in marginHistoriesTask.Result
+                    .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Symbol)))
+                {
+                    if (!closeBySymbol.TryGetValue(marginHistory.Symbol, out var closeHistory) ||
+                        closeHistory?.RecordsByDate == null || closeHistory.RecordsByDate.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var marginRecords = marginHistory.RecordsByDate.Values
+                        .Where(x => x != null)
+                        .OrderBy(x => x.TradeDate)
+                        .ToList();
+                    if (marginRecords.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var priceDict = closeHistory.RecordsByDate
+                        .Where(x => x.Value != null && x.Value.Close > 0d)
+                        .ToDictionary(x => x.Key.Date, x => x.Value.Close);
+                    var metrics = _marginMetricCalculator.CalculateMarginMetrics(marginRecords, priceDict);
+                    var latest = metrics
+                        .Where(x => x?.Record != null)
+                        .OrderByDescending(x => x.Record.TradeDate)
+                        .FirstOrDefault();
+                    if (latest?.Record == null)
+                    {
+                        continue;
+                    }
+
+                    result[marginHistory.Symbol] = new ScanMarginMetric
+                    {
+                        MarginBalanceLots = latest.Record.MarginBalance,
+                        MarginChangeLots = latest.Record.MarginPurchaseSales,
+                        MarginMaintenanceRatio = latest.Record.MarginBalance > 0 && latest.MarginMaintenanceRatio > 0d
+                            ? (double?)latest.MarginMaintenanceRatio
+                            : null,
+                        TradeDate = latest.Record.TradeDate.Date
+                    };
+                }
+            });
+
+            return result;
         }
 
         private async Task ScanAllStocksAsync()
@@ -3217,6 +3446,8 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
                 int analyzeChecked = 0;
                 var lockObj = new object();
                 var t86HistoryMap = await _mainViewModel.LoadAllTwseT86HistoriesForScanAsync(scanHistoryStartDate);
+                ProgressText = "正在依本機歷史資料計算個股融資維持率...";
+                var marginMetricsBySymbol = await LoadMarginMetricsForScanAsync();
                 MarketOverview = await BuildMarketOverviewAsync(t86HistoryMap);
                 SaveMarketOverviewToDb(MarketOverview);
                 ProgressText = "正在取得集保大戶持股資料...";
@@ -3250,6 +3481,8 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
 
                             TwseT86History t86History;
                             t86HistoryMap.TryGetValue(symbol, out t86History);
+                            ScanMarginMetric marginMetric;
+                            marginMetricsBySymbol.TryGetValue(symbol, out marginMetric);
 
                             // 與主頁分數邏輯一致：先把法人歷史注入，再用同一組輸入計算最新分數
                             dummyVm.SetTwseT86Records(t86History?.RecordsByDate?.Values);
@@ -3357,6 +3590,10 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
                                     VolumeRatio20D = volumeRatio20D,
                                     VolumeTurnoverAmount = volumeTurnoverAmount,
                                     VolumeSurgeLabel = volumeSurgeLabel,
+                                    MarginBalanceLots = marginMetric == null ? (long?)null : marginMetric.MarginBalanceLots,
+                                    MarginChangeLots = marginMetric == null ? (long?)null : marginMetric.MarginChangeLots,
+                                    MarginMaintenanceRatio = marginMetric?.MarginMaintenanceRatio,
+                                    MarginDataDate = marginMetric?.TradeDate ?? DateTime.MinValue,
                                     Score = latestScore,
                                     ScoreDate = scoreDate,
                                     CrashRiskScore = latestRecommendation.CrashRiskScore,
@@ -3408,6 +3645,7 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
 
                 symbolDataMap.Clear();
                 t86HistoryMap = null;
+                marginMetricsBySymbol = null;
                 distinctSymbols.Clear();
 
                 RankedStocks.Clear();
@@ -3966,6 +4204,14 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
                 _maxChangePercentFilter = null;
                 _minThreeMajorNetFilter = null;
                 _maxThreeMajorNetFilter = null;
+                _minForeignNetFilter = null;
+                _maxForeignNetFilter = null;
+                _minInvestmentTrustNetFilter = null;
+                _maxInvestmentTrustNetFilter = null;
+                _minDealerNetFilter = null;
+                _maxDealerNetFilter = null;
+                _minMarginMaintenanceRatioFilter = null;
+                _maxMarginMaintenanceRatioFilter = null;
                 _minLatestVolumeLotsFilter = null;
                 _maxLatestVolumeLotsFilter = null;
                 _minVolumeRatio20DFilter = null;
@@ -4067,6 +4313,16 @@ html.AppendLine("function buildTomorrowStatus(stock){const structure=stock.price
             OnPropertyChanged(nameof(MaxChangePercentFilter));
             OnPropertyChanged(nameof(MinThreeMajorNetFilter));
             OnPropertyChanged(nameof(MaxThreeMajorNetFilter));
+            OnPropertyChanged(nameof(MinForeignNetFilter));
+            OnPropertyChanged(nameof(MaxForeignNetFilter));
+            OnPropertyChanged(nameof(MinInvestmentTrustNetFilter));
+            OnPropertyChanged(nameof(MaxInvestmentTrustNetFilter));
+            OnPropertyChanged(nameof(MinDealerNetFilter));
+            OnPropertyChanged(nameof(MaxDealerNetFilter));
+            OnPropertyChanged(nameof(MinMarginMaintenanceRatioFilter));
+            OnPropertyChanged(nameof(MaxMarginMaintenanceRatioFilter));
+            OnPropertyChanged(nameof(MinLatestVolumeLotsFilter));
+            OnPropertyChanged(nameof(MaxLatestVolumeLotsFilter));
             OnPropertyChanged(nameof(MinVolumeRatio20DFilter));
             OnPropertyChanged(nameof(MinLatestScoreFilter));
             OnPropertyChanged(nameof(MinCrashRiskScoreFilter));

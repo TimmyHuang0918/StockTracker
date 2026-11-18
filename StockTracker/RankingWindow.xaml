@@ -4,7 +4,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:StockTracker"
-        Title="全市場推薦排名" Height="760" Width="1280" MinWidth="1100" MinHeight="680"
+        Title="全市場推薦排名" Icon="/Assets/StockTrackerIcon.png" Height="760" Width="1280" MinWidth="1100" MinHeight="680"
         Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource AppForegroundBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
@@ -231,6 +231,38 @@
                                     </WrapPanel>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="外資買賣超（張）" Margin="0,0,0,4" />
+                                    <WrapPanel>
+                                        <TextBox Text="{Binding MinForeignNetFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                        <TextBlock Text="~" VerticalAlignment="Center" Margin="8,0" />
+                                        <TextBox Text="{Binding MaxForeignNetFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                    </WrapPanel>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="投信買賣超（張）" Margin="0,0,0,4" />
+                                    <WrapPanel>
+                                        <TextBox Text="{Binding MinInvestmentTrustNetFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                        <TextBlock Text="~" VerticalAlignment="Center" Margin="8,0" />
+                                        <TextBox Text="{Binding MaxInvestmentTrustNetFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                    </WrapPanel>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="自營商買賣超（張）" Margin="0,0,0,4" />
+                                    <WrapPanel>
+                                        <TextBox Text="{Binding MinDealerNetFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                        <TextBlock Text="~" VerticalAlignment="Center" Margin="8,0" />
+                                        <TextBox Text="{Binding MaxDealerNetFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                    </WrapPanel>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
+                                    <TextBlock Text="融資維持率（%）" Margin="0,0,0,4" />
+                                    <WrapPanel>
+                                        <TextBox Text="{Binding MinMarginMaintenanceRatioFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                        <TextBlock Text="~" VerticalAlignment="Center" Margin="8,0" />
+                                        <TextBox Text="{Binding MaxMarginMaintenanceRatioFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
+                                    </WrapPanel>
+                                </StackPanel>
+                                <StackPanel Margin="0,0,12,8">
                                     <TextBlock Text="今日成交量（張）" Margin="0,0,0,4" />
                                     <WrapPanel>
                                         <TextBox Text="{Binding MinLatestVolumeLotsFilter, UpdateSourceTrigger=PropertyChanged}" Width="90" Height="28" VerticalContentAlignment="Center" />
@@ -357,6 +389,21 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
+                <DataGridTextColumn Header="融資餘額（張）" Binding="{Binding MarginBalanceLotsDisplay}" SortMemberPath="MarginBalanceLots" Width="110" />
+                <DataGridTextColumn Header="融資增減（張）" Binding="{Binding MarginChangeLotsDisplay}" SortMemberPath="MarginChangeLots" Width="110">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding MarginChangeBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="融資維持率" Binding="{Binding MarginMaintenanceRatioDisplay}" SortMemberPath="MarginMaintenanceRatio" Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding MarginMaintenanceRatioBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
                 <DataGridTextColumn Header="分數" Binding="{Binding Score}" Width="80" />
                 <DataGridTextColumn Header="分數日期" Binding="{Binding ScoreDateText}" Width="95" />
                 <DataGridTextColumn Header="風險分" Binding="{Binding CrashRiskScore}" Width="70" />
@@ -373,6 +420,27 @@
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{Binding NetDisplayBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="外資買賣超（張）" Binding="{Binding ForeignNetDisplay}" SortMemberPath="ForeignNet" Width="105">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding ForeignNetBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="投信買賣超（張）" Binding="{Binding TrustNetDisplay}" SortMemberPath="InvestmentTrustNet" Width="105">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding TrustNetBrush}"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="自營商買賣超（張）" Binding="{Binding DealerNetDisplay}" SortMemberPath="DealerNet" Width="110">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding DealerNetBrush}"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>

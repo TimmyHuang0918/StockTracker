@@ -1606,8 +1606,12 @@
     "Symbol": "1603",
     "Name": "華電",
     "Industry": "電器電纜",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "重電／電網"
+    ],
+    "CoreThemes": [
+      "重電／電網"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -1624,8 +1628,12 @@
     "Symbol": "1605",
     "Name": "華新",
     "Industry": "電器電纜",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "重電／電網"
+    ],
+    "CoreThemes": [
+      "重電／電網"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -1633,8 +1641,12 @@
     "Symbol": "1608",
     "Name": "華榮",
     "Industry": "電器電纜",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "重電／電網"
+    ],
+    "CoreThemes": [
+      "重電／電網"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -1642,8 +1654,12 @@
     "Symbol": "1609",
     "Name": "大亞",
     "Industry": "電器電纜",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "重電／電網"
+    ],
+    "CoreThemes": [
+      "重電／電網"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -1660,8 +1676,12 @@
     "Symbol": "1612",
     "Name": "宏泰",
     "Industry": "電器電纜",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "重電／電網"
+    ],
+    "CoreThemes": [
+      "重電／電網"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -1678,8 +1698,12 @@
     "Symbol": "1615",
     "Name": "大山",
     "Industry": "電器電纜",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "重電／電網"
+    ],
+    "CoreThemes": [
+      "重電／電網"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -1705,8 +1729,12 @@
     "Symbol": "1618",
     "Name": "合機",
     "Industry": "電器電纜",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "重電／電網"
+    ],
+    "CoreThemes": [
+      "重電／電網"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -2810,8 +2838,12 @@
     "Symbol": "2208",
     "Name": "台船",
     "Industry": "航運業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "國防／無人機"
+    ],
+    "CoreThemes": [
+      "國防／無人機"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -3414,10 +3446,12 @@
     "Name": "華碩",
     "Industry": "電腦及週邊",
     "Themes": [
-      "筆記型電腦／PC"
+      "筆記型電腦／PC",
+      "AI伺服器"
     ],
     "CoreThemes": [
-      "筆記型電腦／PC"
+      "筆記型電腦／PC",
+      "AI伺服器"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
@@ -3426,8 +3460,12 @@
     "Symbol": "2359",
     "Name": "所羅門",
     "Industry": "其他電子業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "機器人／自動化"
+    ],
+    "CoreThemes": [
+      "機器人／自動化"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -3489,9 +3527,12 @@
     "Name": "燿華",
     "Industry": "電子零組件業",
     "Themes": [
-      "低軌衛星"
+      "低軌衛星",
+      "PCB"
     ],
-    "CoreThemes": [],
+    "CoreThemes": [
+      "PCB"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"
   },
@@ -3568,8 +3609,12 @@
     "Symbol": "2376",
     "Name": "技嘉",
     "Industry": "電腦及週邊",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "AI伺服器"
+    ],
+    "CoreThemes": [
+      "AI伺服器"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -3577,8 +3622,12 @@
     "Symbol": "2377",
     "Name": "微星",
     "Industry": "電腦及週邊",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "AI伺服器"
+    ],
+    "CoreThemes": [
+      "AI伺服器"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -6386,8 +6435,12 @@
     "Symbol": "3081",
     "Name": "聯亞",
     "Industry": "通信網路業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "光通訊／CPO"
+    ],
+    "CoreThemes": [
+      "光通訊／CPO"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -6822,8 +6875,12 @@
     "Symbol": "3211",
     "Name": "順達",
     "Industry": "電腦及週邊",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "AI電源／機櫃"
+    ],
+    "CoreThemes": [
+      "AI電源／機櫃"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -7823,8 +7880,12 @@
     "Symbol": "3515",
     "Name": "華擎",
     "Industry": "電腦及週邊",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "AI伺服器"
+    ],
+    "CoreThemes": [
+      "AI伺服器"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -8520,7 +8581,8 @@
     "Name": "貿聯-KY",
     "Industry": "其他電子業",
     "Themes": [
-      "汽車／電動車"
+      "汽車／電動車",
+      "連接器／高速介面"
     ],
     "CoreThemes": [
       "汽車／電動車"
@@ -8828,8 +8890,14 @@
     "Symbol": "3715",
     "Name": "定穎投控",
     "Industry": "電子零組件業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
+    ],
+    "CoreThemes": [
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -9957,8 +10025,12 @@
     "Symbol": "4562",
     "Name": "穎漢",
     "Industry": "電機機械",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "機器人／自動化"
+    ],
+    "CoreThemes": [
+      "機器人／自動化"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -10065,8 +10137,12 @@
     "Symbol": "4576",
     "Name": "大銀微系統",
     "Industry": "電機機械",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "機器人／自動化"
+    ],
+    "CoreThemes": [
+      "機器人／自動化"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -10110,8 +10186,12 @@
     "Symbol": "4583",
     "Name": "台灣精銳",
     "Industry": "電機機械",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "機器人／自動化"
+    ],
+    "CoreThemes": [
+      "機器人／自動化"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -10128,8 +10208,12 @@
     "Symbol": "4585",
     "Name": "達明",
     "Industry": "其他電子業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "機器人／自動化"
+    ],
+    "CoreThemes": [
+      "機器人／自動化"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -10952,8 +11036,12 @@
     "Symbol": "4977",
     "Name": "眾達-KY",
     "Industry": "通信網路業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "光通訊／CPO"
+    ],
+    "CoreThemes": [
+      "光通訊／CPO"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -11205,8 +11293,12 @@
     "Symbol": "5222",
     "Name": "全訊",
     "Industry": "半導體業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "國防／無人機"
+    ],
+    "CoreThemes": [
+      "國防／無人機"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -11573,8 +11665,12 @@
     "Symbol": "5309",
     "Name": "系統電",
     "Industry": "電子零組件業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "AI電源／機櫃"
+    ],
+    "CoreThemes": [
+      "AI電源／機櫃"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -13883,8 +13979,12 @@
     "Symbol": "6272",
     "Name": "驊陞",
     "Industry": "電子零組件業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "連接器／高速介面"
+    ],
+    "CoreThemes": [
+      "連接器／高速介面"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -16086,8 +16186,12 @@
     "Symbol": "6753",
     "Name": "龍德造船",
     "Industry": "航運業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "國防／無人機"
+    ],
+    "CoreThemes": [
+      "國防／無人機"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -18132,8 +18236,12 @@
     "Symbol": "7711",
     "Name": "永擎",
     "Industry": "電腦及週邊",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "AI伺服器"
+    ],
+    "CoreThemes": [
+      "AI伺服器"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -18582,8 +18690,13 @@
     "Symbol": "7769",
     "Name": "鴻勁",
     "Industry": "半導體業",
-    "Themes": [],
-    "CoreThemes": [],
+    "Themes": [
+      "半導體設備",
+      "先進封裝"
+    ],
+    "CoreThemes": [
+      "半導體設備"
+    ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; theme_needs_review"
   },
@@ -20235,10 +20348,12 @@
     "Name": "南電",
     "Industry": "電子零組件業",
     "Themes": [
-      "載板"
+      "載板",
+      "PCB"
     ],
     "CoreThemes": [
-      "載板"
+      "載板",
+      "PCB"
     ],
     "Enabled": true,
     "Source": "TWSE/TPEX official company basics; curated taxonomy v0.5"

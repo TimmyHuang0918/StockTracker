@@ -3,6 +3,7 @@ using StockTracker.Services;
 using StockTracker.ViewModels;
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
@@ -13,6 +14,7 @@ namespace StockTracker
     {
         private CapitalApiService _capitalApiService;
         private MainWindowViewModel _mainWindowViewModel;
+        private bool _hasSavedCredentials;
         private string CredentialFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StockTracker", "login.dat");
 
         public LoginWindow()
@@ -23,9 +25,9 @@ namespace StockTracker
             DataContext = vm;
             LoadSavedCredentials();
 
-            if (App.IsNightlyAutomationRestart || App.IsManualScanPublish || App.IsSchedulerAutoLogin)
+            if (_hasSavedCredentials || App.IsNightlyAutomationRestart || App.IsManualScanPublish || App.IsSchedulerAutoLogin)
             {
-                Loaded += async (s, e) => await TryAutoLoginForNightlyAutomation();
+                Loaded += async (s, e) => await TryAutoLoginAsync();
             }
         }
         private void PasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
@@ -92,7 +94,20 @@ namespace StockTracker
             {
                 var base64 = File.ReadAllText(CredentialFilePath, Encoding.UTF8);
                 var rawBytes = Convert.FromBase64String(base64);
-                var rawText = Encoding.UTF8.GetString(rawBytes);
+                var usedLegacyEncoding = false;
+                byte[] unprotectedBytes;
+                try
+                {
+                    unprotectedBytes = ProtectedData.Unprotect(rawBytes, null, DataProtectionScope.CurrentUser);
+                }
+                catch (CryptographicException)
+                {
+                    // 相容舊版 Base64 檔案；讀取成功後立即升級為 Windows DPAPI 加密。
+                    unprotectedBytes = rawBytes;
+                    usedLegacyEncoding = true;
+                }
+
+                var rawText = Encoding.UTF8.GetString(unprotectedBytes);
                 var parts = rawText.Split(new[] { '\n' }, 2);
                 if (parts.Length < 2)
                 {
@@ -103,10 +118,17 @@ namespace StockTracker
                 vm.Password = parts[1];
                 PasswordInput.Password = parts[1];
                 RememberCredentialsCheckBox.IsChecked = true;
+                _hasSavedCredentials = true;
+
+                if (usedLegacyEncoding)
+                {
+                    PersistCredentials(vm.Account, vm.Password);
+                }
             }
             catch
             {
                 RememberCredentialsCheckBox.IsChecked = false;
+                _hasSavedCredentials = false;
             }
         }
 
@@ -122,8 +144,10 @@ namespace StockTracker
 
                 var rawText = $"{account}\n{password}";
                 var rawBytes = Encoding.UTF8.GetBytes(rawText);
-                var base64 = Convert.ToBase64String(rawBytes);
+                var protectedBytes = ProtectedData.Protect(rawBytes, null, DataProtectionScope.CurrentUser);
+                var base64 = Convert.ToBase64String(protectedBytes);
                 File.WriteAllText(CredentialFilePath, base64, Encoding.UTF8);
+                _hasSavedCredentials = true;
                 return;
             }
 
@@ -131,6 +155,7 @@ namespace StockTracker
             {
                 File.Delete(CredentialFilePath);
             }
+            _hasSavedCredentials = false;
         }
 
         private void OnNotifyKLineData(string symbol, CandleData candle)
@@ -179,7 +204,7 @@ namespace StockTracker
             }
         }
 
-        private async System.Threading.Tasks.Task TryAutoLoginForNightlyAutomation()
+        private async System.Threading.Tasks.Task TryAutoLoginAsync()
         {
             if (!(DataContext is LoginViewModel vm))
             {
@@ -192,8 +217,10 @@ namespace StockTracker
                 return;
             }
 
-            vm.StatusMessage = "夜間排程：自動登入中...";
-            await System.Threading.Tasks.Task.Delay(500);
+            vm.StatusMessage = App.IsNightlyAutomationRestart || App.IsManualScanPublish || App.IsSchedulerAutoLogin
+                ? "排程：自動登入中..."
+                : "自動登入中...";
+            await System.Threading.Tasks.Task.Delay(350);
 
             if (vm.LoginCommand.CanExecute(null))
             {

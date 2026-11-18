@@ -68,6 +68,27 @@ namespace StockTracker
             Close();
         }
 
+        private void LogoutButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+            {
+                viewModel.ApiService?.Logout();
+            }
+
+            var loginWindow = new LoginWindow();
+            Application.Current.MainWindow = loginWindow;
+            loginWindow.Show();
+            Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _instantCandleFlushTimer?.Stop();
+            // 觸發既有的 DataContextChanged 清理，即時報價不再回灌已關閉的主視窗。
+            DataContext = null;
+            base.OnClosed(e);
+        }
+
         private void ScoreDetailToggle_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.Tag is StockViewModel stock)

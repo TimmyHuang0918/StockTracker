@@ -1800,10 +1800,14 @@
     "market": "上市",
     "industryCode": "06",
     "industry": "電器電纜",
-    "themes": [],
+    "themes": [
+      "重電／電網"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "重電／電網"
+    ]
   },
   {
     "symbol": "1604",
@@ -1822,10 +1826,14 @@
     "market": "上市",
     "industryCode": "06",
     "industry": "電器電纜",
-    "themes": [],
+    "themes": [
+      "重電／電網"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "重電／電網"
+    ]
   },
   {
     "symbol": "1608",
@@ -1833,10 +1841,14 @@
     "market": "上市",
     "industryCode": "06",
     "industry": "電器電纜",
-    "themes": [],
+    "themes": [
+      "重電／電網"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "重電／電網"
+    ]
   },
   {
     "symbol": "1609",
@@ -1844,10 +1856,14 @@
     "market": "上市",
     "industryCode": "06",
     "industry": "電器電纜",
-    "themes": [],
+    "themes": [
+      "重電／電網"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "重電／電網"
+    ]
   },
   {
     "symbol": "1611",
@@ -1866,10 +1882,14 @@
     "market": "上市",
     "industryCode": "06",
     "industry": "電器電纜",
-    "themes": [],
+    "themes": [
+      "重電／電網"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "重電／電網"
+    ]
   },
   {
     "symbol": "1614",
@@ -1888,10 +1908,14 @@
     "market": "上市",
     "industryCode": "06",
     "industry": "電器電纜",
-    "themes": [],
+    "themes": [
+      "重電／電網"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "重電／電網"
+    ]
   },
   {
     "symbol": "1616",
@@ -1921,10 +1945,14 @@
     "market": "上市",
     "industryCode": "06",
     "industry": "電器電纜",
-    "themes": [],
+    "themes": [
+      "重電／電網"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "重電／電網"
+    ]
   },
   {
     "symbol": "1623",
@@ -3249,10 +3277,14 @@
     "market": "上市",
     "industryCode": "15",
     "industry": "航運業",
-    "themes": [],
+    "themes": [
+      "國防／無人機"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "國防／無人機"
+    ]
   },
   {
     "symbol": "2211",
@@ -3914,12 +3946,14 @@
     "industryCode": "25",
     "industry": "電腦及週邊",
     "themes": [
-      "筆記型電腦／PC"
+      "筆記型電腦／PC",
+      "AI伺服器"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
-      "筆記型電腦／PC"
+      "筆記型電腦／PC",
+      "AI伺服器"
     ]
   },
   {
@@ -3928,10 +3962,14 @@
     "market": "上市",
     "industryCode": "31",
     "industry": "其他電子業",
-    "themes": [],
+    "themes": [
+      "機器人／自動化"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "機器人／自動化"
+    ]
   },
   {
     "symbol": "2360",
@@ -4003,11 +4041,14 @@
     "industryCode": "28",
     "industry": "電子零組件業",
     "themes": [
-      "低軌衛星"
+      "低軌衛星",
+      "PCB"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
-    "coreThemes": []
+    "coreThemes": [
+      "PCB"
+    ]
   },
   {
     "symbol": "2368",
@@ -4096,10 +4137,14 @@
     "market": "上市",
     "industryCode": "25",
     "industry": "電腦及週邊",
-    "themes": [],
+    "themes": [
+      "AI伺服器"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "AI伺服器"
+    ]
   },
   {
     "symbol": "2377",
@@ -4107,10 +4152,14 @@
     "market": "上市",
     "industryCode": "25",
     "industry": "電腦及週邊",
-    "themes": [],
+    "themes": [
+      "AI伺服器"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "AI伺服器"
+    ]
   },
   {
     "symbol": "2379",
@@ -7414,10 +7463,14 @@
     "market": "上櫃",
     "industryCode": "27",
     "industry": "通信網路業",
-    "themes": [],
+    "themes": [
+      "光通訊／CPO"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "光通訊／CPO"
+    ]
   },
   {
     "symbol": "3083",
@@ -7898,10 +7951,14 @@
     "market": "上櫃",
     "industryCode": "25",
     "industry": "電腦及週邊",
-    "themes": [],
+    "themes": [
+      "AI電源／機櫃"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "AI電源／機櫃"
+    ]
   },
   {
     "symbol": "3213",
@@ -9100,10 +9157,14 @@
     "market": "上市",
     "industryCode": "25",
     "industry": "電腦及週邊",
-    "themes": [],
+    "themes": [
+      "AI伺服器"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "AI伺服器"
+    ]
   },
   {
     "symbol": "3516",
@@ -9890,7 +9951,8 @@
     "industryCode": "31",
     "industry": "其他電子業",
     "themes": [
-      "汽車／電動車"
+      "汽車／電動車",
+      "連接器／高速介面"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
@@ -10249,10 +10311,16 @@
     "market": "上市",
     "industryCode": "28",
     "industry": "電子零組件業",
-    "themes": [],
+    "themes": [
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "PCB",
+      "PCB製造－硬板／多層板／HDI"
+    ]
   },
   {
     "symbol": "3716",
@@ -11474,10 +11542,14 @@
     "market": "上市",
     "industryCode": "05",
     "industry": "電機機械",
-    "themes": [],
+    "themes": [
+      "機器人／自動化"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "機器人／自動化"
+    ]
   },
   {
     "symbol": "4563",
@@ -11562,10 +11634,14 @@
     "market": "上市",
     "industryCode": "05",
     "industry": "電機機械",
-    "themes": [],
+    "themes": [
+      "機器人／自動化"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "機器人／自動化"
+    ]
   },
   {
     "symbol": "4577",
@@ -11617,10 +11693,14 @@
     "market": "上市",
     "industryCode": "05",
     "industry": "電機機械",
-    "themes": [],
+    "themes": [
+      "機器人／自動化"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "機器人／自動化"
+    ]
   },
   {
     "symbol": "4584",
@@ -11639,10 +11719,14 @@
     "market": "上市",
     "industryCode": "31",
     "industry": "其他電子業",
-    "themes": [],
+    "themes": [
+      "機器人／自動化"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "機器人／自動化"
+    ]
   },
   {
     "symbol": "4588",
@@ -12566,10 +12650,14 @@
     "market": "上市",
     "industryCode": "27",
     "industry": "通信網路業",
-    "themes": [],
+    "themes": [
+      "光通訊／CPO"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "光通訊／CPO"
+    ]
   },
   {
     "symbol": "4979",
@@ -12862,10 +12950,14 @@
     "market": "上市",
     "industryCode": "24",
     "industry": "半導體業",
-    "themes": [],
+    "themes": [
+      "國防／無人機"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "國防／無人機"
+    ]
   },
   {
     "symbol": "5223",
@@ -13211,10 +13303,14 @@
     "market": "上櫃",
     "industryCode": "28",
     "industry": "電子零組件業",
-    "themes": [],
+    "themes": [
+      "AI電源／機櫃"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "AI電源／機櫃"
+    ]
   },
   {
     "symbol": "5310",
@@ -15969,10 +16065,14 @@
     "market": "上市",
     "industryCode": "28",
     "industry": "電子零組件業",
-    "themes": [],
+    "themes": [
+      "連接器／高速介面"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "連接器／高速介面"
+    ]
   },
   {
     "symbol": "6274",
@@ -18074,10 +18174,14 @@
     "market": "上市",
     "industryCode": "15",
     "industry": "航運業",
-    "themes": [],
+    "themes": [
+      "國防／無人機"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "國防／無人機"
+    ]
   },
   {
     "symbol": "6754",
@@ -19483,10 +19587,14 @@
     "market": "上市",
     "industryCode": "25",
     "industry": "電腦及週邊",
-    "themes": [],
+    "themes": [
+      "AI伺服器"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "AI伺服器"
+    ]
   },
   {
     "symbol": "7712",
@@ -19813,10 +19921,15 @@
     "market": "上市",
     "industryCode": "24",
     "industry": "半導體業",
-    "themes": [],
+    "themes": [
+      "半導體設備",
+      "先進封裝"
+    ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; theme_needs_review",
-    "coreThemes": []
+    "coreThemes": [
+      "半導體設備"
+    ]
   },
   {
     "symbol": "7770",
@@ -20334,12 +20447,14 @@
     "industryCode": "28",
     "industry": "電子零組件業",
     "themes": [
-      "載板"
+      "載板",
+      "PCB"
     ],
     "enabled": true,
     "source": "TWSE/TPEX official company basics; curated taxonomy v0.5",
     "coreThemes": [
-      "載板"
+      "載板",
+      "PCB"
     ]
   },
   {

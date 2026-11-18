@@ -98,6 +98,27 @@ namespace StockTracker.Services
             await LoginAsync(Account, Password);
         }
 
+        public void Logout()
+        {
+            // 群益 Quote API 明確提供的是離開監看；登入憑證是否保留由 LoginWindow
+            // 的「自動登入」設定決定，不因登出而刪除。
+            try
+            {
+                _api.SKQuoteLib_LeaveMonitor();
+            }
+            catch
+            {
+                // API 已斷線時 LeaveMonitor 會回傳例外，仍應完成本機登出狀態。
+            }
+
+            _subscribedSymbols.Clear();
+            _isSkQuoteConnectionReady = false;
+            _quoteConnectionReadyTcs = null;
+            IsLoggedIn = false;
+            Account = string.Empty;
+            Password = string.Empty;
+        }
+
         public async Task SubscribeAsync(string symbol)
         {
             var normalized = symbol?.Trim();

@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="群益股票監測系統 - 登入" Height="311" Width="420" WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        Title="群益股票監測系統 - 登入" Icon="/Assets/StockTrackerIcon.png" Height="311" Width="420" WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         Background="{DynamicResource AppBackgroundBrush}" WindowStyle="None">
     <Grid Margin="24" Background="{DynamicResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
@@ -40,7 +40,7 @@
             <PasswordBox x:Name="PasswordInput" Height="20" PasswordChanged="PasswordBox_OnPasswordChanged"/>
         </StackPanel>
 
-        <CheckBox Grid.Row="7" x:Name="RememberCredentialsCheckBox" Content="記住帳號密碼" VerticalAlignment="Center" Foreground="#FFFFF9F9"/>
+        <CheckBox Grid.Row="7" x:Name="RememberCredentialsCheckBox" Content="自動登入（記住帳號密碼）" VerticalAlignment="Center" Foreground="#FFFFF9F9"/>
 
         <StackPanel Grid.Row="9" Orientation="Horizontal" VerticalAlignment="Center">
             <Button Content="登入群益 API" Name="btnLogin" Width="140" Height="34"  Command="{Binding LoginCommand}" />

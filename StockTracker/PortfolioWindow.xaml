@@ -1,7 +1,7 @@
 <Window x:Class="StockTracker.PortfolioWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="&#x6211;&#x7684;&#x6295;&#x8CC7;&#x7D44;&#x5408;" Height="880" Width="1380" MinHeight="720" MinWidth="1050"
+        Title="&#x6211;&#x7684;&#x6295;&#x8CC7;&#x7D44;&#x5408;" Icon="/Assets/StockTrackerIcon.png" Height="880" Width="1380" MinHeight="720" MinWidth="1050"
         WindowStartupLocation="CenterOwner" Background="#161B22">
     <Window.Resources>
         <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#173B57" Offset="0"/><GradientStop Color="#1E2A45" Offset="1"/></LinearGradientBrush>
