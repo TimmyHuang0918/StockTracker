@@ -1,84 +1,107 @@
 [
   {
-    "Theme": "資安／雲端",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 5,
-    "AdvancingCount": 2,
-    "DecliningCount": 3,
-    "AdvanceRatioPercent": 40.0,
-    "AverageChange1D": -0.2735910456980140450279557720,
-    "AverageChange5D": -3.650686964119954115946536462,
-    "AverageVolumeRatio20D": 1.5697254693077215150663402223,
-    "MarketStatus": "轉弱",
+    "Theme": "被動元件製造",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 8,
+    "AdvancingCount": 8,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 9.511732872567865248635118990,
+    "AverageChange5D": 3.1196543743766803334947407275,
+    "AverageVolumeRatio20D": 0.7000819869874495827999268625,
+    "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "2471",
-      "6690",
-      "3029"
+      "2472",
+      "2478",
+      "3026"
     ],
     "WeakSymbols": [
-      "6689",
-      "6214",
-      "3029"
+      "6173",
+      "6449",
+      "2327"
     ]
   },
   {
-    "Theme": "汽車／電動車",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 6,
-    "AdvancingCount": 1,
-    "DecliningCount": 5,
-    "AdvanceRatioPercent": 16.666666666666666666666666667,
-    "AverageChange1D": -2.0749468437506404505215480233,
-    "AverageChange5D": -5.384853607436187598477917395,
-    "AverageVolumeRatio20D": 1.4808878876588071235828488978,
-    "MarketStatus": "轉弱",
+    "Theme": "高速材料／CCL",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 3,
+    "AdvancingCount": 3,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 8.844466314019764628695616517,
+    "AverageChange5D": 13.551723879154917422276754977,
+    "AverageVolumeRatio20D": 1.460693711862980111801169921,
+    "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "3665",
-      "2360",
-      "2204"
+      "6213",
+      "2383",
+      "6274"
     ],
     "WeakSymbols": [
-      "1536",
-      "2201",
-      "2207"
+      "6274",
+      "2383",
+      "6213"
     ]
   },
   {
-    "Theme": "營建／資產",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 5,
-    "AdvancingCount": 0,
-    "DecliningCount": 5,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -3.124396017136485455505780628,
-    "AverageChange5D": -2.350774047879786406205937170,
-    "AverageVolumeRatio20D": 0.7536292027319830170660788951,
-    "MarketStatus": "轉弱",
+    "Theme": "載板",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 4,
+    "AdvancingCount": 4,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 8.782306774375988507206964308,
+    "AverageChange5D": 4.372322510541477654055696975,
+    "AverageVolumeRatio20D": 1.2032688686599441893297070150,
+    "MarketStatus": "升溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "2501",
-      "2545",
-      "5534"
+      "8046",
+      "3037",
+      "4958"
     ],
     "WeakSymbols": [
-      "2542",
-      "2548",
-      "5534"
+      "3189",
+      "4958",
+      "3037"
+    ]
+  },
+  {
+    "Theme": "半導體材料／耗材",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 4,
+    "AdvancingCount": 4,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 8.494342889198930039517464320,
+    "AverageChange5D": 3.143762970804318785275966175,
+    "AverageVolumeRatio20D": 0.9777966257491021269346713583,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "1560",
+      "8028",
+      "6488"
+    ],
+    "WeakSymbols": [
+      "6538",
+      "6488",
+      "8028"
     ]
   },
   {
     "Theme": "散熱／熱管理",
-    "AsOfDate": "2026-11-25T00:00:00",
+    "AsOfDate": "2026-11-26T00:00:00",
     "StockCount": 4,
-    "AdvancingCount": 1,
-    "DecliningCount": 3,
-    "AdvanceRatioPercent": 25.0,
-    "AverageChange1D": -3.380574675400495072626220170,
-    "AverageChange5D": -10.683316977288992063070133240,
-    "AverageVolumeRatio20D": 1.3305674194007868778603103256,
-    "MarketStatus": "轉弱",
+    "AdvancingCount": 4,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 7.882826552144351998046030810,
+    "AverageChange5D": 6.062509020192179181348651400,
+    "AverageVolumeRatio20D": 0.558198032613952944105684476,
+    "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
       "3653",
@@ -92,601 +115,578 @@
     ]
   },
   {
-    "Theme": "先進封裝",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 3,
-    "AdvancingCount": 1,
-    "DecliningCount": 2,
-    "AdvanceRatioPercent": 33.333333333333333333333333333,
-    "AverageChange1D": -3.7407057252037883813543491933,
-    "AverageChange5D": -7.641024221628870015791010860,
-    "AverageVolumeRatio20D": 2.0929691352418635330842493642,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "2449",
-      "2330",
-      "3711"
-    ],
-    "WeakSymbols": [
-      "3711",
-      "2330",
-      "2449"
-    ]
-  },
-  {
-    "Theme": "高速材料／CCL",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 3,
-    "AdvancingCount": 0,
-    "DecliningCount": 3,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -4.113252856376740604872431440,
-    "AverageChange5D": -6.003692712198270921189963380,
-    "AverageVolumeRatio20D": 2.1139451219977891009592720639,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "2383",
-      "6274",
-      "6213"
-    ],
-    "WeakSymbols": [
-      "6213",
-      "6274",
-      "2383"
-    ]
-  },
-  {
-    "Theme": "綠能／儲能",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 5,
-    "AdvancingCount": 0,
-    "DecliningCount": 5,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -4.635972797815890167925545190,
-    "AverageChange5D": -7.263490555788132964226152704,
-    "AverageVolumeRatio20D": 1.0208701630788380493037134219,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "8926",
-      "2308",
-      "9958"
-    ],
-    "WeakSymbols": [
-      "3708",
-      "6869",
-      "9958"
-    ]
-  },
-  {
-    "Theme": "鋼鐵",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 5,
-    "AdvancingCount": 0,
-    "DecliningCount": 5,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -5.164780291266186984371286464,
-    "AverageChange5D": -6.832560561577199149124666246,
-    "AverageVolumeRatio20D": 0.909988950583780370243363796,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "2002",
-      "2006",
-      "2014"
-    ],
-    "WeakSymbols": [
-      "2027",
-      "2030",
-      "2014"
-    ]
-  },
-  {
-    "Theme": "半導體設備",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 7,
-    "AdvancingCount": 0,
-    "DecliningCount": 7,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -5.7806738102942836069334559814,
-    "AverageChange5D": -13.022962974956698249541724791,
-    "AverageVolumeRatio20D": 1.219889152071050892219125027,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "7769",
-      "6640",
-      "5443"
-    ],
-    "WeakSymbols": [
-      "6187",
-      "3583",
-      "3131"
-    ]
-  },
-  {
-    "Theme": "塑化",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 4,
-    "AdvancingCount": 1,
-    "DecliningCount": 3,
-    "AdvanceRatioPercent": 25.0,
-    "AverageChange1D": -5.8704963609057416847783917475,
-    "AverageChange5D": -11.414338578694973129862631732,
-    "AverageVolumeRatio20D": 1.1154909976955792810477596398,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "6505",
-      "1301",
-      "1326"
-    ],
-    "WeakSymbols": [
-      "1303",
-      "1326",
-      "1301"
-    ]
-  },
-  {
-    "Theme": "機器人／自動化",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 10,
-    "AdvancingCount": 0,
-    "DecliningCount": 10,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.186452573687413157480301868,
-    "AverageChange5D": -9.533521770984724936558492306,
-    "AverageVolumeRatio20D": 0.9329811960886277822166302153,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "2308",
-      "2049",
-      "4583"
-    ],
-    "WeakSymbols": [
-      "4540",
-      "4562",
-      "2359"
-    ]
-  },
-  {
-    "Theme": "光通訊／CPO",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 7,
-    "AdvancingCount": 0,
-    "DecliningCount": 7,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.3048973186145866424436927343,
-    "AverageChange5D": -18.460716371087404229044624929,
-    "AverageVolumeRatio20D": 1.7146461543779012624340975933,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "3163",
-      "3450",
-      "4979"
-    ],
-    "WeakSymbols": [
-      "4977",
-      "3363",
-      "3081"
-    ]
-  },
-  {
     "Theme": "封測",
-    "AsOfDate": "2026-11-25T00:00:00",
+    "AsOfDate": "2026-11-26T00:00:00",
     "StockCount": 6,
-    "AdvancingCount": 1,
-    "DecliningCount": 5,
-    "AdvanceRatioPercent": 16.666666666666666666666666667,
-    "AverageChange1D": -6.3226424706929459690646650933,
-    "AverageChange5D": -12.116070789137103984993320503,
-    "AverageVolumeRatio20D": 1.2685199763671079909452901581,
-    "MarketStatus": "轉弱",
+    "AdvancingCount": 6,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 7.5446727489305138579004757433,
+    "AverageChange5D": 3.9601440939937990746724083883,
+    "AverageVolumeRatio20D": 0.9565748145611225710060535436,
+    "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
+      "8150",
       "2449",
-      "3264",
       "6257"
     ],
     "WeakSymbols": [
-      "8150",
       "3711",
-      "6239"
-    ]
-  },
-  {
-    "Theme": "IC設計",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 6,
-    "AdvancingCount": 1,
-    "DecliningCount": 5,
-    "AdvanceRatioPercent": 16.666666666666666666666666667,
-    "AverageChange1D": -6.422007804408085776425175980,
-    "AverageChange5D": -10.836851806243420986143328098,
-    "AverageVolumeRatio20D": 1.1613324894426316044597436805,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "2379",
-      "3034",
-      "3661"
-    ],
-    "WeakSymbols": [
-      "2454",
-      "3443",
-      "3035"
-    ]
-  },
-  {
-    "Theme": "重電／電網",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 12,
-    "AdvancingCount": 0,
-    "DecliningCount": 12,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.4693470472737170670466519808,
-    "AverageChange5D": -8.296190667918171378169549392,
-    "AverageVolumeRatio20D": 0.7550576240430526261323132022,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "1603",
-      "1615",
-      "1503"
-    ],
-    "WeakSymbols": [
-      "1605",
-      "1609",
-      "2371"
-    ]
-  },
-  {
-    "Theme": "半導體材料／耗材",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 4,
-    "AdvancingCount": 0,
-    "DecliningCount": 4,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.4990008070966140692887226725,
-    "AverageChange5D": -13.840351811412538705331995258,
-    "AverageVolumeRatio20D": 0.9182897556002465256014561376,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "1560",
-      "6488",
-      "8028"
-    ],
-    "WeakSymbols": [
-      "6538",
-      "8028",
-      "6488"
-    ]
-  },
-  {
-    "Theme": "筆記型電腦／PC",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 9,
-    "AdvancingCount": 0,
-    "DecliningCount": 9,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.5570220163234816271267460156,
-    "AverageChange5D": -7.075189920605483411757089520,
-    "AverageVolumeRatio20D": 1.0584877032477077715472790443,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "3005",
-      "2353",
-      "3213"
-    ],
-    "WeakSymbols": [
-      "2364",
-      "2324",
-      "2382"
-    ]
-  },
-  {
-    "Theme": "PCB",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 31,
-    "AdvancingCount": 1,
-    "DecliningCount": 30,
-    "AdvanceRatioPercent": 3.2258064516129032258064516129,
-    "AverageChange1D": -6.582904495395326016881501251,
-    "AverageChange5D": -10.560184586158445229505035976,
-    "AverageVolumeRatio20D": 1.2694001774102708233639584689,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "2368",
-      "2383",
-      "6274"
-    ],
-    "WeakSymbols": [
-      "8021",
-      "5498",
-      "4958"
-    ]
-  },
-  {
-    "Theme": "AI伺服器",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 11,
-    "AdvancingCount": 0,
-    "DecliningCount": 11,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.5856633142925693239546800736,
-    "AverageChange5D": -7.0020709828025214140045302191,
-    "AverageVolumeRatio20D": 1.2817310706442872291226350606,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "3706",
-      "6669",
-      "2376"
-    ],
-    "WeakSymbols": [
-      "2317",
-      "3515",
-      "7711"
-    ]
-  },
-  {
-    "Theme": "國防／無人機",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 8,
-    "AdvancingCount": 0,
-    "DecliningCount": 8,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.636317199203176911372109150,
-    "AverageChange5D": -11.524069317465448484941923952,
-    "AverageVolumeRatio20D": 0.884590687334133183808496177,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "6753",
-      "2634",
-      "2208"
-    ],
-    "WeakSymbols": [
-      "5284",
-      "2645",
-      "5222"
-    ]
-  },
-  {
-    "Theme": "晶圓代工",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 4,
-    "AdvancingCount": 0,
-    "DecliningCount": 4,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.8099670928101764005239971575,
-    "AverageChange5D": -5.183442156881656132590054030,
-    "AverageVolumeRatio20D": 1.3798188089601613870744080246,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "2330",
-      "5347",
-      "6770"
-    ],
-    "WeakSymbols": [
-      "2303",
-      "6770",
-      "5347"
-    ]
-  },
-  {
-    "Theme": "AI電源／機櫃",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 6,
-    "AdvancingCount": 0,
-    "DecliningCount": 6,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.8115916012001313816587255633,
-    "AverageChange5D": -9.804544663655885105736148435,
-    "AverageVolumeRatio20D": 1.0585269713341431892676482286,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "2308",
-      "6121",
-      "2301"
-    ],
-    "WeakSymbols": [
-      "5309",
-      "6282",
-      "3211"
-    ]
-  },
-  {
-    "Theme": "載板",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 4,
-    "AdvancingCount": 0,
-    "DecliningCount": 4,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -6.9775190609221462944418614375,
-    "AverageChange5D": -13.584493987373360726801365728,
-    "AverageVolumeRatio20D": 1.8335598524610191318115114476,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "3189",
-      "3037",
-      "8046"
-    ],
-    "WeakSymbols": [
-      "4958",
-      "8046",
-      "3037"
-    ]
-  },
-  {
-    "Theme": "面板／顯示",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 5,
-    "AdvancingCount": 0,
-    "DecliningCount": 5,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -7.181040983133270931883259370,
-    "AverageChange5D": -11.204539256875190471596818550,
-    "AverageVolumeRatio20D": 0.9761142918422973912127900937,
-    "MarketStatus": "轉弱",
-    "Source": "user_api_market_data",
-    "LeadingSymbols": [
-      "8105",
-      "8069",
-      "6116"
-    ],
-    "WeakSymbols": [
-      "2409",
-      "3481",
-      "6116"
+      "6239",
+      "3264"
     ]
   },
   {
     "Theme": "網通設備",
-    "AsOfDate": "2026-11-25T00:00:00",
+    "AsOfDate": "2026-11-26T00:00:00",
     "StockCount": 7,
-    "AdvancingCount": 0,
-    "DecliningCount": 7,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -7.4897563033487101726675796286,
-    "AverageChange5D": -9.665465240932773679897439267,
-    "AverageVolumeRatio20D": 1.2260314656040315822612166776,
-    "MarketStatus": "轉弱",
+    "AdvancingCount": 7,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 7.0887946283155932964022572543,
+    "AverageChange5D": 2.209696910543269278987453530,
+    "AverageVolumeRatio20D": 0.6910103247013959124322736014,
+    "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "2345",
-      "3704",
-      "2332"
+      "6285",
+      "2332",
+      "2345"
     ],
     "WeakSymbols": [
-      "2419",
-      "6285",
-      "3062"
+      "5388",
+      "3704",
+      "2419"
     ]
   },
   {
-    "Theme": "連接器／高速介面",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 6,
-    "AdvancingCount": 0,
-    "DecliningCount": 6,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -7.6255070556190112957193518367,
-    "AverageChange5D": -10.707923566210869690822830767,
-    "AverageVolumeRatio20D": 0.676046843560282166954895416,
-    "MarketStatus": "轉弱",
+    "Theme": "PCB",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 31,
+    "AdvancingCount": 30,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 96.77419354838709677419354839,
+    "AverageChange1D": 7.0874225912109306182462662558,
+    "AverageChange5D": 5.390650909796570426680192591,
+    "AverageVolumeRatio20D": 0.9242684644418149351749671309,
+    "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "3023",
-      "3217",
-      "6272"
+      "6213",
+      "3044",
+      "2368"
     ],
     "WeakSymbols": [
-      "3605",
-      "3533",
-      "3689"
+      "1802",
+      "6438",
+      "5340"
     ]
   },
   {
     "Theme": "記憶體",
-    "AsOfDate": "2026-11-25T00:00:00",
+    "AsOfDate": "2026-11-26T00:00:00",
     "StockCount": 11,
-    "AdvancingCount": 0,
-    "DecliningCount": 11,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -8.073482204532273990733015959,
-    "AverageChange5D": -8.504004067612235329204943205,
-    "AverageVolumeRatio20D": 1.1092950943301934900294923816,
-    "MarketStatus": "轉弱",
+    "AdvancingCount": 11,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 6.8842205282887595893541453973,
+    "AverageChange5D": 5.2895338116155511758889334473,
+    "AverageVolumeRatio20D": 0.8409442278123403797809530956,
+    "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
       "5351",
-      "8112",
-      "3006"
+      "2408",
+      "8299"
     ],
     "WeakSymbols": [
-      "2337",
-      "2344",
-      "5289"
+      "8112",
+      "5289",
+      "8271"
+    ]
+  },
+  {
+    "Theme": "塑化",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 4,
+    "AdvancingCount": 4,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 6.6794118061514945614620860125,
+    "AverageChange5D": 2.1673016585604723869525750025,
+    "AverageVolumeRatio20D": 0.6527155329047527965177611572,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "1303",
+      "6505",
+      "1326"
+    ],
+    "WeakSymbols": [
+      "1301",
+      "1326",
+      "6505"
+    ]
+  },
+  {
+    "Theme": "半導體設備",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 7,
+    "AdvancingCount": 7,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 6.5820473072688584833525364943,
+    "AverageChange5D": 2.6763931525794235645258291171,
+    "AverageVolumeRatio20D": 1.0012294175407233881084385004,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3131",
+      "6640",
+      "3583"
+    ],
+    "WeakSymbols": [
+      "7769",
+      "6187",
+      "5443"
     ]
   },
   {
     "Theme": "功率半導體",
-    "AsOfDate": "2026-11-25T00:00:00",
+    "AsOfDate": "2026-11-26T00:00:00",
     "StockCount": 6,
-    "AdvancingCount": 0,
-    "DecliningCount": 6,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -8.363506958145113542332306503,
-    "AverageChange5D": -12.281903546284535687935686223,
-    "AverageVolumeRatio20D": 0.9618029619359838488985230228,
-    "MarketStatus": "轉弱",
+    "AdvancingCount": 6,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 6.067472399128829169824451645,
+    "AverageChange5D": 2.311219892665840088232726965,
+    "AverageVolumeRatio20D": 0.7245172804660226185053566597,
+    "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "3675",
-      "8255",
-      "5425"
-    ],
-    "WeakSymbols": [
       "8261",
       "6435",
       "2481"
+    ],
+    "WeakSymbols": [
+      "8255",
+      "3675",
+      "5425"
+    ]
+  },
+  {
+    "Theme": "AI伺服器",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 11,
+    "AdvancingCount": 11,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 6.0471414799039445200587110709,
+    "AverageChange5D": 3.2134733471906331395818183545,
+    "AverageVolumeRatio20D": 0.8410065323994800296436962834,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3231",
+      "6669",
+      "2382"
+    ],
+    "WeakSymbols": [
+      "3706",
+      "2377",
+      "2357"
+    ]
+  },
+  {
+    "Theme": "光通訊／CPO",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 7,
+    "AdvancingCount": 6,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 85.71428571428571428571428571,
+    "AverageChange1D": 6.0164921666985877266870861429,
+    "AverageChange5D": -3.9408434983778424309641458386,
+    "AverageVolumeRatio20D": 0.8930758877178673226946038450,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3363",
+      "3081",
+      "6442"
+    ],
+    "WeakSymbols": [
+      "4977",
+      "3450",
+      "4979"
     ]
   },
   {
     "Theme": "低軌衛星",
-    "AsOfDate": "2026-11-25T00:00:00",
+    "AsOfDate": "2026-11-26T00:00:00",
     "StockCount": 6,
-    "AdvancingCount": 0,
-    "DecliningCount": 6,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -9.138401640469385576151564900,
-    "AverageChange5D": -19.717460372784062446161309988,
-    "AverageVolumeRatio20D": 1.0402429570029790172048504023,
-    "MarketStatus": "轉弱",
+    "AdvancingCount": 5,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 83.33333333333333333333333333,
+    "AverageChange1D": 5.6756295384241851178297136417,
+    "AverageChange5D": -6.6304571113774903471874779317,
+    "AverageVolumeRatio20D": 1.0312359144605685304795415882,
+    "MarketStatus": "降溫",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "3138",
+      "6285",
       "3491",
-      "6285"
+      "2485"
     ],
     "WeakSymbols": [
       "2314",
       "2419",
-      "2485"
+      "3138"
     ]
   },
   {
-    "Theme": "被動元件製造",
-    "AsOfDate": "2026-11-25T00:00:00",
-    "StockCount": 8,
-    "AdvancingCount": 0,
-    "DecliningCount": 8,
-    "AdvanceRatioPercent": 0.0,
-    "AverageChange1D": -9.280545198276850694567513761,
-    "AverageChange5D": -14.692974593109078979967153058,
-    "AverageVolumeRatio20D": 0.8506990524425362253934173588,
-    "MarketStatus": "轉弱",
+    "Theme": "AI電源／機櫃",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 6,
+    "AdvancingCount": 6,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 5.6048433504294710655802149667,
+    "AverageChange5D": 2.259239791794280802195212740,
+    "AverageVolumeRatio20D": 0.7435317002234891963970654336,
+    "MarketStatus": "延續",
     "Source": "user_api_market_data",
     "LeadingSymbols": [
-      "6449",
-      "3026",
-      "2472"
+      "3211",
+      "6282",
+      "2308"
     ],
     "WeakSymbols": [
-      "2375",
-      "2492",
-      "2478"
+      "6121",
+      "2301",
+      "5309"
+    ]
+  },
+  {
+    "Theme": "筆記型電腦／PC",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 9,
+    "AdvancingCount": 9,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 5.2143098325458302022743809022,
+    "AverageChange5D": 2.2764823359420746546138135933,
+    "AverageVolumeRatio20D": 0.7380032000817150725333745117,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3231",
+      "2382",
+      "2356"
+    ],
+    "WeakSymbols": [
+      "2353",
+      "3005",
+      "3213"
+    ]
+  },
+  {
+    "Theme": "機器人／自動化",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 10,
+    "AdvancingCount": 9,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 90.0,
+    "AverageChange1D": 5.059922417818600362516365960,
+    "AverageChange5D": 2.885932926126835874808528197,
+    "AverageVolumeRatio20D": 0.5911865713320493919541373769,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "1597",
+      "2359",
+      "4540"
+    ],
+    "WeakSymbols": [
+      "4562",
+      "4585",
+      "4583"
+    ]
+  },
+  {
+    "Theme": "IC設計",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 6,
+    "AdvancingCount": 6,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 4.6299397983792851642255116383,
+    "AverageChange5D": -0.6820875130765689159739406133,
+    "AverageVolumeRatio20D": 0.8343835844841194742644373948,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3035",
+      "3443",
+      "2379"
+    ],
+    "WeakSymbols": [
+      "2454",
+      "3661",
+      "3034"
+    ]
+  },
+  {
+    "Theme": "面板／顯示",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 5,
+    "AdvancingCount": 4,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 80.0,
+    "AverageChange1D": 4.584967160709737406991793536,
+    "AverageChange5D": -0.2541841962606668135974833540,
+    "AverageVolumeRatio20D": 0.6457356583841138716497819545,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3481",
+      "2409",
+      "8069"
+    ],
+    "WeakSymbols": [
+      "8105",
+      "6116",
+      "8069"
+    ]
+  },
+  {
+    "Theme": "汽車／電動車",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 6,
+    "AdvancingCount": 6,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 4.537198189448927955890492645,
+    "AverageChange5D": 3.782874793794089110075988750,
+    "AverageVolumeRatio20D": 0.7271198347709921736920085822,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3665",
+      "2360",
+      "1536"
+    ],
+    "WeakSymbols": [
+      "2204",
+      "2201",
+      "2207"
+    ]
+  },
+  {
+    "Theme": "先進封裝",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 3,
+    "AdvancingCount": 2,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 66.666666666666666666666666667,
+    "AverageChange1D": 4.3836922819257832557258048533,
+    "AverageChange5D": 3.6534391534391534391534391533,
+    "AverageVolumeRatio20D": 1.1944258045811644365181446199,
+    "MarketStatus": "升溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "2449",
+      "3711",
+      "2330"
+    ],
+    "WeakSymbols": [
+      "2330",
+      "3711",
+      "2449"
+    ]
+  },
+  {
+    "Theme": "綠能／儲能",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 5,
+    "AdvancingCount": 5,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 4.190423541784951711244550018,
+    "AverageChange5D": 2.179064105536930056475951968,
+    "AverageVolumeRatio20D": 0.6416290437157707038823836950,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3708",
+      "2308",
+      "8926"
+    ],
+    "WeakSymbols": [
+      "6869",
+      "9958",
+      "8926"
+    ]
+  },
+  {
+    "Theme": "重電／電網",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 12,
+    "AdvancingCount": 12,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 4.065850256698734162570571230,
+    "AverageChange5D": -0.5102054959454843353582455200,
+    "AverageVolumeRatio20D": 0.5815541061319778893102051208,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "1519",
+      "1514",
+      "1503"
+    ],
+    "WeakSymbols": [
+      "1615",
+      "1603",
+      "1612"
+    ]
+  },
+  {
+    "Theme": "國防／無人機",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 8,
+    "AdvancingCount": 8,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 4.0652897271054703879012034775,
+    "AverageChange5D": -1.085186550476712584311059585,
+    "AverageVolumeRatio20D": 0.6550162314794586834693630678,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "5284",
+      "2645",
+      "8033"
+    ],
+    "WeakSymbols": [
+      "2208",
+      "7402",
+      "5222"
+    ]
+  },
+  {
+    "Theme": "連接器／高速介面",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 6,
+    "AdvancingCount": 5,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 83.33333333333333333333333333,
+    "AverageChange1D": 4.0108921136599522387176435617,
+    "AverageChange5D": -2.103904722854960396907725020,
+    "AverageVolumeRatio20D": 0.5381219221283562022758474271,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "3533",
+      "3605",
+      "3689"
+    ],
+    "WeakSymbols": [
+      "3023",
+      "6272",
+      "3217"
+    ]
+  },
+  {
+    "Theme": "晶圓代工",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 4,
+    "AdvancingCount": 3,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 75.0,
+    "AverageChange1D": 2.809011621721170660565672745,
+    "AverageChange5D": 2.678802490742735915820289515,
+    "AverageVolumeRatio20D": 1.0570312299829345667645516352,
+    "MarketStatus": "延續",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "6770",
+      "5347",
+      "2303"
+    ],
+    "WeakSymbols": [
+      "2330",
+      "2303",
+      "5347"
+    ]
+  },
+  {
+    "Theme": "鋼鐵",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 5,
+    "AdvancingCount": 5,
+    "DecliningCount": 0,
+    "AdvanceRatioPercent": 100.0,
+    "AverageChange1D": 1.4471396042466530481039914760,
+    "AverageChange5D": -3.065625948951371392989012128,
+    "AverageVolumeRatio20D": 0.6396016565752038498609003900,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "2006",
+      "2014",
+      "2002"
+    ],
+    "WeakSymbols": [
+      "2027",
+      "2030",
+      "2002"
+    ]
+  },
+  {
+    "Theme": "營建／資產",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 5,
+    "AdvancingCount": 4,
+    "DecliningCount": 1,
+    "AdvanceRatioPercent": 80.0,
+    "AverageChange1D": 1.1829438897039038048168685600,
+    "AverageChange5D": -0.2931134010744780130683125560,
+    "AverageVolumeRatio20D": 0.5573422146347539154269718572,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "2548",
+      "2501",
+      "5534"
+    ],
+    "WeakSymbols": [
+      "2545",
+      "2542",
+      "5534"
+    ]
+  },
+  {
+    "Theme": "資安／雲端",
+    "AsOfDate": "2026-11-26T00:00:00",
+    "StockCount": 5,
+    "AdvancingCount": 2,
+    "DecliningCount": 3,
+    "AdvanceRatioPercent": 40.0,
+    "AverageChange1D": -0.1874641182333490025797718100,
+    "AverageChange5D": 2.727639802494470680702546420,
+    "AverageVolumeRatio20D": 0.8410399882027777563332488572,
+    "MarketStatus": "降溫",
+    "Source": "user_api_market_data",
+    "LeadingSymbols": [
+      "6214",
+      "3029",
+      "2471"
+    ],
+    "WeakSymbols": [
+      "6690",
+      "6689",
+      "2471"
     ]
   }
 ]
